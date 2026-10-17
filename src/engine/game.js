@@ -22,7 +22,8 @@ import {
  *                      extraDeck, hasNormalSummoned } },
  *   log: [{ id, turn, actor, kind, text, details? }], logSeq
  * }
- * การ์ดในกอง/มือ/สุสาน = { uid, cardId } · บนสนามเพิ่ม { hasAttacked, summonedTurn }
+ * การ์ดในกอง/มือ/สุสาน = { uid, cardId }
+ * บนสนามเพิ่ม { hasAttacked, summonedTurn, position: 'attack'|'defense', faceDown, positionChangedTurn }
  */
 
 export class GameRuleError extends Error {
@@ -36,6 +37,12 @@ export const cardOf = (instance) => getCardById(instance.cardId)
 
 export function expandDeckList(deckList) {
   return deckList.flatMap(([cardId, copies]) => Array(copies).fill(cardId))
+}
+
+// จำนวนตัวที่ต้องสังเวย: ระดับ 5–6 = 1, ระดับ 7+ = 2 (เฉพาะการ์ดอัญเชิญสังเวย) · 0 = อัญเชิญแบบนี้ไม่ได้
+export function tributesRequired(card) {
+  if (card?.type !== 'monster' || card.summonType !== 'tribute') return 0
+  return card.level >= 7 ? 2 : card.level >= 5 ? 1 : 0
 }
 
 export function isNormalSummonable(card) {
@@ -111,8 +118,15 @@ export function getSummonableHand(state, playerId) {
   const p = state.players[playerId]
   if (state.winner || state.activePlayer !== playerId) return []
   if (state.phase !== 'main1' && state.phase !== 'main2') return []
-  if (p.hasNormalSummoned || !p.field.includes(null)) return []
-  return p.hand.filter((inst) => isNormalSummonable(cardOf(inst)))
+  if (p.hasNormalSummoned) return []
+  const hasEmptyZone = p.field.includes(null)
+  const monsterCount = p.field.filter(Boolean).length
+  return p.hand.filter((inst) => {
+    const card = cardOf(inst)
+    if (isNormalSummonable(card)) return hasEmptyZone
+    const required = tributesRequired(card)
+    return required > 0 && monsterCount >= required
+  })
 }
 
 export function canAttackThisTurn(state) {
@@ -122,7 +136,20 @@ export function canAttackThisTurn(state) {
 export function getReadyAttackers(state, playerId) {
   if (state.winner || state.activePlayer !== playerId || state.phase !== 'battle') return []
   if (!canAttackThisTurn(state)) return []
-  return state.players[playerId].field.filter((m) => m && !m.hasAttacked)
+  return state.players[playerId].field.filter((m) => m && !m.hasAttacked && m.position !== 'defense')
+}
+
+// เปลี่ยนท่าได้ในเฟสหลัก ตัวละ 1 ครั้ง/เทิร์น ยกเว้นเทิร์นที่เพิ่งลงสนามหรือโจมตีไปแล้ว
+// คืนข้อความเหตุผลถ้าเปลี่ยนไม่ได้ หรือ null ถ้าเปลี่ยนได้
+export function positionChangeBlocker(state, playerId, uid) {
+  const m = state.players[playerId].field.find((x) => x?.uid === uid)
+  if (!m) return 'ไม่พบมอนสเตอร์ตัวนี้บนสนาม'
+  if (state.winner || state.activePlayer !== playerId) return 'ยังไม่ถึงตาของคุณ'
+  if (state.phase !== 'main1' && state.phase !== 'main2') return 'เปลี่ยนท่าได้เฉพาะเฟสหลัก'
+  if (m.summonedTurn === state.turn) return 'เพิ่งลงสนามเทิร์นนี้ ยังเปลี่ยนท่าไม่ได้'
+  if (m.hasAttacked) return 'โจมตีไปแล้วเทิร์นนี้ เปลี่ยนท่าไม่ได้'
+  if (m.positionChangedTurn === state.turn) return 'เปลี่ยนท่าไปแล้วเทิร์นนี้'
+  return null
 }
 
 export function getOpponentMonsters(state, playerId) {
@@ -131,7 +158,8 @@ export function getOpponentMonsters(state, playerId) {
 
 // การ์ดมอนสเตอร์ตัวอื่นบนสนามของ playerId (ใช้เช็กเงื่อนไขเอฟเฟกต์)
 export function getAllies(state, playerId, excludeUid) {
-  return state.players[playerId].field.filter((m) => m && m.uid !== excludeUid).map(cardOf)
+  // การ์ดคว่ำยังไม่เปิดเผย จึงไม่นับเป็นเงื่อนไขเอฟเฟกต์
+  return state.players[playerId].field.filter((m) => m && m.uid !== excludeUid && !m.faceDown).map(cardOf)
 }
 
 // ATK จริงบนสนามรวมบัฟจากเอฟเฟกต์ (ยังไม่รวมโบนัสธาตุ/เผ่าซึ่งขึ้นกับคู่ต่อสู้)
@@ -148,6 +176,7 @@ export function previewBattle(state, playerId, attackerUid, defenderUid) {
   return resolveBattle(cardOf(attacker), cardOf(defender), {
     attackerAllies: getAllies(state, playerId, attackerUid),
     defenderAllies: getAllies(state, oppId, defenderUid),
+    defenderStat: defender.position === 'defense' ? 'def' : 'atk',
   })
 }
 
@@ -165,7 +194,10 @@ export function applyAction(state, action) {
   const next = structuredClone(state)
   switch (action.type) {
     case 'summon':
-      summon(next, action.player, action.uid, action.zone)
+      summon(next, action.player, action.uid, action.zone, action.tributes, action.position)
+      break
+    case 'changePosition':
+      changePosition(next, action.player, action.uid)
       break
     case 'enterBattle':
       enterBattle(next, action.player)
@@ -188,32 +220,90 @@ export function applyAction(state, action) {
   return next
 }
 
-function summon(state, playerId, uid, zone) {
+function summon(state, playerId, uid, zone, tributeUids = [], position = 'attack') {
   const p = state.players[playerId]
   if (state.phase !== 'main1' && state.phase !== 'main2') {
     throw new GameRuleError('อัญเชิญได้เฉพาะเฟสหลัก')
   }
-  if (p.hasNormalSummoned) throw new GameRuleError('อัญเชิญปกติได้เทิร์นละ 1 ครั้ง')
+  if (p.hasNormalSummoned) throw new GameRuleError('อัญเชิญปกติ/สังเวยได้เทิร์นละ 1 ครั้ง')
   const handIndex = p.hand.findIndex((c) => c.uid === uid)
   if (handIndex === -1) throw new GameRuleError('ไม่พบการ์ดนี้ในมือ')
   const card = cardOf(p.hand[handIndex])
-  if (!isNormalSummonable(card)) {
+
+  const required = tributesRequired(card)
+  if (required === 0 && !isNormalSummonable(card)) {
     throw new GameRuleError(`${card.name} อัญเชิญปกติไม่ได้ (ต้องเป็นมอนสเตอร์ระดับ 1–4)`)
   }
-  const zoneIndex = zone ?? p.field.indexOf(null)
+  const uniqueTributes = [...new Set(tributeUids)]
+  if (uniqueTributes.length !== required) {
+    throw new GameRuleError(
+      required === 0
+        ? `${card.name} อัญเชิญได้โดยไม่ต้องสังเวย`
+        : `${card.name} ระดับ ${card.level} ต้องสังเวยมอนสเตอร์ ${required} ตัว`
+    )
+  }
+  if (position !== 'attack' && position !== 'defense') throw new GameRuleError('ท่าไม่ถูกต้อง')
+  const tributeZones = uniqueTributes.map((tUid) => p.field.findIndex((m) => m?.uid === tUid))
+  if (tributeZones.includes(-1)) throw new GameRuleError('สังเวยได้เฉพาะมอนสเตอร์บนสนามของเรา')
+
+  // ตัวที่ถูกสังเวยลงสุสาน แล้วช่องแรกที่ว่างลงจะเป็นที่วางตัวใหม่
+  const tributedCards = tributeZones.map((z) => {
+    const { uid: id, cardId } = p.field[z]
+    p.field[z] = null
+    p.graveyard.push({ uid: id, cardId })
+    return getCardById(cardId)
+  })
+
+  const zoneIndex = zone ?? (required > 0 ? Math.min(...tributeZones) : p.field.indexOf(null))
   if (zoneIndex < 0 || zoneIndex >= RULES.monsterZones || p.field[zoneIndex]) {
     throw new GameRuleError('ช่องมอนสเตอร์ไม่ว่าง')
   }
 
   const [inst] = p.hand.splice(handIndex, 1)
-  p.field[zoneIndex] = { ...inst, hasAttacked: false, summonedTurn: state.turn }
+  const faceDown = position === 'defense'
+  p.field[zoneIndex] = {
+    ...inst,
+    hasAttacked: false,
+    summonedTurn: state.turn,
+    position,
+    faceDown,
+    positionChangedTurn: null,
+  }
   p.hasNormalSummoned = true
-  addLog(
-    state,
-    playerId,
-    'summon',
-    `${PLAYER_NAMES[playerId]}อัญเชิญ ${card.name} (ระดับ ${card.level} · ATK ${formatNumber(card.atk)}) ลงช่องที่ ${zoneIndex + 1}`
-  )
+
+  // การ์ดคว่ำของคู่ต่อสู้ไม่เปิดเผยชื่อในบันทึก
+  const name = PLAYER_NAMES[playerId]
+  const shown = !faceDown || playerId === PLAYER
+  const what = shown
+    ? `${card.name} (ระดับ ${card.level} · ATK ${formatNumber(card.atk)} / DEF ${formatNumber(card.def)})`
+    : 'มอนสเตอร์ 1 ใบ'
+  const placed = faceDown ? `วาง ${what} คว่ำ (ท่าตั้งรับ)` : `${required > 0 ? 'อัญเชิญสังเวย' : 'อัญเชิญ'} ${what}`
+  const where = `ลงช่องที่ ${zoneIndex + 1}`
+  if (required > 0) {
+    const tributeNames = tributedCards.map((c) => `${c.name} (ATK ${formatNumber(c.atk)})`).join(' + ')
+    addLog(state, playerId, 'summon', `${name}สังเวย ${tributeNames} → ${placed} ${where}`)
+  } else {
+    addLog(state, playerId, 'summon', `${name}${placed} ${where}`)
+  }
+}
+
+function changePosition(state, playerId, uid) {
+  const blocker = positionChangeBlocker(state, playerId, uid)
+  if (blocker) throw new GameRuleError(blocker)
+  const m = state.players[playerId].field.find((x) => x?.uid === uid)
+  const card = cardOf(m)
+  const name = PLAYER_NAMES[playerId]
+  m.positionChangedTurn = state.turn
+  if (m.position === 'defense') {
+    const flip = m.faceDown
+    m.position = 'attack'
+    m.faceDown = false
+    const verb = flip ? 'หงาย' : 'เปลี่ยน'
+    addLog(state, playerId, 'position', `${name}${verb} ${card.name} เป็นท่าโจมตี (ATK ${formatNumber(card.atk)})`)
+  } else {
+    m.position = 'defense'
+    addLog(state, playerId, 'position', `${name}เปลี่ยน ${card.name} เป็นท่าตั้งรับ (DEF ${formatNumber(card.def)})`)
+  }
 }
 
 function enterBattle(state, playerId) {
@@ -260,6 +350,7 @@ function attack(state, playerId, attackerUid, targetUid) {
   const attacker = me.field.find((m) => m?.uid === attackerUid)
   if (!attacker) throw new GameRuleError('ไม่พบมอนสเตอร์ที่จะโจมตี')
   if (attacker.hasAttacked) throw new GameRuleError('มอนสเตอร์ตัวนี้โจมตีไปแล้วในเทิร์นนี้')
+  if (attacker.position === 'defense') throw new GameRuleError('มอนสเตอร์ท่าตั้งรับโจมตีไม่ได้')
 
   const attackerCard = cardOf(attacker)
   const details = []
@@ -287,6 +378,12 @@ function attack(state, playerId, attackerUid, targetUid) {
   const result = previewBattle(state, playerId, attacker.uid, defender.uid)
   attacker.hasAttacked = true
 
+  const inDefense = defender.position === 'defense'
+  if (defender.faceDown) {
+    defender.faceDown = false
+    details.push(`เปิดการ์ดคว่ำ: ${defenderCard.name} (DEF ${formatNumber(defenderCard.def)})`)
+  }
+
   if (result.defender.cancelled.length > 0) {
     details.push(`🏹 ${attackerCard.name} ซุ่มโจมตี! ${defenderCard.name} ไม่ได้รับโบนัสธาตุ/เผ่า`)
   }
@@ -295,7 +392,20 @@ function attack(state, playerId, attackerUid, targetUid) {
 
   const a = formatNumber(result.attacker.final)
   const d = formatNumber(result.defender.final)
-  if (result.outcome === 'attacker') {
+  if (inDefense) {
+    // ATK ปะทะ DEF: ตัวตั้งรับถูกทำลายได้แต่เจ้าของไม่เสีย LP · ตีไม่ผ่าน ฝ่ายโจมตีเสีย LP
+    if (result.outcome === 'attacker') {
+      details.push(`ATK ${a} > DEF ${d} → ${defenderCard.name} ถูกทำลาย (ท่าตั้งรับ ไม่เสีย LP)`)
+      destroyMonster(state, oppId, defender.uid)
+    } else if (result.outcome === 'defender') {
+      details.push(
+        `ATK ${a} < DEF ${d} → ตีไม่ผ่าน ไม่มีใครถูกทำลาย (ส่วนต่าง ${d} − ${a} = ${formatNumber(result.damage)})`
+      )
+      damagePlayer(state, playerId, result.damage, details)
+    } else {
+      details.push(`ATK ${a} = DEF ${d} → ไม่มีอะไรเกิดขึ้น`)
+    }
+  } else if (result.outcome === 'attacker') {
     details.push(`${a} > ${d} → ${defenderCard.name} ถูกทำลาย (ส่วนต่าง ${a} − ${d} = ${formatNumber(result.damage)})`)
     destroyMonster(state, oppId, defender.uid)
     damagePlayer(state, oppId, result.damage, details)
@@ -309,7 +419,8 @@ function attack(state, playerId, attackerUid, targetUid) {
     destroyMonster(state, oppId, defender.uid)
   }
 
-  addLog(state, playerId, 'battle', `⚔️ ${attackerCard.name} โจมตี ${defenderCard.name}`, details)
+  const target = `${defenderCard.name}${inDefense ? ' (ท่าตั้งรับ)' : ''}`
+  addLog(state, playerId, 'battle', `⚔️ ${attackerCard.name} โจมตี ${target}`, details)
   logLpKnockout(state)
 }
 

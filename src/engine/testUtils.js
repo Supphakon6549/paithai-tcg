@@ -18,8 +18,11 @@ export function makeState({ turn = 3, activePlayer = PLAYER, phase = 'main1', pl
     p.field = Array(RULES.monsterZones).fill(null)
     p.spellTrap = Array(RULES.spellTrapZones).fill(null)
     p.fieldSpell = null
-    ;(spec.field ?? []).forEach((cardId, i) => {
-      p.field[i] = cardId ? { ...inst(cardId), hasAttacked: false, summonedTurn: 1 } : null
+    // field: ['th01-001', { id: 'th01-005', position: 'defense', faceDown: true }, null, ...]
+    ;(spec.field ?? []).forEach((entry, i) => {
+      if (!entry) return
+      const { id, position = 'attack', faceDown = false } = typeof entry === 'string' ? { id: entry } : entry
+      p.field[i] = { ...inst(id), hasAttacked: false, summonedTurn: 1, position, faceDown, positionChangedTurn: null }
     })
     p.graveyard = []
     p.lp = spec.lp ?? RULES.startingLP

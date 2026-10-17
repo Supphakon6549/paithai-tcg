@@ -199,6 +199,12 @@
   outline-offset: 2px;
 }
 
+.mini-card--tribute {
+  transform: translateY(-4px);
+  outline: 2px solid var(--lose);
+  outline-offset: 2px;
+}
+
 .mini-card--spent {
   opacity: 0.55;
   filter: grayscale(0.5);
@@ -222,6 +228,51 @@
   outline-offset: 2px;
 }
 
+
+/* ท่าตั้งรับ: หมุนการ์ดเป็นแนวนอนและย่อให้อยู่ในช่องเดิม (88:63 → กว้างเท่าช่อง) */
+.mini-card--defense .mini-card__scale {
+  transform: rotate(-90deg) scale(0.716);
+}
+
+.mini-card__atk--def {
+  border-color: #6fa8dc;
+  color: #cfe5ff;
+}
+
+/* การ์ดคว่ำของเรา: เห็นหน้าการ์ดแต่หรี่ลง */
+.mini-card--own-facedown .mini-card__scale {
+  filter: brightness(0.5) saturate(0.6);
+}
+
+.mini-card__facedown-tag {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(14, 11, 9, 0.85);
+  border: 1px solid var(--panel-line);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+/* หลังการ์ด (ขนาดเท่าการ์ดจริง 316px แล้วย่อด้วย zoom เหมือนหน้าการ์ด) */
+.card-back {
+  display: block;
+  width: 316px;
+  aspect-ratio: 63 / 88;
+  border-radius: 12px;
+  border: 10px solid #110d0a;
+  outline: 3px solid var(--gold);
+  outline-offset: -14px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(235, 209, 131, 0.45) 0 14%, transparent 15%),
+    radial-gradient(circle at 50% 50%, transparent 0 24%, rgba(235, 209, 131, 0.3) 25% 27%, transparent 28%),
+    repeating-linear-gradient(45deg, #5a1d16 0 18px, #3d120d 18px 36px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
+}
 
 /* ----- กระดานแต่ละฝ่าย (มือถือ: เรียงเป็นแถว · ฝ่ายตรงข้ามกลับด้าน) ----- */
 .board-side {

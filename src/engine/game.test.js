@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getCardById } from '../data/cards'
-import { GameRuleError, applyAction, createGame, getSummonableHand } from './game'
+import { GameRuleError, applyAction, createGame, getSummonableHand, tributesRequired } from './game'
 import { AI, PLAYER, RULES } from './rules'
 import { handUid, lastLog, makeState, uidAt } from './testUtils'
 
@@ -80,7 +80,7 @@ describe('การอัญเชิญปกติ', () => {
     const s2 = applyAction(s, { type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 0) })
     expect(s2.players.player.field[1].cardId).toBe('th01-002')
     expect(s2.players.player.hand).toHaveLength(0)
-    expect(lastLog(s2).text).toBe('คุณอัญเชิญ พรานหนุ่ม (ระดับ 4 · ATK 1,600) ลงช่องที่ 2')
+    expect(lastLog(s2).text).toBe('คุณอัญเชิญ พรานหนุ่ม (ระดับ 4 · ATK 1,600 / DEF 1,200) ลงช่องที่ 2')
   })
 
   it('อัญเชิญได้เทิร์นละ 1 ตัว', () => {
@@ -98,15 +98,20 @@ describe('การอัญเชิญปกติ', () => {
     expect(s2.players.player.hasNormalSummoned).toBe(false)
   })
 
-  it('อัญเชิญระดับ 5 ขึ้นไป หรือการ์ดที่ไม่ใช่มอนสเตอร์ไม่ได้', () => {
-    const s = makeState({ player: { hand: ['th01-003', 'th01-013', 'th01-001'] } })
+  it('ระดับ 5 ขึ้นไปต้องสังเวย และการ์ดที่ไม่ใช่มอนสเตอร์อัญเชิญไม่ได้', () => {
+    const s = makeState({ player: { hand: ['th01-003', 'th01-013', 'th01-001', 'th01-007'] } })
+    // ไม่มีมอนสเตอร์บนสนาม → ยังสังเวยไม่ได้
     expect(getSummonableHand(s, PLAYER).map((c) => c.cardId)).toEqual(['th01-001'])
     expect(() =>
       applyAction(s, { type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 0) })
-    ).toThrow('ระดับ 1–4')
+    ).toThrow('ต้องสังเวยมอนสเตอร์ 1 ตัว')
     expect(() =>
       applyAction(s, { type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 1) })
     ).toThrow(GameRuleError)
+    // ระดับ 8 แบบพิธีกรรม อัญเชิญด้วยวิธีนี้ไม่ได้
+    expect(() =>
+      applyAction(s, { type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 3) })
+    ).toThrow('ระดับ 1–4')
   })
 
   it('อัญเชิญไม่ได้เมื่อสนามเต็ม 5 ช่อง หรืออยู่ในเฟสต่อสู้', () => {
@@ -123,6 +128,70 @@ describe('การอัญเชิญปกติ', () => {
     const s = makeState({ phase: 'main2', player: { hand: ['th01-016'] } })
     const s2 = applyAction(s, { type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 0) })
     expect(s2.players.player.field[0].cardId).toBe('th01-016')
+  })
+})
+
+describe('การอัญเชิญสังเวย', () => {
+  it('tributesRequired: ระดับ 5–6 = 1 · 7+ = 2 · พิธีกรรม/ผสานร่าง/ระดับต่ำ = 0', () => {
+    expect(tributesRequired(getCardById('th01-020'))).toBe(1) // ระดับ 5
+    expect(tributesRequired(getCardById('th01-003'))).toBe(1) // ระดับ 6
+    expect(tributesRequired({ type: 'monster', summonType: 'tribute', level: 7 })).toBe(2)
+    expect(tributesRequired(getCardById('th01-007'))).toBe(0) // พิธีกรรม
+    expect(tributesRequired(getCardById('th01-012'))).toBe(0) // ผสานร่าง
+    expect(tributesRequired(getCardById('th01-001'))).toBe(0)
+  })
+
+  it('สังเวย 1 ตัว: ตัวสังเวยลงสุสาน ตัวใหม่ลงช่องเดิม และบันทึกครบ', () => {
+    const s = makeState({ player: { hand: ['th01-003'], field: ['th01-016', 'th01-001'] } })
+    expect(getSummonableHand(s, PLAYER).map((c) => c.cardId)).toEqual(['th01-003'])
+    const s2 = applyAction(s, {
+      type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 0), tributes: [uidAt(s, PLAYER, 1)],
+    })
+    const p = s2.players.player
+    expect(p.field.map((m) => m?.cardId ?? null)).toEqual(['th01-016', 'th01-003', null, null, null])
+    expect(p.graveyard.map((c) => c.cardId)).toEqual(['th01-001'])
+    expect(p.hand).toHaveLength(0)
+    expect(p.hasNormalSummoned).toBe(true)
+    expect(lastLog(s2).text).toBe(
+      `คุณสังเวย ลูกพราน (ATK 800) → อัญเชิญสังเวย ${getCardById('th01-003').name} (ระดับ 6 · ATK 2,400 / DEF 1,800) ลงช่องที่ 2`
+    )
+  })
+
+  it('สังเวยได้แม้สนามเต็ม 5 ช่อง', () => {
+    const s = makeState({ player: { hand: ['th01-018'], field: Array(5).fill('th01-004') } })
+    const s2 = applyAction(s, {
+      type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 0), tributes: [uidAt(s, PLAYER, 4)],
+    })
+    expect(s2.players.player.field[4].cardId).toBe('th01-018')
+  })
+
+  it('จำนวนตัวสังเวยต้องพอดี และต้องเป็นมอนสเตอร์บนสนามเรา', () => {
+    const s = makeState({ player: { hand: ['th01-003', 'th01-001'], field: ['th01-016', 'th01-005'] }, ai: { field: ['th01-004'] } })
+    const uid = handUid(s, PLAYER, 0)
+    expect(() => applyAction(s, { type: 'summon', player: PLAYER, uid, tributes: [] })).toThrow('ต้องสังเวย')
+    expect(() =>
+      applyAction(s, { type: 'summon', player: PLAYER, uid, tributes: [uidAt(s, PLAYER, 0), uidAt(s, PLAYER, 1)] })
+    ).toThrow('ต้องสังเวยมอนสเตอร์ 1 ตัว')
+    expect(() => applyAction(s, { type: 'summon', player: PLAYER, uid, tributes: [uidAt(s, AI, 0)] })).toThrow(
+      'สนามของเรา'
+    )
+    expect(() => applyAction(s, { type: 'summon', player: PLAYER, uid, tributes: [handUid(s, PLAYER, 1)] })).toThrow(
+      'สนามของเรา'
+    )
+    // อัญเชิญปกติห้ามแนบตัวสังเวย
+    expect(() =>
+      applyAction(s, { type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 1), tributes: [uidAt(s, PLAYER, 0)] })
+    ).toThrow('โดยไม่ต้องสังเวย')
+  })
+
+  it('ใช้สิทธิ์เดียวกับอัญเชิญปกติ: เทิร์นละ 1 ครั้งรวมกัน', () => {
+    const s = makeState({ player: { hand: ['th01-001', 'th01-003'] } })
+    const s2 = applyAction(s, { type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 0) })
+    // มีตัวบนสนามแล้วแต่ใช้สิทธิ์ไปแล้ว
+    expect(getSummonableHand(s2, PLAYER)).toEqual([])
+    expect(() =>
+      applyAction(s2, { type: 'summon', player: PLAYER, uid: handUid(s2, PLAYER, 0), tributes: [uidAt(s2, PLAYER, 0)] })
+    ).toThrow('เทิร์นละ 1 ครั้ง')
   })
 })
 

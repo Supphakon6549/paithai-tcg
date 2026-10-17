@@ -10,11 +10,36 @@ describe('getAiAction', () => {
   })
 
   it('อัญเชิญตัวที่ ATK สูงสุดที่อัญเชิญปกติได้', () => {
-    // th01-003 (ATK 2,400) ระดับ 6 อัญเชิญปกติไม่ได้ → เลือก th01-011 (1,800)
+    // th01-003 (ATK 2,400) ต้องสังเวย แต่สนามว่าง → เลือก th01-011 (1,800)
     const s = makeState({ activePlayer: AI, ai: { hand: ['th01-001', 'th01-003', 'th01-011', 'th01-017'] } })
     const action = getAiAction(s)
     expect(action.type).toBe('summon')
     expect(s.players.ai.hand.find((c) => c.uid === action.uid).cardId).toBe('th01-011')
+  })
+
+  it('สังเวยตัว ATK ต่ำสุดเมื่อคุ้ม', () => {
+    // บนสนาม 1,800 กับ 300 · มือมี 2,500 (สังเวย) และ 900 → สังเวย 300 อัญเชิญ 2,500
+    const s = makeState({ activePlayer: AI, ai: { hand: ['th01-016', 'th01-018'], field: ['th01-011', 'th01-004'] } })
+    expect(getAiAction(s)).toEqual({
+      type: 'summon', player: AI, uid: s.players.ai.hand[1].uid, tributes: [uidAt(s, AI, 1)], position: 'attack',
+    })
+  })
+
+  it('ไม่สังเวยเมื่อไม่คุ้ม (ตัวที่ต้องเสียแรงกว่าหรือเท่ากับตัวใหม่)', () => {
+    // บนสนามมีแต่ 1,800 · ตัวสังเวยในมือ 1,500 → อัญเชิญปกติแทน
+    const s = makeState({ activePlayer: AI, ai: { hand: ['th01-006', 'th01-001'], field: ['th01-011'] } })
+    expect(getAiAction(s)).toEqual({ type: 'summon', player: AI, uid: s.players.ai.hand[1].uid, position: 'attack' })
+  })
+
+  it('ไม่สังเวยเมื่อตัวอัญเชิญปกติในมือแรงกว่า', () => {
+    // ตัวสังเวย 1,500 แต่มี 1,800 อัญเชิญปกติได้
+    const s = makeState({ activePlayer: AI, ai: { hand: ['th01-006', 'th01-011'], field: ['th01-004'] } })
+    expect(getAiAction(s)).toEqual({ type: 'summon', player: AI, uid: s.players.ai.hand[1].uid, position: 'attack' })
+  })
+
+  it('สนามเต็มและมีตัวสังเวยคุ้ม → สังเวยได้', () => {
+    const s = makeState({ activePlayer: AI, ai: { hand: ['th01-003'], field: Array(5).fill('th01-016') } })
+    expect(getAiAction(s)).toMatchObject({ type: 'summon', tributes: [uidAt(s, AI, 0)] })
   })
 
   it('โจมตีเมื่อชนะเท่านั้น และเลือกเป้าที่แข็งที่สุดที่ชนะได้', () => {

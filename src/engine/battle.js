@@ -35,27 +35,40 @@ export function getAdvantageBonuses(card, opponent) {
   return bonuses
 }
 
-function computeSide(card, opponent, { allies = [], ambushed = false } = {}) {
+// stat: 'atk' (ท่าโจมตี) หรือ 'def' (ท่าตั้งรับ) — บัฟ ATK จากเอฟเฟกต์ไม่บวกเข้า DEF
+// แต่โบนัสธาตุ/เผ่าบวกได้ทั้งสองค่า
+function computeSide(card, opponent, { allies = [], ambushed = false, stat = 'atk' } = {}) {
   const advantage = getAdvantageBonuses(card, opponent)
-  const bonuses = [...getAtkBoosts(card, allies), ...(ambushed ? [] : advantage)]
+  const effects = stat === 'atk' ? getAtkBoosts(card, allies) : []
+  const bonuses = [...effects, ...(ambushed ? [] : advantage)]
   const total = bonuses.reduce((sum, b) => sum + b.amount, 0)
+  const base = stat === 'def' ? card.def : card.atk
   return {
     card,
-    base: card.atk,
+    stat,
+    base,
     bonuses,
     cancelled: ambushed ? advantage : [],
-    final: card.atk + total,
+    final: base + total,
   }
 }
 
 /**
- * คำนวณผลการต่อสู้ ATK ปะทะ ATK (รวมเอฟเฟกต์การ์ด + โบนัสธาตุ/เผ่า)
- * outcome: 'attacker' | 'defender' | 'tie'
+ * คำนวณผลการต่อสู้ ATK ปะทะ ATK หรือ ATK ปะทะ DEF (รวมเอฟเฟกต์การ์ด + โบนัสธาตุ/เผ่า)
+ * outcome: 'attacker' | 'defender' | 'tie' (ค่าไหนสูงกว่า — ผลจริงขึ้นกับท่าของฝ่ายรับ ดู game.js)
  */
-export function resolveBattle(attackerCard, defenderCard, { attackerAllies = [], defenderAllies = [] } = {}) {
+export function resolveBattle(
+  attackerCard,
+  defenderCard,
+  { attackerAllies = [], defenderAllies = [], defenderStat = 'atk' } = {}
+) {
   const ambush = hasAmbush(attackerCard)
   const attacker = computeSide(attackerCard, defenderCard, { allies: attackerAllies })
-  const defender = computeSide(defenderCard, attackerCard, { allies: defenderAllies, ambushed: ambush })
+  const defender = computeSide(defenderCard, attackerCard, {
+    allies: defenderAllies,
+    ambushed: ambush,
+    stat: defenderStat,
+  })
   const diff = attacker.final - defender.final
   return {
     attacker,
@@ -75,5 +88,6 @@ export function describeSide(side) {
     .map((b) => ` [ซุ่มโจมตียกเลิก${b.label} +${formatNumber(b.amount)}: ${b.reason}]`)
     .join('')
   const noBonus = !parts && !cancelled ? ' (ไม่มีโบนัส)' : ''
-  return `${side.card.name}: ATK ${formatNumber(side.base)}${parts}${cancelled}${noBonus} = ${formatNumber(side.final)}`
+  const label = side.stat === 'def' ? 'DEF' : 'ATK'
+  return `${side.card.name}: ${label} ${formatNumber(side.base)}${parts}${cancelled}${noBonus} = ${formatNumber(side.final)}`
 }
