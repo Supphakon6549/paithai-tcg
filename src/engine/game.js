@@ -1,6 +1,14 @@
 import { getCardById } from '../data/cards'
 import { describeSide, resolveBattle } from './battle'
-import { getAtkBoosts, getEffectiveAtk } from './effects'
+import {
+  getAfterBattleDestroy,
+  getAtkBoosts,
+  getEffectiveAtk,
+  getExtraAttack,
+  getNoTributeCondition,
+  getPiercing,
+  reduceBattleDamage,
+} from './effects'
 import { createRng, shuffle } from './random'
 import {
   PLAYER,
@@ -59,15 +67,68 @@ function addLog(state, actor, kind, text, details) {
   state.log.push({ id: state.logSeq, turn: state.turn, actor, kind, text, ...(details ? { details } : {}) })
 }
 
+// ตรวจสำรับจากภายนอก (เช่นหน้าจัดสำรับ): รหัสการ์ดต้องมีจริง และกองพิเศษรับเฉพาะมอนสเตอร์ผสานร่าง
+// คืนรายการปัญหาเป็นข้อความภาษาไทย (ว่าง = ใช้ได้)
+export function validateDeck(deckList, extraDeckList = []) {
+  const problems = []
+  const check = (list, label) => {
+    if (!Array.isArray(list)) {
+      problems.push(`${label}ต้องเป็นรายการ [รหัสการ์ด, จำนวน]`)
+      return
+    }
+    for (const entry of list) {
+      const [cardId, copies] = Array.isArray(entry) ? entry : []
+      if (!getCardById(cardId)) problems.push(`${label}: ไม่พบการ์ดรหัส ${cardId}`)
+      if (!Number.isInteger(copies) || copies < 1) problems.push(`${label}: จำนวนของ ${cardId} ไม่ถูกต้อง`)
+    }
+  }
+  check(deckList, 'กองหลัก')
+  check(extraDeckList, 'กองพิเศษ')
+  if (problems.length) return problems
+
+  if (expandDeckList(deckList).length <= RULES.startingHand) {
+    problems.push(`กองหลักต้องมีมากกว่า ${RULES.startingHand} ใบ`)
+  }
+  for (const [cardId] of extraDeckList) {
+    if (getCardById(cardId).summonType !== 'fusion') {
+      problems.push(`กองพิเศษ: ${getCardById(cardId).name} ไม่ใช่มอนสเตอร์ผสานร่าง`)
+    }
+  }
+  for (const [cardId] of deckList) {
+    if (getCardById(cardId).summonType === 'fusion') {
+      problems.push(`กองหลัก: ${getCardById(cardId).name} เป็นมอนสเตอร์ผสานร่าง ต้องอยู่กองพิเศษ`)
+    }
+  }
+  return problems
+}
+
+/**
+ * deckList / extraDeckList = สำรับของผู้เล่น · aiDeckList / aiExtraDeckList = สำรับของ AI
+ * (ไม่ระบุ = สำรับเริ่มต้น) รูปแบบ: [['th01-001', 4], ...]
+ */
 export function createGame({
   seed = Date.now(),
   firstPlayer = PLAYER,
   deckList = STARTER_DECK_LIST,
   extraDeckList = EXTRA_DECK_LIST,
+  aiDeckList = STARTER_DECK_LIST,
+  aiExtraDeckList = EXTRA_DECK_LIST,
 } = {}) {
+  for (const [main, extra, owner] of [
+    [deckList, extraDeckList, 'ผู้เล่น'],
+    [aiDeckList, aiExtraDeckList, 'AI'],
+  ]) {
+    const problems = validateDeck(main, extra)
+    if (problems.length) throw new GameRuleError(`สำรับ${owner}ใช้ไม่ได้: ${problems.join(' · ')}`)
+  }
   const rng = createRng(seed)
+  const decks = {
+    [PLAYER]: { deckList, extraDeckList },
+    [opponentOf(PLAYER)]: { deckList: aiDeckList, extraDeckList: aiExtraDeckList },
+  }
 
   const makePlayer = (id) => {
+    const { deckList, extraDeckList } = decks[id]
     const cards = expandDeckList(deckList).map((cardId, i) => ({ uid: `${id}-${i + 1}`, cardId }))
     const deck = shuffle(cards, rng)
     const hand = deck.splice(0, RULES.startingHand)
@@ -96,12 +157,15 @@ export function createGame({
     logSeq: 0,
   }
 
-  const deckSize = state.players[PLAYER].deck.length + RULES.startingHand
+  const deckSizeOf = (id) => state.players[id].deck.length + RULES.startingHand
+  const mySize = deckSizeOf(PLAYER)
+  const aiSize = deckSizeOf(opponentOf(PLAYER))
+  const deckText = mySize === aiSize ? `สำรับฝ่ายละ ${mySize} ใบ` : `สำรับคุณ ${mySize} ใบ · คู่ต่อสู้ ${aiSize} ใบ`
   addLog(
     state,
     null,
     'system',
-    `เริ่มเกม! LP ฝ่ายละ ${formatNumber(RULES.startingLP)} · สำรับฝ่ายละ ${deckSize} ใบ · จั่วมือแรกฝ่ายละ ${RULES.startingHand} ใบ`
+    `เริ่มเกม! LP ฝ่ายละ ${formatNumber(RULES.startingLP)} · ${deckText} · จั่วมือแรกฝ่ายละ ${RULES.startingHand} ใบ`
   )
   addLog(
     state,
@@ -124,9 +188,18 @@ export function getSummonableHand(state, playerId) {
   return p.hand.filter((inst) => {
     const card = cardOf(inst)
     if (isNormalSummonable(card)) return hasEmptyZone
-    const required = tributesRequired(card)
-    return required > 0 && monsterCount >= required
+    if (tributesRequired(card) === 0) return false
+    const cost = getTributeCost(state, playerId, card)
+    return cost === 0 ? hasEmptyZone : monsterCount >= cost
   })
+}
+
+// จำนวนตัวสังเวยจริง (เอฟเฟกต์บางใบลดเป็น 0 ได้ เช่น ช้างศึกไอยรา)
+export function getTributeCost(state, playerId, card) {
+  const base = tributesRequired(card)
+  if (base === 0) return 0
+  const free = getNoTributeCondition(card)
+  return free?.isActive({ allies: getAllies(state, playerId, null) }) ? 0 : base
 }
 
 export function canAttackThisTurn(state) {
@@ -136,7 +209,22 @@ export function canAttackThisTurn(state) {
 export function getReadyAttackers(state, playerId) {
   if (state.winner || state.activePlayer !== playerId || state.phase !== 'battle') return []
   if (!canAttackThisTurn(state)) return []
-  return state.players[playerId].field.filter((m) => m && !m.hasAttacked && m.position !== 'defense')
+  return state.players[playerId].field.filter((m) => m && canDeclareAttack(state, playerId, m))
+}
+
+const attacksMade = (m) => m.attackCount ?? (m.hasAttacked ? 1 : 0)
+
+// โจมตีได้กี่ครั้งเทิร์นนี้ (เอฟเฟกต์โจมตีเพิ่มเช็ก ณ ตอนประกาศโจมตี)
+function maxAttacks(state, playerId, m) {
+  const extra = getExtraAttack(cardOf(m))
+  if (!extra) return 1
+  const allyCount = state.players[playerId].field.filter(Boolean).length
+  const enemyCount = state.players[opponentOf(playerId)].field.filter(Boolean).length
+  return extra.isActive({ allyCount, enemyCount }) ? 2 : 1
+}
+
+function canDeclareAttack(state, playerId, m) {
+  return m.position !== 'defense' && attacksMade(m) < maxAttacks(state, playerId, m)
 }
 
 // เปลี่ยนท่าได้ในเฟสหลัก ตัวละ 1 ครั้ง/เทิร์น ยกเว้นเทิร์นที่เพิ่งลงสนามหรือโจมตีไปแล้ว
@@ -165,7 +253,7 @@ export function getAllies(state, playerId, excludeUid) {
 // ATK จริงบนสนามรวมบัฟจากเอฟเฟกต์ (ยังไม่รวมโบนัสธาตุ/เผ่าซึ่งขึ้นกับคู่ต่อสู้)
 export function getFieldAtk(state, playerId, uid) {
   const monster = state.players[playerId].field.find((m) => m?.uid === uid)
-  return getEffectiveAtk(cardOf(monster), getAllies(state, playerId, uid))
+  return getEffectiveAtk(cardOf(monster), getAllies(state, playerId, uid), getAllies(state, opponentOf(playerId), null))
 }
 
 // คำนวณผลต่อสู้ล่วงหน้าโดยไม่เปลี่ยนสถานะ — ใช้ทั้งตอนโจมตีจริง, AI และ UI
@@ -175,7 +263,9 @@ export function previewBattle(state, playerId, attackerUid, defenderUid) {
   const defender = state.players[oppId].field.find((m) => m?.uid === defenderUid)
   return resolveBattle(cardOf(attacker), cardOf(defender), {
     attackerAllies: getAllies(state, playerId, attackerUid),
+    attackerEnemies: getAllies(state, oppId, null),
     defenderAllies: getAllies(state, oppId, defenderUid),
+    defenderEnemies: getAllies(state, playerId, null),
     defenderStat: defender.position === 'defense' ? 'def' : 'atk',
   })
 }
@@ -230,10 +320,12 @@ function summon(state, playerId, uid, zone, tributeUids = [], position = 'attack
   if (handIndex === -1) throw new GameRuleError('ไม่พบการ์ดนี้ในมือ')
   const card = cardOf(p.hand[handIndex])
 
-  const required = tributesRequired(card)
-  if (required === 0 && !isNormalSummonable(card)) {
+  const baseTributes = tributesRequired(card)
+  if (baseTributes === 0 && !isNormalSummonable(card)) {
     throw new GameRuleError(`${card.name} อัญเชิญปกติไม่ได้ (ต้องเป็นมอนสเตอร์ระดับ 1–4)`)
   }
+  const required = getTributeCost(state, playerId, card)
+  const freeReason = baseTributes > 0 && required === 0 ? getNoTributeCondition(card).reason : null
   const uniqueTributes = [...new Set(tributeUids)]
   if (uniqueTributes.length !== required) {
     throw new GameRuleError(
@@ -283,7 +375,8 @@ function summon(state, playerId, uid, zone, tributeUids = [], position = 'attack
     const tributeNames = tributedCards.map((c) => `${c.name} (ATK ${formatNumber(c.atk)})`).join(' + ')
     addLog(state, playerId, 'summon', `${name}สังเวย ${tributeNames} → ${placed} ${where}`)
   } else {
-    addLog(state, playerId, 'summon', `${name}${placed} ${where}`)
+    const free = freeReason ? ` (ไม่ต้องสังเวย: ${freeReason})` : ''
+    addLog(state, playerId, 'summon', `${name}${placed} ${where}${free}`)
   }
 }
 
@@ -319,12 +412,20 @@ function endBattle(state, playerId) {
   addLog(state, playerId, 'phase', `${PLAYER_NAMES[playerId]}จบเฟสต่อสู้ → เฟสหลัก 2`)
 }
 
-function damagePlayer(state, playerId, amount, details) {
+// battle = { ownMonster, opposingMonster } ใช้เช็กเอฟเฟกต์ลด/กันความเสียหายของผู้รับ
+function damagePlayer(state, playerId, amount, details, battle = {}) {
   const p = state.players[playerId]
+  const reduced = reduceBattleDamage(amount, { ...battle, ownFieldCards: getAllies(state, playerId, null) })
+  details.push(...reduced.steps)
+  if (reduced.amount === 0) {
+    details.push(`${PLAYER_NAMES[playerId]}ไม่เสีย LP`)
+    return
+  }
+  const dealt = reduced.amount
   const before = p.lp
-  p.lp = Math.max(0, before - amount)
+  p.lp = Math.max(0, before - dealt)
   details.push(
-    `${PLAYER_NAMES[playerId]}เสีย LP ${formatNumber(amount)}: ${formatNumber(before)} − ${formatNumber(amount)} = ${formatNumber(p.lp)}`
+    `${PLAYER_NAMES[playerId]}เสีย LP ${formatNumber(dealt)}: ${formatNumber(before)} − ${formatNumber(dealt)} = ${formatNumber(p.lp)}`
   )
   if (p.lp === 0) {
     state.winner = opponentOf(playerId)
@@ -349,24 +450,34 @@ function attack(state, playerId, attackerUid, targetUid) {
 
   const attacker = me.field.find((m) => m?.uid === attackerUid)
   if (!attacker) throw new GameRuleError('ไม่พบมอนสเตอร์ที่จะโจมตี')
-  if (attacker.hasAttacked) throw new GameRuleError('มอนสเตอร์ตัวนี้โจมตีไปแล้วในเทิร์นนี้')
   if (attacker.position === 'defense') throw new GameRuleError('มอนสเตอร์ท่าตั้งรับโจมตีไม่ได้')
+  if (!canDeclareAttack(state, playerId, attacker)) {
+    throw new GameRuleError('มอนสเตอร์ตัวนี้โจมตีไปแล้วในเทิร์นนี้')
+  }
 
   const attackerCard = cardOf(attacker)
   const details = []
+  const attackNo = attacksMade(attacker) + 1
+  const markAttacked = () => {
+    attacker.attackCount = attackNo
+    attacker.hasAttacked = true
+    if (attackNo > 1) details.push(`⚔️ โจมตีครั้งที่ ${attackNo}: ${getExtraAttack(attackerCard).reason}`)
+  }
 
   if (targetUid === null) {
     if (opp.field.some(Boolean)) {
       throw new GameRuleError('โจมตีตรงได้เมื่อฝ่ายตรงข้ามไม่มีมอนสเตอร์บนสนามเท่านั้น')
     }
-    attacker.hasAttacked = true
-    const boosts = getAtkBoosts(attackerCard, getAllies(state, playerId, attacker.uid))
-    const power = attackerCard.atk + boosts.reduce((sum, b) => sum + b.amount, 0)
-    const boostText = boosts.map((b) => ` + ${formatNumber(b.amount)} (${b.label}: ${b.reason})`).join('')
+    markAttacked()
+    const boosts = getAtkBoosts(attackerCard, getAllies(state, playerId, attacker.uid), getAllies(state, oppId, null))
+    const power = getFieldAtk(state, playerId, attacker.uid)
+    const boostText = boosts
+      .map((b) => `${b.amount < 0 ? ' − ' : ' + '}${formatNumber(Math.abs(b.amount))} (${b.label}: ${b.reason})`)
+      .join('')
     details.push(
       `ฝ่ายตรงข้ามไม่มีมอนสเตอร์ → โจมตีตรงด้วย ATK ${formatNumber(attackerCard.atk)}${boostText ? `${boostText} = ${formatNumber(power)}` : ''}`
     )
-    damagePlayer(state, oppId, power, details)
+    damagePlayer(state, oppId, power, details, { opposingMonster: attackerCard })
     addLog(state, playerId, 'battle', `⚔️ ${attackerCard.name} โจมตีตรง${PLAYER_NAMES[oppId]}!`, details)
     logLpKnockout(state)
     return
@@ -375,14 +486,15 @@ function attack(state, playerId, attackerUid, targetUid) {
   const defender = opp.field.find((m) => m?.uid === targetUid)
   if (!defender) throw new GameRuleError('ไม่พบมอนสเตอร์เป้าหมาย')
   const defenderCard = cardOf(defender)
-  const result = previewBattle(state, playerId, attacker.uid, defender.uid)
-  attacker.hasAttacked = true
+  markAttacked()
 
+  // เปิดการ์ดคว่ำก่อนคำนวณ เอฟเฟกต์ของการ์ดที่เพิ่งเปิดจึงมีผลในการต่อสู้นี้
   const inDefense = defender.position === 'defense'
   if (defender.faceDown) {
     defender.faceDown = false
     details.push(`เปิดการ์ดคว่ำ: ${defenderCard.name} (DEF ${formatNumber(defenderCard.def)})`)
   }
+  const result = previewBattle(state, playerId, attacker.uid, defender.uid)
 
   if (result.defender.cancelled.length > 0) {
     details.push(`🏹 ${attackerCard.name} ซุ่มโจมตี! ${defenderCard.name} ไม่ได้รับโบนัสธาตุ/เผ่า`)
@@ -390,33 +502,62 @@ function attack(state, playerId, attackerUid, targetUid) {
   details.push(`ฝ่ายโจมตี — ${describeSide(result.attacker)}`)
   details.push(`ฝ่ายรับ — ${describeSide(result.defender)}`)
 
+  // คิดความเสียหายก่อนทำลายการ์ด (เอฟเฟกต์ลดความเสียหายของตัวที่แพ้ยังมีผล)
+  const hitDefenderOwner = (amount) =>
+    damagePlayer(state, oppId, amount, details, { ownMonster: defenderCard, opposingMonster: attackerCard })
+  const hitAttackerOwner = (amount) =>
+    damagePlayer(state, playerId, amount, details, { ownMonster: attackerCard, opposingMonster: defenderCard })
+
   const a = formatNumber(result.attacker.final)
   const d = formatNumber(result.defender.final)
+  const diff = formatNumber(result.damage)
   if (inDefense) {
-    // ATK ปะทะ DEF: ตัวตั้งรับถูกทำลายได้แต่เจ้าของไม่เสีย LP · ตีไม่ผ่าน ฝ่ายโจมตีเสีย LP
+    // ATK ปะทะ DEF: ตัวตั้งรับถูกทำลายได้แต่เจ้าของไม่เสีย LP (ยกเว้นตีทะลุ) · ตีไม่ผ่าน ฝ่ายโจมตีเสีย LP
     if (result.outcome === 'attacker') {
-      details.push(`ATK ${a} > DEF ${d} → ${defenderCard.name} ถูกทำลาย (ท่าตั้งรับ ไม่เสีย LP)`)
+      const pierce = getPiercing(attackerCard)
+      if (pierce) {
+        const amount = Math.floor(result.damage * pierce.ratio)
+        details.push(`ATK ${a} > DEF ${d} → ${defenderCard.name} ถูกทำลาย`)
+        details.push(
+          pierce.ratio === 1
+            ? `${attackerCard.name} ${pierce.reason}: ${a} − ${d} = ${formatNumber(amount)}`
+            : `${attackerCard.name} ${pierce.reason}: (${a} − ${d}) ÷ ${1 / pierce.ratio} = ${formatNumber(amount)}`
+        )
+        hitDefenderOwner(amount)
+      } else {
+        details.push(`ATK ${a} > DEF ${d} → ${defenderCard.name} ถูกทำลาย (ท่าตั้งรับ ไม่เสีย LP)`)
+      }
       destroyMonster(state, oppId, defender.uid)
     } else if (result.outcome === 'defender') {
-      details.push(
-        `ATK ${a} < DEF ${d} → ตีไม่ผ่าน ไม่มีใครถูกทำลาย (ส่วนต่าง ${d} − ${a} = ${formatNumber(result.damage)})`
-      )
-      damagePlayer(state, playerId, result.damage, details)
+      details.push(`ATK ${a} < DEF ${d} → ตีไม่ผ่าน ไม่มีใครถูกทำลาย (ส่วนต่าง ${d} − ${a} = ${diff})`)
+      hitAttackerOwner(result.damage)
     } else {
       details.push(`ATK ${a} = DEF ${d} → ไม่มีอะไรเกิดขึ้น`)
     }
   } else if (result.outcome === 'attacker') {
-    details.push(`${a} > ${d} → ${defenderCard.name} ถูกทำลาย (ส่วนต่าง ${a} − ${d} = ${formatNumber(result.damage)})`)
+    details.push(`${a} > ${d} → ${defenderCard.name} ถูกทำลาย (ส่วนต่าง ${a} − ${d} = ${diff})`)
+    hitDefenderOwner(result.damage)
     destroyMonster(state, oppId, defender.uid)
-    damagePlayer(state, oppId, result.damage, details)
   } else if (result.outcome === 'defender') {
-    details.push(`${a} < ${d} → ${attackerCard.name} ถูกทำลาย (ส่วนต่าง ${d} − ${a} = ${formatNumber(result.damage)})`)
+    details.push(`${a} < ${d} → ${attackerCard.name} ถูกทำลาย (ส่วนต่าง ${d} − ${a} = ${diff})`)
+    hitAttackerOwner(result.damage)
     destroyMonster(state, playerId, attacker.uid)
-    damagePlayer(state, playerId, result.damage, details)
   } else {
     details.push(`${a} = ${d} → เสมอ ทำลายทั้งคู่ ไม่มีใครเสีย LP`)
     destroyMonster(state, playerId, attacker.uid)
     destroyMonster(state, oppId, defender.uid)
+  }
+
+  // เอฟเฟกต์หลังคำนวณความเสียหาย: ทำลายคู่ต่อสู้ตามเผ่า (ถ้ายังอยู่บนสนาม)
+  for (const [card, foe, foeOwner, foeUid] of [
+    [attackerCard, defenderCard, oppId, defender.uid],
+    [defenderCard, attackerCard, playerId, attacker.uid],
+  ]) {
+    const effect = getAfterBattleDestroy(card, foe)
+    if (effect && state.players[foeOwner].field.some((m) => m?.uid === foeUid)) {
+      details.push(`${effect.reason}: ${foe.name} ถูกทำลาย`)
+      destroyMonster(state, foeOwner, foeUid)
+    }
   }
 
   const target = `${defenderCard.name}${inDefense ? ' (ท่าตั้งรับ)' : ''}`
@@ -465,7 +606,12 @@ function startNextTurn(state, endingPlayerId) {
   state.activePlayer = nextId
   state.phase = 'main1'
   next.hasNormalSummoned = false
-  for (const m of next.field) if (m) m.hasAttacked = false
+  for (const m of next.field) {
+    if (m) {
+      m.hasAttacked = false
+      m.attackCount = 0
+    }
+  }
 
   addLog(state, nextId, 'turn', `เทิร์น ${state.turn} — ตาของ${PLAYER_NAMES[nextId]}`)
 

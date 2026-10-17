@@ -23,14 +23,30 @@ import {
   isNormalSummonable,
   positionChangeBlocker,
   previewBattle,
+  getTributeCost,
   tributesRequired,
 } from '../../engine'
 import './BattleScreen.css'
 
 const AI_STEP_DELAY = { attack: 1100, default: 750 }
 
-const newGame = () =>
-  createGame({ seed: Date.now(), firstPlayer: Math.random() < 0.5 ? PLAYER : AI })
+// deckList / extraDeckList จากหน้าจัดสำรับ (ไม่ระบุ = สำรับเริ่มต้น) — AI ใช้สำรับเริ่มต้นเสมอ
+const newGame = (deckList, extraDeckList) =>
+  createGame({
+    seed: Date.now(),
+    firstPlayer: Math.random() < 0.5 ? PLAYER : AI,
+    ...(deckList && { deckList }),
+    ...(extraDeckList && { extraDeckList }),
+  })
+
+// สำรับที่ส่งมาใช้ไม่ได้ → เล่นด้วยสำรับเริ่มต้นแทน พร้อมข้อความแจ้ง
+function startGame(deckList, extraDeckList) {
+  try {
+    return { game: newGame(deckList, extraDeckList), deckError: null }
+  } catch (e) {
+    return { game: newGame(), deckError: `${e.message} — ใช้สำรับเริ่มต้นแทน` }
+  }
+}
 
 const OUTCOME_BADGE = {
   attacker: { tone: 'win', label: 'ชนะ' },
@@ -38,15 +54,16 @@ const OUTCOME_BADGE = {
   tie: { tone: 'tie', label: 'เสมอ' },
 }
 
-export default function BattleScreen({ active = true }) {
-  const [game, setGame] = useState(newGame)
+export default function BattleScreen({ active = true, deckList, extraDeckList }) {
+  const [initial] = useState(() => startGame(deckList, extraDeckList))
+  const [game, setGame] = useState(initial.game)
   const [selectedHandUid, setSelectedHandUid] = useState(null)
   const [attackerUid, setAttackerUid] = useState(null)
   const [inspectCard, setInspectCard] = useState(null)
   const [openPile, setOpenPile] = useState(null) // { playerId, kind }
   const [tributePick, setTributePick] = useState(null) // { handUid, selected: [uid], position }
   const [selectedFieldUid, setSelectedFieldUid] = useState(null) // มอนสเตอร์ของเราที่เปิดเมนูเปลี่ยนท่า
-  const [error, setError] = useState(null)
+  const [error, setError] = useState(initial.deckError)
 
   const me = game.players[PLAYER]
   const opp = game.players[AI]
@@ -59,7 +76,7 @@ export default function BattleScreen({ active = true }) {
   const oppHasMonsters = opp.field.some(Boolean)
   const tributeInst = tributePick ? me.hand.find((c) => c.uid === tributePick.handUid) : null
   const tributeCard = tributeInst ? cardOf(tributeInst) : null
-  const tributeNeeded = tributeCard ? tributesRequired(tributeCard) : 0
+  const tributeNeeded = tributeCard ? getTributeCost(game, PLAYER, tributeCard) : 0
 
   // ทำแอ็กชันของผู้เล่น — ผิดกติกาจะแสดงข้อความแทน
   function play(action) {
@@ -86,12 +103,13 @@ export default function BattleScreen({ active = true }) {
   }, [game, active])
 
   function restart() {
-    setGame(newGame())
+    const next = startGame(deckList, extraDeckList)
+    setGame(next.game)
     setSelectedHandUid(null)
     setAttackerUid(null)
     setTributePick(null)
     setSelectedFieldUid(null)
-    setError(null)
+    setError(next.deckError)
   }
 
   function onHandCardTap(inst) {
@@ -129,7 +147,7 @@ export default function BattleScreen({ active = true }) {
   }
 
   function startSummon(inst, position) {
-    if (tributesRequired(cardOf(inst)) > 0) {
+    if (getTributeCost(game, PLAYER, cardOf(inst)) > 0) {
       setSelectedHandUid(null)
       setTributePick({ handUid: inst.uid, selected: [], position })
       setError(null)
@@ -293,7 +311,7 @@ export default function BattleScreen({ active = true }) {
                 (m.uid === attackerUid || m.uid === selectedFieldUid) && 'mini-card--selected',
                 tributePick?.selected.includes(m.uid) && 'mini-card--tribute',
                 (tributePick || readyAttackers.has(m.uid)) && 'mini-card--ready',
-                m.hasAttacked && 'mini-card--spent',
+                m.hasAttacked && !readyAttackers.has(m.uid) && 'mini-card--spent',
               ]
                 .filter(Boolean)
                 .join(' ')
@@ -340,6 +358,7 @@ export default function BattleScreen({ active = true }) {
             canDiscard={isMyTurn && game.phase === 'discard'}
             hasSummoned={me.hasNormalSummoned}
             monsterCount={me.field.filter(Boolean).length}
+            tributeCost={getTributeCost(game, PLAYER, cardOf(selectedHand))}
             isMyTurn={isMyTurn}
             phase={game.phase}
             onSummon={(position) => startSummon(selectedHand, position)}
@@ -417,11 +436,11 @@ function FieldRow({ label, field, atkOf, onTap, classFor, renderBadge, hideFaceD
   )
 }
 
-function HandActionSheet({ card, canSummon, canDiscard, hasSummoned, monsterCount, isMyTurn, phase, onSummon, onDiscard, onInspect, onClose }) {
-  const required = tributesRequired(card)
+function HandActionSheet({ card, canSummon, canDiscard, hasSummoned, monsterCount, tributeCost, isMyTurn, phase, onSummon, onDiscard, onInspect, onClose }) {
+  const required = tributeCost
   let reason = null
   if (!canSummon && !canDiscard) {
-    if (required === 0 && !isNormalSummonable(card)) {
+    if (tributesRequired(card) === 0 && !isNormalSummonable(card)) {
       reason = card.type === 'monster' ? 'ต้องใช้พิธีกรรม/ผสานร่าง (ยังไม่เปิดในขั้นนี้)' : 'การ์ดเวท/กับดักยังใช้ไม่ได้ในขั้นนี้'
     } else if (!isMyTurn) reason = 'ยังไม่ถึงตาของคุณ'
     else if (phase !== 'main1' && phase !== 'main2') reason = 'อัญเชิญได้ในเฟสหลักเท่านั้น'

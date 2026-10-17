@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getCardById } from '../data/cards'
-import { GameRuleError, applyAction, createGame, getSummonableHand, tributesRequired } from './game'
+import { GameRuleError, applyAction, createGame, getSummonableHand, tributesRequired, validateDeck } from './game'
 import { AI, PLAYER, RULES } from './rules'
 import { handUid, lastLog, makeState, uidAt } from './testUtils'
 
@@ -30,6 +30,38 @@ describe('createGame', () => {
     expect(createGame({ seed: 7 }).players.player.hand).not.toEqual(
       createGame({ seed: 8 }).players.player.hand
     )
+  })
+})
+
+describe('สำรับจากหน้าจัดสำรับ', () => {
+  const custom = [['th01-011', 20], ['th01-017', 20]]
+
+  it('ผู้เล่นใช้สำรับที่ส่งมา ส่วน AI ใช้สำรับเริ่มต้น', () => {
+    const s = createGame({ seed: 1, deckList: custom, extraDeckList: [['th01-021', 1]] })
+    const mine = [...s.players.player.deck, ...s.players.player.hand].map((c) => c.cardId)
+    expect(mine).toHaveLength(40)
+    expect(new Set(mine)).toEqual(new Set(['th01-011', 'th01-017']))
+    expect(s.players.player.extraDeck.map((c) => c.cardId)).toEqual(['th01-021'])
+    expect(s.players.ai.deck.length + s.players.ai.hand.length).toBe(40)
+    expect(s.players.ai.extraDeck).toHaveLength(3)
+  })
+
+  it('บันทึกบอกขนาดสำรับแยกเมื่อไม่เท่ากัน', () => {
+    const s = createGame({ seed: 1, deckList: [['th01-011', 30]] })
+    expect(s.log[0].text).toContain('สำรับคุณ 30 ใบ · คู่ต่อสู้ 40 ใบ')
+  })
+
+  it('validateDeck จับรหัสผิด จำนวนผิด และการ์ดผิดกอง', () => {
+    expect(validateDeck(custom, [['th01-012', 1]])).toEqual([])
+    expect(validateDeck([['th99-999', 3]])).toEqual(['กองหลัก: ไม่พบการ์ดรหัส th99-999'])
+    expect(validateDeck([['th01-001', 0]])).toEqual(['กองหลัก: จำนวนของ th01-001 ไม่ถูกต้อง'])
+    expect(validateDeck([['th01-001', 3]])).toEqual(['กองหลักต้องมีมากกว่า 5 ใบ'])
+    expect(validateDeck(custom, [['th01-001', 1]])[0]).toContain('ไม่ใช่มอนสเตอร์ผสานร่าง')
+    expect(validateDeck([...custom, ['th01-012', 1]])[0]).toContain('ต้องอยู่กองพิเศษ')
+  })
+
+  it('สำรับใช้ไม่ได้ → createGame แจ้งเหตุผล', () => {
+    expect(() => createGame({ deckList: [['nope', 40]] })).toThrow('สำรับผู้เล่นใช้ไม่ได้: กองหลัก: ไม่พบการ์ดรหัส nope')
   })
 })
 

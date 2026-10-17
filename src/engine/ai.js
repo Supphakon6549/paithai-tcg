@@ -6,10 +6,10 @@ import {
   getReadyAttackers,
   getFieldAtk,
   getSummonableHand,
+  getTributeCost,
   isNormalSummonable,
   positionChangeBlocker,
   previewBattle,
-  tributesRequired,
 } from './game'
 import { AI, opponentOf } from './rules'
 
@@ -60,15 +60,17 @@ export function getAiAction(state, playerId = AI) {
  */
 function chooseSummon(state, playerId) {
   const options = [...getSummonableHand(state, playerId)].sort(byAtkDesc)
-  const bestNormal = options.find((inst) => isNormalSummonable(cardOf(inst)))
-  const bestTribute = options.find((inst) => tributesRequired(cardOf(inst)) > 0)
+  // cost = จำนวนตัวสังเวยจริง (0 = ลงได้เลย รวมการ์ดสังเวยที่เอฟเฟกต์ยกเว้นการสังเวย)
+  const costOf = (inst) => (isNormalSummonable(cardOf(inst)) ? 0 : getTributeCost(state, playerId, cardOf(inst)))
+  const bestNormal = options.find((inst) => costOf(inst) === 0)
+  const bestTribute = options.find((inst) => costOf(inst) > 0)
 
   if (bestTribute) {
     const card = cardOf(bestTribute)
     const fodder = state.players[playerId].field
       .filter(Boolean)
       .sort((a, b) => getFieldAtk(state, playerId, a.uid) - getFieldAtk(state, playerId, b.uid))
-      .slice(0, tributesRequired(card))
+      .slice(0, costOf(bestTribute))
     const beatsNormal = !bestNormal || card.atk > cardOf(bestNormal).atk
     const beatsFodder = fodder.every((m) => card.atk > getFieldAtk(state, playerId, m.uid))
     if (beatsNormal && beatsFodder) {
