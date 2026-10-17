@@ -25,9 +25,13 @@ function CardInspectorModal({ card, onClose, onSelectCard }) {
   const evoFromCards = (card.evolution?.evolvesFrom || [])
     .map((id) => getCardById(id))
     .filter(Boolean)
-  const evoToCard = card.evolution?.evolvesTo
-    ? getCardById(card.evolution.evolvesTo)
-    : null
+  const rawEvoTo = card.evolution?.evolvesTo
+  const evoToIds = Array.isArray(rawEvoTo)
+    ? rawEvoTo
+    : rawEvoTo
+    ? [rawEvoTo]
+    : []
+  const evoToCards = evoToIds.map((id) => getCardById(id)).filter(Boolean)
   const ritualCard = card.evolution?.ritualCardId
     ? getCardById(card.evolution.ritualCardId)
     : null
@@ -212,18 +216,23 @@ function CardInspectorModal({ card, onClose, onSelectCard }) {
                     </button>
                   )}
 
-                  {evoToCard && (
+                  {evoToCards.map((nextCard) => (
                     <button
+                      key={nextCard.id}
                       type="button"
                       className="evo-chip evo-chip--next"
-                      onClick={() => onSelectCard(evoToCard)}
+                      onClick={() => onSelectCard(nextCard)}
                     >
-                      <span>วิวัฒนาการ / ผสานสู่:</span>
+                      <span>
+                        {nextCard.summonType === 'fusion'
+                          ? 'สายผสานร่างสู่:'
+                          : 'เลื่อนขั้นสู่:'}
+                      </span>
                       <strong>
-                        {evoToCard.setCode} {evoToCard.name}
+                        {nextCard.setCode} {nextCard.name}
                       </strong>
                     </button>
-                  )}
+                  ))}
 
                   {ritualTarget && (
                     <button
@@ -256,7 +265,18 @@ function App() {
 
   const filteredCards = useMemo(() => {
     return CARDS.filter((card) => {
-      if (selectedGroup !== 'all' && card.groupTag !== selectedGroup) return false
+      if (selectedGroup !== 'all') {
+        if (selectedGroup === 'spell-trap') {
+          const isSpellOrTrap =
+            card.groupTag === 'spell-trap' ||
+            card.type === 'spell' ||
+            card.type === 'trap' ||
+            card.type === 'ritual'
+          if (!isSpellOrTrap) return false
+        } else if (card.groupTag !== selectedGroup) {
+          return false
+        }
+      }
       if (selectedType !== 'all' && card.type !== selectedType) return false
       if (selectedElement !== 'all') {
         const matchesPrimary = card.element === selectedElement
@@ -276,9 +296,9 @@ function App() {
     <div className="app">
       <header className="app__header">
         <p className="app__eyebrow">ไพ่ไทย TCG · คลังการ์ดต้นแบบ</p>
-        <h1 className="app__title">ชุดปฐมบท: ตำนานหิมพานต์และศรัทธา</h1>
+        <h1 className="app__title">ชุดปฐมบท: ตำนานหิมพานต์และกองทัพอยุธยา</h1>
         <p className="app__subtitle">
-          การ์ดต้นแบบ 15 ใบ · 4 ประเภทการ์ด · 8 ธาตุ · 3 สายวิวัฒนาการ · 5 ระบบอัญเชิญ
+          การ์ดต้นแบบ 24 ใบ · 4 ประเภทการ์ด · 8 ธาตุ · ระบบแตกสายวิวัฒนาการและผสานร่างข้ามเผ่า
         </p>
       </header>
 

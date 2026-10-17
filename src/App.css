@@ -464,3 +464,159 @@
   background: rgba(16, 185, 129, 0.16);
   border-color: rgba(52, 211, 153, 0.45);
 }
+
+/* =========================================================
+   การปรับสำหรับมือถือ (จอกว้างไม่เกิน 640px)
+   ========================================================= */
+@media (max-width: 640px) {
+  .app {
+    gap: 14px;
+    padding: 20px 12px 56px;
+  }
+
+  /* หัวเว็บกระชับขึ้น ให้เห็นการ์ดเร็วขึ้น */
+  .app__eyebrow {
+    font-size: 10.5px;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+  }
+
+  .app__title {
+    font-size: 20px;
+    line-height: 1.35;
+    margin-bottom: 4px;
+  }
+
+  .app__subtitle {
+    font-size: 12px;
+  }
+
+  /* ตัวกรอง: แต่ละกลุ่มเป็นแถบเลื่อนแนวนอนบรรทัดเดียว */
+  .gallery-controls {
+    gap: 8px;
+    padding: 10px 0;
+    border-radius: 8px;
+  }
+
+  .filter-row,
+  .filter-group {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding: 0 10px;
+    /* ไล่ขอบขวาให้รู้ว่าเลื่อนต่อได้ */
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
+
+  .filter-row::-webkit-scrollbar,
+  .filter-group::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-btn,
+  .chip-btn,
+  .filter-label {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .filter-btn {
+    padding: 6px 12px;
+    font-size: 12.5px;
+  }
+
+  .chip-btn {
+    padding: 5px 10px;
+  }
+
+  .filter-subrow {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .search-box {
+    min-width: 0;
+    max-width: none;
+    padding: 0 10px;
+  }
+
+  .gallery-status {
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 11.5px;
+  }
+
+  /* การ์ดแถวละ 2 ใบ: ย่อทั้งใบตามสัดส่วนด้วย zoom ไม่ให้เลย์เอาต์ในการ์ดเพี้ยน */
+  .app__stage {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-items: center;
+    gap: 10px;
+  }
+
+  .app__stage .tc {
+    max-width: none;
+    zoom: 0.5;
+  }
+
+  .app__stage .tc:active {
+    transform: scale(0.97);
+  }
+
+  /* หน้ารายละเอียดการ์ด */
+  .modal-backdrop {
+    padding: 8px;
+  }
+
+  .modal-panel {
+    max-height: 96svh;
+    padding: 46px 14px 16px;
+  }
+
+  .modal-close {
+    top: 8px;
+    right: 8px;
+    z-index: 5;
+  }
+
+  .modal-grid {
+    gap: 16px;
+  }
+
+  .modal-title {
+    font-size: 21px;
+    gap: 4px 10px;
+  }
+
+  .modal-stat-strip {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+/* ขยายขนาดการ์ดตามความกว้างจอ (ช่องละครึ่งจอ) */
+@media (min-width: 375px) and (max-width: 640px) {
+  .app__stage .tc { zoom: 0.55; }
+}
+@media (min-width: 412px) and (max-width: 640px) {
+  .app__stage .tc { zoom: 0.6; }
+}
+@media (min-width: 480px) and (max-width: 640px) {
+  .app__stage .tc { zoom: 0.7; }
+}
+@media (min-width: 560px) and (max-width: 640px) {
+  .app__stage .tc { zoom: 0.84; }
+}
+
+/* จอแคบมาก: ย่อการ์ดในหน้ารายละเอียดเล็กน้อยให้พอดีกรอบ */
+@media (max-width: 370px) {
+  .modal-card-preview .tc { zoom: 0.92; max-width: none; }
+}

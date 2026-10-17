@@ -20,11 +20,12 @@ export const SUMMON_TYPES = {
 }
 
 export const CARD_GROUPS = {
-  all: { id: 'all', name: 'ทั้งหมด (15 ใบ)', icon: '🃏' },
-  'xp-hunter': { id: 'xp-hunter', name: 'สายเก็บประสบการณ์ (พรานป่า)', icon: '🏹' },
-  'ritual-faith': { id: 'ritual-faith', name: 'สายพิธีกรรม (พุทธคุณ)', icon: '🙏' },
-  'himmapan-fusion': { id: 'himmapan-fusion', name: 'สายผสานร่าง & ตำนานหิมพานต์', icon: '⚡' },
-  'spell-trap': { id: 'spell-trap', name: 'เวทมนตร์ & กับดัก', icon: '📜' },
+  all: { id: 'all', name: 'ทั้งหมด (24 ใบ)', icon: '🃏' },
+  'warrior-beast': { id: 'warrior-beast', name: 'สายทหารหาญ & สัตว์ศึก (9)', icon: '⚔️' },
+  'xp-hunter': { id: 'xp-hunter', name: 'สายเก็บประสบการณ์ พรานป่า (4)', icon: '🏹' },
+  'ritual-faith': { id: 'ritual-faith', name: 'สายพิธีกรรม พุทธคุณ (6)', icon: '🙏' },
+  'himmapan-fusion': { id: 'himmapan-fusion', name: 'สายตำนานหิมพานต์ (5)', icon: '⚡' },
+  'spell-trap': { id: 'spell-trap', name: 'รวมเวทมนตร์ / กับดัก / พิธีกรรม (6)', icon: '📜' },
 }
 
 export const getCardById = (id) => CARDS.find((card) => card.id === id)
@@ -53,7 +54,6 @@ export function getCardMatchupInfo(card) {
   const tribe = card.tribe ? TRIBES[card.tribe] : null
 
   if (tribe) {
-    // ใน tribes.js: weakAgainst หมายถึงเผ่าที่เผ่านี้ชนะ (เช่น นก -> แมลง -> พืช -> สัตว์เลื้อยคลาน -> สัตว์ใหญ่ -> นก)
     // ตาม GDD: นก -> แมลง -> พืช -> สัตว์เลื้อยคลาน -> สัตว์ใหญ่ -> นก และ อสูร -> วิญญาณ -> เทวดา -> อสูร
     const TRIBE_BEATS_MAP = {
       bird: 'insect',

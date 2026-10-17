@@ -41,14 +41,14 @@ export type SummonType =
   | 'fusion'  // มอนสเตอร์ 2 ตัว + คาถาผสาน
   | 'spirit'; // อัญเชิญจาก Graveyard ด้วย "น้ำมนต์"
 
-export type EvolutionPathType = 'ritual' | 'xp' | 'fusion';
+export type EvolutionPathType = 'ritual' | 'xp' | 'fusion' | 'branch';
 
 export interface EvolutionInfo {
   path: EvolutionPathType;
   stage?: number;
   maxStage?: number;
-  evolvesFrom?: string[]; // Card IDs
-  evolvesTo?: string;     // Card ID
+  evolvesFrom?: string[];          // Card IDs
+  evolvesTo?: string | string[];   // รองรับการแตกสายหลายทาง (Multi-branch Evolution)
   conditionText: string;
   ritualCardId?: string;
   fusionSpellId?: string;
@@ -66,7 +66,7 @@ export interface BaseCard {
   image: string;
   effectText: string;
   flavorText: string;
-  groupTag: 'xp-hunter' | 'ritual-faith' | 'himmapan-fusion' | 'spell-trap' | 'promo';
+  groupTag: 'xp-hunter' | 'ritual-faith' | 'himmapan-fusion' | 'warrior-beast' | 'spell-trap' | 'promo';
   evolution?: EvolutionInfo;
 }
 

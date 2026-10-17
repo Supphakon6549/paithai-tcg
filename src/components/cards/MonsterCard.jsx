@@ -18,11 +18,13 @@ const PATH_LABELS = {
   xp: 'สายเก็บประสบการณ์',
   ritual: 'สายพิธีกรรม',
   fusion: 'สายผสานร่าง',
+  branch: 'แตกสายได้',
 }
 
 export default function MonsterCard({ card, onClick, isSelected = false }) {
   const cardRef = useRef(null)
   const [imgError, setImgError] = useState(false)
+  const [isPortrait, setIsPortrait] = useState(false)
 
   const element = ELEMENTS[card.element] || ELEMENTS.void
   const tribe = card.tribe ? TRIBES[card.tribe] : null
@@ -144,15 +146,29 @@ export default function MonsterCard({ card, onClick, isSelected = false }) {
         </div>
 
         {/* 3. กรอบภาพประกอบ (Art Box) แบบย่อมุม */}
-        <div className="tc__art-frame">
+        <div className={`tc__art-frame${isPortrait ? ' tc__art-frame--portrait' : ''}`}>
           {card.image && !imgError ? (
-            <img
-              className="tc__art-img"
-              src={card.image}
-              alt={card.name}
-              loading="lazy"
-              onError={() => setImgError(true)}
-            />
+            <>
+              {/* รูปแนวตั้ง: แสดงเต็มรูปไม่ตัด และเติมด้านข้างด้วยภาพเดียวกันแบบเบลอ */}
+              {isPortrait && (
+                <div
+                  className="tc__art-backdrop"
+                  style={{ backgroundImage: `url(${card.image})` }}
+                  aria-hidden="true"
+                />
+              )}
+              <img
+                className="tc__art-img"
+                src={card.image}
+                alt={card.name}
+                loading="lazy"
+                onLoad={(e) => {
+                  const { naturalWidth: w, naturalHeight: h } = e.currentTarget
+                  setIsPortrait(h > w)
+                }}
+                onError={() => setImgError(true)}
+              />
+            </>
           ) : (
             <div className="tc__art-fallback" />
           )}
