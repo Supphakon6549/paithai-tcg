@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import MonsterCard from './components/cards/MonsterCard'
+import BattleScreen from './components/battle/BattleScreen'
 import { ElementSeal, RarityGem } from './components/cards/ThaiIcons'
 import {
   CARDS,
@@ -256,7 +257,48 @@ function CardInspectorModal({ card, onClose, onSelectCard }) {
   )
 }
 
+const VIEWS = [
+  { id: 'gallery', label: '🃏 คลังการ์ด' },
+  { id: 'battle', label: '⚔️ ต่อสู้' },
+]
+
 function App() {
+  const [view, setView] = useState('gallery')
+  // เปิดหน้าต่อสู้ครั้งแรกแล้วให้ค้างไว้ สลับแท็บกลับมาเกมยังอยู่
+  const [battleOpened, setBattleOpened] = useState(false)
+
+  const switchView = (id) => {
+    setView(id)
+    if (id === 'battle') setBattleOpened(true)
+  }
+
+  return (
+    <div className={`app${view === 'battle' ? ' app--battle' : ''}`}>
+      <nav className="view-tabs" aria-label="เลือกหน้า">
+        {VIEWS.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            className={`view-tabs__btn${view === v.id ? ' view-tabs__btn--active' : ''}`}
+            aria-current={view === v.id ? 'page' : undefined}
+            onClick={() => switchView(v.id)}
+          >
+            {v.label}
+          </button>
+        ))}
+      </nav>
+
+      {battleOpened && (
+        <div className="view-panel" hidden={view !== 'battle'}>
+          <BattleScreen active={view === 'battle'} />
+        </div>
+      )}
+      {view === 'gallery' && <GalleryView />}
+    </div>
+  )
+}
+
+function GalleryView() {
   const [selectedGroup, setSelectedGroup] = useState('all')
   const [selectedType, setSelectedType] = useState('all')
   const [selectedElement, setSelectedElement] = useState('all')
@@ -293,7 +335,7 @@ function App() {
   }, [selectedGroup, selectedType, selectedElement, searchQuery])
 
   return (
-    <div className="app">
+    <>
       <header className="app__header">
         <p className="app__eyebrow">ไพ่ไทย TCG · คลังการ์ดต้นแบบ</p>
         <h1 className="app__title">ชุดปฐมบท: ตำนานหิมพานต์และกองทัพอยุธยา</h1>
@@ -415,7 +457,7 @@ function App() {
         onClose={() => setActiveCard(null)}
         onSelectCard={(c) => setActiveCard(c)}
       />
-    </div>
+    </>
   )
 }
 

@@ -620,3 +620,46 @@
 @media (max-width: 370px) {
   .modal-card-preview .tc { zoom: 0.92; max-width: none; }
 }
+
+/* ----- สลับหน้า คลังการ์ด / ต่อสู้ ----- */
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #17120e;
+  border: 1px solid rgba(197, 155, 56, 0.3);
+  border-radius: 999px;
+}
+
+.view-tabs__btn {
+  min-height: 40px;
+  padding: 6px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: rgba(242, 229, 201, 0.72);
+  font-family: 'Sarabun', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.view-tabs__btn--active {
+  background: linear-gradient(180deg, #d4ab4a, #9c7424);
+  color: #1a1209;
+}
+
+.view-panel {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.view-panel[hidden] {
+  display: none;
+}
+
+.app--battle {
+  gap: 12px;
+  padding: 12px 16px 32px;
+}

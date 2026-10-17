@@ -1,0 +1,712 @@
+/* ==========================================================================
+   หน้าต่อสู้ — ออกแบบสำหรับจอมือถือก่อน (≥ 320px) แล้วขยายบนจอใหญ่
+   การ์ดใช้ MonsterCard เดิม (กว้าง 316px) ย่อด้วย zoom ผ่าน --mini-zoom
+   ========================================================================== */
+
+.battle {
+  --gold: #c59b38;
+  --gold-light: #ebd183;
+  --panel: #17120e;
+  --panel-line: rgba(197, 155, 56, 0.28);
+  --text: #f2e5c9;
+  --text-dim: rgba(242, 229, 201, 0.66);
+  --win: #5fc27a;
+  --lose: #e0574a;
+  --tie: #d8b54a;
+  --field-zoom: 0.165;
+  --st-zoom: 0.13;
+  --hand-zoom: 0.28;
+
+  width: 100%;
+  max-width: 1100px;
+  display: grid;
+  gap: 8px;
+  color: var(--text);
+  font-family: 'Sarabun', sans-serif;
+}
+
+/* ----- แถบผู้เล่น ----- */
+.player-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.player-bar--active {
+  border-color: var(--gold-light);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 16px rgba(197, 155, 56, 0.25);
+}
+
+.player-bar__name {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.player-bar__lp {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.player-bar__lp-label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.player-bar__lp-num {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold-light);
+  animation: lp-flash 0.6s ease-out;
+}
+
+@keyframes lp-flash {
+  0% { color: #fff; transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+.player-bar__lp-track {
+  height: 6px;
+  min-width: 30px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.player-bar__lp-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--lose), var(--tie) 50%, var(--win));
+  background-size: 300% 100%;
+  background-position: right;
+  transition: width 0.5s ease;
+}
+
+.player-bar__counts {
+  display: flex;
+  gap: 8px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ----- สนาม 5 ช่อง ----- */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(5, calc(316px * var(--field-zoom)));
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0 10px;
+  --mini-zoom: var(--field-zoom);
+}
+
+.field-row__slot {
+  width: calc(316px * var(--field-zoom));
+  aspect-ratio: 63 / 88;
+  border: 1px dashed rgba(197, 155, 56, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ----- การ์ดย่อ ----- */
+.mini-card {
+  position: relative;
+  display: block;
+  flex: none;
+  width: calc(316px * var(--mini-zoom));
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.2s ease, filter 0.2s ease;
+}
+
+.mini-card__scale {
+  display: block;
+  width: 316px;
+  zoom: var(--mini-zoom);
+  pointer-events: none;
+}
+
+.mini-card__scale .tc {
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
+}
+
+.mini-card__atk {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--element-color, var(--gold));
+  background: rgba(14, 11, 9, 0.92);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-card__atk--boosted {
+  color: #9ff0b4;
+  border-color: var(--win);
+}
+
+.mini-card__badge {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 3px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  color: #120d08;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mini-card__badge-detail {
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-card__badge--win { background: var(--win); }
+.mini-card__badge--lose { background: var(--lose); color: #fff; }
+.mini-card__badge--tie { background: var(--tie); }
+
+.mini-card--ready {
+  filter: drop-shadow(0 0 5px rgba(235, 209, 131, 0.75));
+}
+
+.mini-card--selected {
+  transform: translateY(-6px);
+  outline: 2px solid var(--gold-light);
+  outline-offset: 2px;
+}
+
+.mini-card--spent {
+  opacity: 0.55;
+  filter: grayscale(0.5);
+}
+
+.mini-card--target {
+  animation: target-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes target-pulse {
+  50% { filter: drop-shadow(0 0 8px rgba(224, 87, 74, 0.9)); }
+}
+
+.mini-card--discardable {
+  outline: 1px dashed var(--lose);
+  outline-offset: 2px;
+}
+
+.mini-card:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+
+/* ----- กระดานแต่ละฝ่าย (มือถือ: เรียงเป็นแถว · ฝ่ายตรงข้ามกลับด้าน) ----- */
+.board-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.board-side--opp {
+  flex-direction: column-reverse;
+}
+
+.zone-row--st {
+  --mini-zoom: var(--st-zoom);
+  display: grid;
+  grid-template-columns: repeat(5, calc(316px * var(--st-zoom)));
+  justify-content: center;
+  gap: 6px;
+}
+
+.zone-slot {
+  display: grid;
+  place-items: center;
+  width: calc(316px * var(--st-zoom));
+  aspect-ratio: 63 / 88;
+  border: 1px dashed rgba(94, 184, 194, 0.35);
+  border-radius: 5px;
+  background: rgba(94, 184, 194, 0.04);
+  font-size: 13px;
+  opacity: 0.55;
+}
+
+.pile-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.pile {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 3px 10px;
+  border: 1px solid var(--panel-line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+button.pile {
+  cursor: pointer;
+}
+
+button.pile:hover {
+  border-color: var(--gold);
+}
+
+.pile__body {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pile__label {
+  color: var(--text-dim);
+}
+
+.pile__count {
+  font-weight: 700;
+  color: var(--gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+.pile--field .mini-card {
+  --mini-zoom: var(--st-zoom);
+}
+
+/* มือถือแคบ: ซ่อนชื่อกอง เหลือไอคอน + จำนวน ให้อยู่บรรทัดเดียว */
+@media (max-width: 479px) {
+  .pile { padding: 3px 9px; }
+  .pile__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* ----- หน้าต่างดูสุสาน / กองพิเศษ ----- */
+.pile-viewer {
+  --mini-zoom: 0.28;
+  width: min(100%, 560px);
+  max-height: 80svh;
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+}
+
+.pile-viewer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.pile-viewer__title {
+  margin: 0;
+  font-family: 'Chonburi', 'Noto Serif Thai', serif;
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--gold-light);
+}
+
+.pile-viewer__grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 10px;
+  padding-bottom: 8px;
+}
+
+.pile-viewer__empty,
+.pile-viewer__note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ----- แถบสถานะกลางกระดาน ----- */
+.battle__status {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  background:
+    linear-gradient(90deg, transparent, rgba(197, 155, 56, 0.12), transparent),
+    var(--panel);
+  border-block: 1px solid var(--panel-line);
+  text-align: center;
+}
+
+.battle__turn {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 10px;
+  font-size: 13px;
+}
+
+.battle__turn-num {
+  font-family: 'Chonburi', 'Noto Serif Thai', serif;
+  color: var(--gold-light);
+}
+
+.battle__whose--player { color: var(--win); font-weight: 700; }
+.battle__whose--ai { color: var(--lose); font-weight: 700; }
+
+.battle__phase {
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-line);
+}
+
+.battle__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.battle__error {
+  margin: 0;
+  font-size: 13px;
+  color: #ff8f84;
+}
+
+.battle__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ----- ปุ่ม ----- */
+.btn {
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-line);
+  background: #241b13;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) { border-color: var(--gold); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn--primary {
+  background: linear-gradient(180deg, #d4ab4a, #9c7424);
+  border-color: var(--gold-light);
+  color: #1a1209;
+}
+
+.btn--danger {
+  background: linear-gradient(180deg, #c8493d, #8c2a21);
+  border-color: #f08a7f;
+  color: #fff;
+}
+
+/* ----- มือ ----- */
+.hand {
+  --mini-zoom: var(--hand-zoom);
+  display: grid;
+  gap: 8px;
+}
+
+.hand__row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 4px 14px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hand__row > .mini-card { scroll-snap-align: start; }
+
+.hand__empty {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.hand-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+}
+
+.hand-sheet__info {
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.hand-sheet__info strong { font-size: 15px; }
+.hand-sheet__reason { color: #ff8f84; }
+
+.hand-sheet__buttons {
+  display: flex;
+  gap: 6px;
+}
+
+/* ----- บันทึกการต่อสู้ ----- */
+.battle-log {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+}
+
+.battle-log__title {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--panel-line);
+  font-family: 'Chonburi', 'Noto Serif Thai', serif;
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--gold-light);
+}
+
+.battle-log__list {
+  margin: 0;
+  padding: 6px 10px 10px;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.log-entry {
+  padding: 5px 0 5px 8px;
+  border-left: 2px solid transparent;
+}
+
+.log-entry + .log-entry { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+.log-entry--player { border-left-color: var(--win); }
+.log-entry--ai { border-left-color: var(--lose); }
+
+.log-entry__text { margin: 0; }
+
+.log-entry--turn .log-entry__text {
+  font-weight: 700;
+  color: var(--gold-light);
+}
+
+.log-entry--system .log-entry__text,
+.log-entry--draw .log-entry__text,
+.log-entry--phase .log-entry__text {
+  color: var(--text-dim);
+}
+
+.log-entry--battle .log-entry__text { font-weight: 700; }
+
+.log-entry--gameover .log-entry__text {
+  font-weight: 700;
+  color: var(--tie);
+}
+
+.log-entry__details {
+  margin: 3px 0 0;
+  padding: 4px 8px 4px 18px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  font-variant-numeric: tabular-nums;
+  color: rgba(242, 229, 201, 0.85);
+}
+
+/* ----- ป๊อปอัป ----- */
+.battle-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  background: rgba(5, 4, 3, 0.86);
+}
+
+.battle-modal__card {
+  width: 316px;
+  zoom: 0.92;
+}
+
+.battle-modal__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.result-panel {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  width: min(100%, 360px);
+  padding: 24px 20px;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.result-panel__title {
+  margin: 0;
+  font-family: 'Chonburi', 'Noto Serif Thai', serif;
+  font-size: 30px;
+  color: var(--gold-light);
+}
+
+.result-panel__reason,
+.result-panel__score {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+/* ----- จอใหญ่ขึ้น ----- */
+@media (min-width: 360px) {
+  .battle { --field-zoom: 0.18; --st-zoom: 0.14; }
+}
+
+@media (min-width: 400px) {
+  .battle { --field-zoom: 0.2; --st-zoom: 0.15; }
+}
+
+@media (min-width: 520px) {
+  .battle { --field-zoom: 0.25; --st-zoom: 0.19; --hand-zoom: 0.32; }
+  .mini-card__atk { font-size: 12px; }
+  .mini-card__badge { padding: 1px 5px; font-size: 10px; }
+}
+
+@media (min-width: 720px) {
+  .battle { --field-zoom: 0.26; --st-zoom: 0.2; --hand-zoom: 0.36; }
+  .field-row { gap: 10px; }
+  .battle-modal__card { zoom: 1; }
+}
+
+
+/* จอกว้าง: วางกองการ์ดเป็นช่องข้างสนามแบบกระดานจริง
+   ฝั่งเรา:      [เวทสนาม] [มอนสเตอร์ ×5] [สุสาน]
+                 [กองพิเศษ] [เวท/กับดัก ×5] [กองการ์ด]
+   ฝั่งคู่ต่อสู้ หมุน 180° */
+@media (min-width: 720px) {
+  .board-side {
+    --pile-w: calc(316px * var(--field-zoom));
+    display: grid;
+    grid-template-columns: var(--pile-w) auto var(--pile-w);
+    justify-content: center;
+    align-items: center;
+    gap: 6px 14px;
+  }
+  .board-side--me {
+    grid-template-areas:
+      'field monsters grave'
+      'extra st deck';
+  }
+  .board-side--opp {
+    grid-template-areas:
+      'deck st extra'
+      'grave monsters field';
+  }
+  .board-side__monsters { grid-area: monsters; }
+  .zone-row--st { grid-area: st; }
+  .pile-row { display: contents; }
+  .pile--field { grid-area: field; }
+  .pile--grave { grid-area: grave; }
+  .pile--extra { grid-area: extra; }
+  .pile--deck { grid-area: deck; }
+
+  .pile {
+    justify-content: center;
+    width: var(--pile-w);
+    aspect-ratio: 63 / 88;
+    padding: 4px;
+    border-radius: 6px;
+    border-style: dashed;
+  }
+  .pile__body {
+    flex-direction: column;
+    gap: 2px;
+    text-align: center;
+  }
+  .pile__icon { font-size: 20px; }
+  .pile__count { font-size: 16px; }
+  .pile--back {
+    border: 2px solid var(--gold);
+    background:
+      radial-gradient(circle at 50% 50%, rgba(235, 209, 131, 0.28) 0 22%, transparent 23%),
+      repeating-linear-gradient(45deg, #5a1d16 0 6px, #3d120d 6px 12px);
+  }
+  .pile--back .pile__body {
+    padding: 4px 2px;
+    border-radius: 4px;
+    background: rgba(14, 11, 9, 0.75);
+  }
+  .pile--field { border-color: rgba(94, 184, 194, 0.45); }
+  .pile--field .mini-card { --mini-zoom: var(--field-zoom); }
+}
+
+/* เดสก์ท็อป: กระดานซ้าย บันทึกขวา */
+@media (min-width: 1000px) {
+  .battle {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+  }
+  .battle > :not(.battle-log):not(.battle-modal) { grid-column: 1; }
+  .battle-log {
+    grid-column: 2;
+    grid-row: 1 / span 6;
+    position: sticky;
+    top: 16px;
+    max-height: calc(100svh - 32px);
+  }
+  .battle-log__list { max-height: none; }
+}
