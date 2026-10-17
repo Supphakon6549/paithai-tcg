@@ -340,7 +340,7 @@ function GalleryView() {
         <p className="app__eyebrow">ไพ่ไทย TCG · คลังการ์ดต้นแบบ</p>
         <h1 className="app__title">ชุดปฐมบท: ตำนานหิมพานต์และกองทัพอยุธยา</h1>
         <p className="app__subtitle">
-          การ์ดต้นแบบ 24 ใบ · 4 ประเภทการ์ด · 8 ธาตุ · ระบบแตกสายวิวัฒนาการและผสานร่างข้ามเผ่า
+          การ์ดต้นแบบ {CARDS.length} ใบ · 4 ประเภทการ์ด · 8 ธาตุ · ระบบแตกสายวิวัฒนาการและผสานร่างข้ามเผ่า
         </p>
       </header>
 
@@ -353,7 +353,7 @@ function GalleryView() {
               className={`filter-btn${selectedGroup === grp.id ? ' filter-btn--active' : ''}`}
               onClick={() => setSelectedGroup(grp.id)}
             >
-              <span>{grp.name}</span>
+              <span>{grp.name} ({CARDS.filter((card) => grp.id === 'all' || (grp.id === 'spell-trap' ? card.type !== 'monster' : card.groupTag === grp.id)).length})</span>
             </button>
           ))}
         </div>
@@ -462,3 +462,4 @@ function GalleryView() {
 }
 
 export default App
+

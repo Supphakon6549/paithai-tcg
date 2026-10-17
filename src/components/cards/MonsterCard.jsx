@@ -5,21 +5,13 @@ import { RARITIES } from '../../data/rarities'
 import { CARD_TYPES, SUMMON_TYPES } from '../../data/cards'
 import {
   ElementSeal,
+  HolofoilStamp,
   LevelCrystal,
   RarityGem,
-  ShieldIcon,
-  SwordIcon,
 } from './ThaiIcons'
 import './MonsterCard.css'
 
 const FOIL_RARITIES = new Set(['gold', 'emerald', 'divine'])
-
-const PATH_LABELS = {
-  xp: 'สายเก็บประสบการณ์',
-  ritual: 'สายพิธีกรรม',
-  fusion: 'สายผสานร่าง',
-  branch: 'แตกสายได้',
-}
 
 export default function MonsterCard({ card, onClick, isSelected = false }) {
   const cardRef = useRef(null)
@@ -33,7 +25,10 @@ export default function MonsterCard({ card, onClick, isSelected = false }) {
   const cardType = CARD_TYPES[card.type] || CARD_TYPES.monster
   const summonInfo = card.summonType ? SUMMON_TYPES[card.summonType] : null
   const isFoil = FOIL_RARITIES.has(card.rarity)
-  const pathText = card.evolution?.path ? PATH_LABELS[card.evolution.path] : null
+
+  const isNormalMonster =
+    card.type === 'monster' &&
+    (!card.effectText || card.effectText.startsWith('มอนสเตอร์ปกติ'))
 
   const handleMouseMove = (event) => {
     const el = cardRef.current
@@ -41,8 +36,8 @@ export default function MonsterCard({ card, onClick, isSelected = false }) {
     const rect = el.getBoundingClientRect()
     const px = (event.clientX - rect.left) / rect.width
     const py = (event.clientY - rect.top) / rect.height
-    el.style.setProperty('--rx', `${(0.5 - py) * 8}deg`)
-    el.style.setProperty('--ry', `${(px - 0.5) * 8}deg`)
+    el.style.setProperty('--rx', `${(0.5 - py) * 7}deg`)
+    el.style.setProperty('--ry', `${(px - 0.5) * 7}deg`)
     el.style.setProperty('--mx', `${px * 100}%`)
     el.style.setProperty('--my', `${py * 100}%`)
   }
@@ -54,30 +49,23 @@ export default function MonsterCard({ card, onClick, isSelected = false }) {
     el.style.setProperty('--ry', '0deg')
   }
 
-  // สร้างข้อความแถบประเภทและเผ่าแบบไม่ต้องพึ่งอีโมจิ
-  let typeLineLeft = 'การ์ดมอนสเตอร์'
-  let typeLineCenter = ''
-  let typeLineRight = ''
-
+  // สร้างข้อความแถบประเภทตรงกลาง (Typeline Pill)
+  let typeLineText = ''
   if (card.type === 'monster') {
-    typeLineLeft = summonInfo ? summonInfo.badge : 'มอนสเตอร์'
-    if (tribe) {
-      typeLineCenter = `เผ่า${tribe.name}${secondaryTribe ? ` / ${secondaryTribe.name}` : ''}`
-    }
-    if (card.evolution?.stage) {
-      typeLineRight = `ขั้น ${card.evolution.stage}/${card.evolution.maxStage}`
-    } else if (pathText) {
-      typeLineRight = pathText
-    }
+    const tribePart = tribe
+      ? `เผ่า${tribe.name}${secondaryTribe ? `·${secondaryTribe.name}` : ''}`
+      : 'มอนสเตอร์'
+    const summonPart = summonInfo ? summonInfo.badge : 'ปกติ'
+    const stagePart = card.evolution?.stage
+      ? `ขั้น ${card.evolution.stage}/${card.evolution.maxStage}`
+      : null
+    typeLineText = [tribePart, summonPart, stagePart].filter(Boolean).join(' — ')
   } else if (card.type === 'spell') {
-    typeLineLeft = 'การ์ดเวทมนตร์'
-    typeLineCenter = card.spellSubtypeName || 'คาถาปกติ'
+    typeLineText = `การ์ดเวทมนตร์ — ${card.spellSubtypeName || 'คาถาปกติ'}`
   } else if (card.type === 'trap') {
-    typeLineLeft = 'การ์ดกับดัก'
-    typeLineCenter = card.trapSubtypeName || 'กับดักอาคม'
+    typeLineText = `การ์ดกับดัก — ${card.trapSubtypeName || 'กับดักอาคม'}`
   } else if (card.type === 'ritual') {
-    typeLineLeft = 'การ์ดพิธีกรรม'
-    typeLineCenter = `สังเวยระดับ ${card.requiredLevel}+`
+    typeLineText = `การ์ดพิธีกรรม — สังเวยระดับ ${card.requiredLevel}+`
   }
 
   return (
@@ -105,11 +93,20 @@ export default function MonsterCard({ card, onClick, isSelected = false }) {
           : undefined
       }
     >
+      {/* พื้นหลังบรรยากาศภาพเต็มใบ (Full-Bleed Ambient Art Backdrop) */}
+      {card.image && !imgError && (
+        <div
+          className="tc__ambient-bg"
+          style={{ backgroundImage: `url(${card.image})` }}
+          aria-hidden="true"
+        />
+      )}
+      <div className="tc__ambient-shade" aria-hidden="true" />
+
       {isFoil && <div className="tc__foil-glare" aria-hidden="true" />}
 
-      {/* โครงสร้างกรอบการ์ดพิมพ์จริงพร้อมเส้นลายไทยย่อมุม */}
       <div className="tc__inner">
-        {/* 1. ป้ายชื่อหัวการ์ด (Nameplate) + ตราธาตุ SVG */}
+        {/* 1. ป้ายชื่อทรงมงกุฎทองด้านบน (Crowned Gold Filigree Title Bar) */}
         <header className="tc__namebar">
           <h2 className="tc__title">{card.name}</h2>
           <div className="tc__seals">
@@ -119,37 +116,23 @@ export default function MonsterCard({ card, onClick, isSelected = false }) {
                 <ElementSeal
                   key={secElId}
                   elementId={secElId}
-                  size={20}
+                  size={17}
                   title={`ธาตุรอง: ธาตุ${secEl.name}`}
                 />
               ) : null
             })}
             <ElementSeal
               elementId={card.element}
-              size={28}
+              size={22}
               title={`ธาตุ${element.name} (${element.nameEn})`}
             />
           </div>
         </header>
 
-        {/* 2. แถบดาวระดับ / ชนิดการ์ด และรหัสชุด */}
-        <div className="tc__subbar">
-          {card.type === 'monster' ? (
-            <div className="tc__level-wrap">
-              <LevelCrystal level={card.level} />
-              <span className="tc__level-text">ระดับ {card.level}</span>
-            </div>
-          ) : (
-            <span className="tc__kind-tag">ประเภท: การ์ด{cardType.name}</span>
-          )}
-          <span className="tc__code">{card.setCode}</span>
-        </div>
-
-        {/* 3. กรอบภาพประกอบ (Art Box) แบบย่อมุม */}
+        {/* 2. หน้าต่างภาพประกอบ 4:3 (1200x896) เห็นตัวละครหัวจรดเท้าครบ */}
         <div className={`tc__art-frame${isPortrait ? ' tc__art-frame--portrait' : ''}`}>
           {card.image && !imgError ? (
             <>
-              {/* รูปแนวตั้ง: แสดงเต็มรูปไม่ตัด และเติมด้านข้างด้วยภาพเดียวกันแบบเบลอ */}
               {isPortrait && (
                 <div
                   className="tc__art-backdrop"
@@ -170,75 +153,69 @@ export default function MonsterCard({ card, onClick, isSelected = false }) {
               />
             </>
           ) : (
-            <div className="tc__art-fallback" />
+            <div className="tc__art-fallback">
+              <span>รอภาพประกอบ</span>
+            </div>
           )}
           <div className="tc__art-vignette" aria-hidden="true" />
-        </div>
 
-        {/* 4. แถบระบุเผ่าและสายการเล่น (Typeline Banner) */}
-        <div className="tc__typeline">
-          <span>{typeLineLeft}</span>
-          {typeLineCenter && (
-            <>
-              <span className="tc__diamond" aria-hidden="true">◆</span>
-              <span>{typeLineCenter}</span>
-            </>
-          )}
-          {typeLineRight && (
-            <>
-              <span className="tc__diamond" aria-hidden="true">◆</span>
-              <span className="tc__typeline-evo">{typeLineRight}</span>
-            </>
-          )}
-        </div>
-
-        {/* 5. กล่องข้อความสมุดข่อย (Parchment Rule Box) — อ่านง่ายคมชัดเหมือนการ์ดพิมพ์จริง */}
-        <div className="tc__textbox">
-          {card.effectText && <p className="tc__effect">{card.effectText}</p>}
-          {card.flavorText && (
-            <>
-              <div className="tc__divider" aria-hidden="true">
-                <span className="tc__divider-line" />
-                <span className="tc__divider-gem">❖</span>
-                <span className="tc__divider-line" />
+          {/* ป้ายแคปซูลรหัสการ์ดมุมซ้ายล่าง + เพชรทรงหยดน้ำบอกระดับมุมขวาล่าง */}
+          <div className="tc__capsule-row">
+            <span className="tc__code-pill">{card.setCode}</span>
+            {card.type === 'monster' && (
+              <div className="tc__level-pill">
+                <LevelCrystal level={card.level} />
               </div>
-              <p className="tc__flavor">{card.flavorText}</p>
-            </>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* 6. แถบค่าพลังโจมตี / ความหายาก / ป้องกัน */}
-        {card.type === 'monster' ? (
-          <footer className="tc__footer">
-            <div className="tc__stat-plate tc__stat-plate--atk">
-              <SwordIcon />
-              <span className="tc__stat-lbl">โจมตี</span>
-              <span className="tc__stat-num">{card.atk}</span>
-            </div>
+        {/* 3. แถบประเภทปลายมนขอบทอง (Gold-Rimmed Rounded Typeline Pill) */}
+        <div className="tc__typeline">
+          <span className="tc__typeline-text">{typeLineText}</span>
+          <span className="tc__typeline-gem" title={`ระดับ${rarity.name}`}>
+            <RarityGem rarityId={card.rarity} size={13} title={`ระดับ${rarity.name}`} />
+          </span>
+        </div>
 
-            <div className="tc__rarity-slot" title={`ความหายาก: ${rarity.name}`}>
-              <RarityGem rarityId={card.rarity} size={20} title={`ระดับ${rarity.name}`} />
-            </div>
+        {/* 4. กล่องข้อความสีนิลโปร่งแสงเส้นทอง (Dark Translucent Gold-Framed Text Box) */}
+        <div className="tc__textbox">
+          <div className="tc__text-scroll">
+            {isNormalMonster ? (
+              <p className="tc__flavor tc__flavor--main">“{card.flavorText}”</p>
+            ) : (
+              <>
+                {card.effectText && <p className="tc__effect">{card.effectText}</p>}
+                {card.flavorText && <p className="tc__flavor">“{card.flavorText}”</p>}
+              </>
+            )}
+          </div>
 
-            <div className="tc__stat-plate tc__stat-plate--def">
-              <ShieldIcon />
-              <span className="tc__stat-lbl">ป้องกัน</span>
-              <span className="tc__stat-num">{card.def}</span>
+          {/* ตราสามเหลี่ยมโฮโลแกรมกึ่งกลางเส้นขอบล่าง (แบบการ์ดในภาพแนบ) */}
+          <div className="tc__holo-slot">
+            <HolofoilStamp rarityId={card.rarity} />
+          </div>
+        </div>
+
+        {/* 5. แถบฐานการ์ดสีดำด้านล่างสุด + ป้ายค่าพลัง ATK / DEF ขอบทอง */}
+        <footer className="tc__footer">
+          <div className="tc__collector-info">
+            <span>{card.setCode} • ธาตุ{element.name}</span>
+            <span className="tc__collector-sub">ไพ่ไทย TCG • ระดับ{rarity.name}</span>
+          </div>
+
+          {card.type === 'monster' ? (
+            <div className="tc__pt-box" title={`โจมตี ${card.atk} / ป้องกัน ${card.def}`}>
+              <span className="tc__pt-atk">{card.atk}</span>
+              <span className="tc__pt-slash">/</span>
+              <span className="tc__pt-def">{card.def}</span>
             </div>
-          </footer>
-        ) : (
-          <footer className="tc__footer tc__footer--non-monster">
-            <div className="tc__stat-plate">
-              <span className="tc__stat-lbl">ธาตุ{element.name}</span>
+          ) : (
+            <div className="tc__pt-box tc__pt-box--spell">
+              <span>{cardType.name}</span>
             </div>
-            <div className="tc__rarity-slot" title={`ความหายาก: ${rarity.name}`}>
-              <RarityGem rarityId={card.rarity} size={20} title={`ระดับ${rarity.name}`} />
-            </div>
-            <div className="tc__stat-plate">
-              <span className="tc__stat-lbl">ระดับ{rarity.name}</span>
-            </div>
-          </footer>
-        )}
+          )}
+        </footer>
       </div>
     </article>
   )

@@ -66,7 +66,7 @@ export interface BaseCard {
   image: string;
   effectText: string;
   flavorText: string;
-  groupTag: 'xp-hunter' | 'ritual-faith' | 'himmapan-fusion' | 'warrior-beast' | 'spell-trap' | 'promo';
+  groupTag: 'xp-hunter' | 'ritual-faith' | 'himmapan-fusion' | 'warrior-beast' | 'spell-trap' | 'promo' | 'celestial-court';
   evolution?: EvolutionInfo;
 }
 
@@ -104,3 +104,4 @@ export type CardData =
   | SpellCardData
   | TrapCardData
   | RitualCardData;
+
