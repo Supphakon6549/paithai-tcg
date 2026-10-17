@@ -1,0 +1,78 @@
+// ธาตุ (Elements) — GDD.md § ⚡ ธาตุ (8 ธาตุ) + ระบบหักล้างธาตุ
+// strongAgainst: ธาตุที่ธาตุนี้ได้เปรียบ (ATK +300 เมื่อปะทะ)
+export const ELEMENTS = {
+  fire: {
+    id: 'fire',
+    symbol: '🔥',
+    name: 'อัคนี',
+    nameEn: 'Fire',
+    color: '#ff5a36',
+    glow: '#ff8a5c',
+    strongAgainst: 'wind',
+  },
+  water: {
+    id: 'water',
+    symbol: '💧',
+    name: 'วารี',
+    nameEn: 'Water',
+    color: '#2f8fd6',
+    glow: '#7ec4ec',
+    strongAgainst: 'fire',
+  },
+  earth: {
+    id: 'earth',
+    symbol: '🌿',
+    name: 'ปฐวี',
+    nameEn: 'Earth',
+    color: '#6a8f3a',
+    glow: '#a4c470',
+    strongAgainst: 'lightning',
+  },
+  wind: {
+    id: 'wind',
+    symbol: '💨',
+    name: 'วายุ',
+    nameEn: 'Wind',
+    color: '#5ecbb4',
+    glow: '#9fe6d6',
+    strongAgainst: 'earth',
+  },
+  lightning: {
+    id: 'lightning',
+    symbol: '⚡',
+    name: 'อาสนี',
+    nameEn: 'Lightning',
+    color: '#e6c34a',
+    glow: '#f5e08a',
+    strongAgainst: 'water',
+  },
+  dark: {
+    id: 'dark',
+    symbol: '🌑',
+    name: 'ตมะ',
+    nameEn: 'Dark',
+    color: '#7a4fc9',
+    glow: '#a980e8',
+    strongAgainst: 'void',
+  },
+  light: {
+    id: 'light',
+    symbol: '✨',
+    name: 'โชติ',
+    nameEn: 'Light',
+    color: '#f2c94c',
+    glow: '#fbe8a4',
+    strongAgainst: 'dark',
+  },
+  void: {
+    id: 'void',
+    symbol: '🌀',
+    name: 'ศูนยตา',
+    nameEn: 'Void',
+    color: '#8892a6',
+    glow: '#c3cadb',
+    strongAgainst: 'light',
+  },
+}
+
+export const ELEMENT_ADVANTAGE_BONUS = 300

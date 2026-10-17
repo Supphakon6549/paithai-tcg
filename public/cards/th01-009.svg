@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800">
+  <defs>
+    <radialGradient id="fireSky" cx="50%" cy="38%" r="70%">
+      <stop offset="0%" stop-color="#ff9a3c" />
+      <stop offset="35%" stop-color="#b82914" />
+      <stop offset="70%" stop-color="#3d0b05" />
+      <stop offset="100%" stop-color="#120302" />
+    </radialGradient>
+    <linearGradient id="krutGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff3c4" />
+      <stop offset="45%" stop-color="#eab93b" />
+      <stop offset="100%" stop-color="#8c580c" />
+    </linearGradient>
+    <linearGradient id="crimsonWing" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff6b3d" />
+      <stop offset="50%" stop-color="#c91e10" />
+      <stop offset="100%" stop-color="#4d0604" />
+    </linearGradient>
+    <filter id="fireGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="9" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Blazing Sky above Mount Meru -->
+  <rect width="600" height="800" fill="url(#fireSky)" />
+
+  <!-- Solar Halo & Thai Yantra Sunburst -->
+  <g transform="translate(300, 330)">
+    <circle r="210" fill="none" stroke="url(#krutGold)" stroke-width="3" opacity="0.55" />
+    <circle r="175" fill="none" stroke="#ffcf6b" stroke-width="2" stroke-dasharray="14 8" opacity="0.7" />
+    <polygon points="0,-230 35,-150 115,-195 95,-110 195,-115 135,-40 230,0 135,40 195,115 95,110 115,195 35,150 0,230 -35,150 -115,195 -95,110 -195,115 -135,40 -230,0 -135,-40 -195,-115 -95,-110 -115,-195 -35,-150" fill="url(#krutGold)" opacity="0.22" />
+  </g>
+
+  <!-- Massive Blazing Wings of Phaya Krut (ปีกพญาครุฑเวนไตย) -->
+  <g filter="url(#fireGlow)">
+    <!-- Left Wing -->
+    <path d="M265,340 C170,220 65,150 10,120 C25,220 55,310 20,360 C75,380 115,395 45,455 C120,465 185,450 250,420 Z" fill="url(#crimsonWing)" stroke="url(#krutGold)" stroke-width="4" />
+    <path d="M255,355 C180,265 95,215 38,195 M245,380 C175,325 105,305 55,310 M240,405 C185,380 135,385 88,405" fill="none" stroke="url(#krutGold)" stroke-width="3" />
+
+    <!-- Right Wing -->
+    <path d="M335,340 C430,220 535,150 590,120 C575,220 545,310 580,360 C525,380 485,395 555,455 C480,465 415,450 350,420 Z" fill="url(#crimsonWing)" stroke="url(#krutGold)" stroke-width="4" />
+    <path d="M345,355 C420,265 505,215 562,195 M355,380 C425,325 495,305 545,310 M360,405 C415,380 465,385 512,405" fill="none" stroke="url(#krutGold)" stroke-width="3" />
+  </g>
+
+  <!-- Tail Feathers & Swirling Fire Clouds -->
+  <path d="M250,490 L195,690 L265,640 L300,720 L335,640 L405,690 L350,490 Z" fill="url(#crimsonWing)" stroke="url(#krutGold)" stroke-width="3" />
+
+  <!-- Phaya Krut Royal Warrior Torso & Arms (ท่าครุฑยุดนาค/กางกรงเล็บ) -->
+  <g>
+    <!-- Muscular Crimson Body with Golden Sangwan Jewelry -->
+    <path d="M230,325 C260,300 340,300 370,325 L350,485 L250,485 Z" fill="#b81d13" stroke="url(#krutGold)" stroke-width="3" />
+    <!-- Royal Golden Armor Collar (กรองคอและสังวาลทองคำ) -->
+    <path d="M225,325 Q300,385 375,325 L360,358 Q300,415 240,358 Z" fill="url(#krutGold)" />
+    <line x1="245" y1="340" x2="350" y2="475" stroke="url(#krutGold)" stroke-width="5" />
+    <line x1="355" y1="340" x2="250" y2="475" stroke="url(#krutGold)" stroke-width="5" />
+    <circle cx="300" cy="405" r="16" fill="url(#krutGold)" stroke="#590a05" stroke-width="2" />
+
+    <!-- Raised Arms with Golden Armlets -->
+    <path d="M230,340 C175,335 145,295 140,245" fill="none" stroke="#c92416" stroke-width="24" stroke-linecap="round" />
+    <path d="M230,340 C175,335 145,295 140,245" fill="none" stroke="url(#krutGold)" stroke-width="6" stroke-dasharray="12 18" />
+    <path d="M370,340 C425,335 455,295 460,245" fill="none" stroke="#c92416" stroke-width="24" stroke-linecap="round" />
+    <path d="M370,340 C425,335 455,295 460,245" fill="none" stroke="url(#krutGold)" stroke-width="6" stroke-dasharray="12 18" />
+
+    <!-- Golden Talons (กรงเล็บเพชร) -->
+    <path d="M250,485 C210,535 195,585 215,625 M215,625 L190,645 M215,625 L215,655 M215,625 L240,645" fill="none" stroke="url(#krutGold)" stroke-width="9" stroke-linecap="round" />
+    <path d="M350,485 C390,535 405,585 385,625 M385,625 L360,645 M385,625 L385,655 M385,625 L410,645" fill="none" stroke="url(#krutGold)" stroke-width="9" stroke-linecap="round" />
+
+    <!-- Garuda Head, Golden Beak & Spire Crown (ชฎาพญาครุฑ) -->
+    <circle cx="300" cy="265" r="42" fill="#d12315" stroke="url(#krutGold)" stroke-width="3" />
+    <!-- Fierce Glowing Eyes -->
+    <ellipse cx="282" cy="258" rx="8" ry="5" fill="#fff7b0" filter="url(#fireGlow)" />
+    <ellipse cx="318" cy="258" rx="8" ry="5" fill="#fff7b0" filter="url(#fireGlow)" />
+    <!-- Curved Golden Eagle Beak -->
+    <path d="M282,272 Q300,260 318,272 L300,312 Z" fill="url(#krutGold)" stroke="#5c3304" stroke-width="2" />
+    <!-- Towering Thai Chada Crown -->
+    <path d="M255,240 L270,175 L288,190 L300,105 L312,190 L330,175 L345,240 Z" fill="url(#krutGold)" stroke="#6e3f05" stroke-width="2" />
+  </g>
+
+  <!-- Mount Meru Peak & Floating Embers -->
+  <polygon points="150,800 300,670 450,800" fill="#1f0503" stroke="url(#krutGold)" stroke-width="2" />
+  <g fill="#ffdf78" filter="url(#fireGlow)">
+    <circle cx="95" cy="540" r="5" />
+    <circle cx="515" cy="520" r="6" />
+    <circle cx="150" cy="180" r="4" />
+    <circle cx="465" cy="160" r="5" />
+    <circle cx="230" cy="680" r="4" />
+    <circle cx="380" cy="660" r="5" />
+  </g>
+</svg>

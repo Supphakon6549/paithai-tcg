@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800">
+  <defs>
+    <radialGradient id="jungleSky" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#3c6e31" />
+      <stop offset="45%" stop-color="#193318" />
+      <stop offset="100%" stop-color="#070e07" />
+    </radialGradient>
+    <radialGradient id="emeraldAura" cx="50%" cy="42%" r="48%">
+      <stop offset="0%" stop-color="#b8f576" stop-opacity="0.7" />
+      <stop offset="45%" stop-color="#5bb336" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#070e07" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="goldLeaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff0b8" />
+      <stop offset="50%" stop-color="#d4af37" />
+      <stop offset="100%" stop-color="#7c5a10" />
+    </linearGradient>
+    <linearGradient id="cloakGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2c441e" />
+      <stop offset="60%" stop-color="#152410" />
+      <stop offset="100%" stop-color="#080f06" />
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Deep Himmapan Jungle Background -->
+  <rect width="600" height="800" fill="url(#jungleSky)" />
+
+  <!-- Ancient Khmer/Thai Temple Ruins Silhouette in Mist -->
+  <g fill="#0c190c" opacity="0.75">
+    <polygon points="60,800 60,420 95,350 130,240 165,350 200,420 200,800" />
+    <polygon points="410,800 410,450 445,370 480,270 515,370 550,450 550,800" />
+    <path d="M0,180 Q150,240 260,120 Q180,60 0,40 Z" />
+    <path d="M600,150 Q430,230 330,110 Q440,50 600,20 Z" />
+  </g>
+
+  <!-- Sacred Yantra & Emerald Moon Halo -->
+  <circle cx="300" cy="310" r="220" fill="url(#emeraldAura)" />
+  <circle cx="300" cy="310" r="165" fill="none" stroke="url(#goldLeaf)" stroke-width="2" stroke-dasharray="10 6" opacity="0.55" />
+  <circle cx="300" cy="310" r="142" fill="none" stroke="#a4e864" stroke-width="1.5" opacity="0.45" />
+  <polygon points="300,145 345,250 460,260 370,335 398,448 300,388 202,448 230,335 140,260 255,250" fill="none" stroke="url(#goldLeaf)" stroke-width="1.2" opacity="0.35" />
+
+  <!-- Spirit Beasts in the Background (Glowing Tiger & Great Stag Eyes/Silhouettes) -->
+  <g opacity="0.5" filter="url(#glow)">
+    <!-- Left Spirit Tiger -->
+    <path d="M90,520 C85,465 130,430 175,450 C200,460 215,495 195,535 Z" fill="#173316" stroke="#7fd94c" stroke-width="2" />
+    <circle cx="128" cy="478" r="5" fill="#d9ff70" />
+    <circle cx="158" cy="482" r="5" fill="#d9ff70" />
+    <!-- Right Spirit Horned Stag -->
+    <path d="M510,520 C515,465 470,430 425,450 C400,460 385,495 405,535 Z" fill="#173316" stroke="#7fd94c" stroke-width="2" />
+    <path d="M455,445 C465,400 495,375 520,355 M475,412 L505,405 M440,445 C430,400 405,375 385,360" fill="none" stroke="#b8f576" stroke-width="3" stroke-linecap="round" />
+    <circle cx="442" cy="482" r="5" fill="#d9ff70" />
+    <circle cx="472" cy="478" r="5" fill="#d9ff70" />
+  </g>
+
+  <!-- Mossy Ancient Ruin Pedestal -->
+  <path d="M80,800 L140,610 L460,610 L520,800 Z" fill="#111d10" stroke="url(#goldLeaf)" stroke-width="2" />
+  <path d="M120,645 L480,645 M160,705 L440,705" stroke="#4d7a36" stroke-width="3" opacity="0.5" />
+
+  <!-- Master Hunter of the Deep Wilds (เจ้าพรานแห่งไพร) -->
+  <g>
+    <!-- Flowing Leaf & Hide Cloak -->
+    <path d="M165,635 C155,480 195,355 245,305 L355,305 C405,355 445,480 435,635 Z" fill="url(#cloakGrad)" stroke="#4f7d34" stroke-width="2" />
+
+    <!-- Muscular Shoulders & Torso with Glowing Golden Sak Yant -->
+    <path d="M225,315 C250,295 350,295 375,315 L395,470 L205,470 Z" fill="#593a25" stroke="url(#goldLeaf)" stroke-width="2" />
+    <!-- Glowing Sak Yant Tattoos on Chest/Shoulders -->
+    <g stroke="#d9ff7a" stroke-width="2" fill="none" opacity="0.85" filter="url(#glow)">
+      <circle cx="260" cy="355" r="16" />
+      <path d="M250,355 L270,355 M260,345 L260,365" />
+      <circle cx="340" cy="355" r="16" />
+      <path d="M330,355 L350,355 M340,345 L340,365" />
+      <path d="M275,395 Q300,378 325,395 M282,412 Q300,398 318,412" />
+    </g>
+
+    <!-- Bone & Gold Talisman Necklace (สร้อยเขี้ยวเสือทองคำ) -->
+    <path d="M240,312 Q300,375 360,312" fill="none" stroke="url(#goldLeaf)" stroke-width="5" />
+    <polygon points="270,340 264,368 278,345" fill="#f7f1de" />
+    <polygon points="300,348 295,382 306,348" fill="#fff0b8" stroke="#8b6a1f" stroke-width="1" />
+    <polygon points="330,340 336,368 322,345" fill="#f7f1de" />
+
+    <!-- Head & Ornate Ancient Hunter Crown/Headband -->
+    <ellipse cx="300" cy="255" rx="38" ry="46" fill="#6b462d" stroke="#2a180d" stroke-width="2" />
+    <!-- Bearded Wise Facial Features & Glowing Eyes -->
+    <path d="M272,278 Q300,312 328,278 Q315,302 300,305 Q285,302 272,278 Z" fill="#1e1510" />
+    <ellipse cx="285" cy="250" rx="6" ry="3.5" fill="#d9ff70" filter="url(#glow)" />
+    <ellipse cx="315" cy="250" rx="6" ry="3.5" fill="#d9ff70" filter="url(#glow)" />
+    <!-- Golden Lai Thai Hunter Headband & Garuda/Peacock Plume -->
+    <path d="M258,236 Q300,215 342,236 L346,220 Q300,198 254,220 Z" fill="url(#goldLeaf)" />
+    <path d="M300,212 C310,165 345,135 375,120 C345,150 328,180 312,215 Z" fill="#5ecbb4" stroke="url(#goldLeaf)" stroke-width="1.5" />
+    <path d="M298,212 C285,168 255,142 230,130 C258,158 275,182 288,215 Z" fill="#6a8f3a" stroke="url(#goldLeaf)" stroke-width="1.5" />
+  </g>
+
+  <!-- Giant Enchanted Greatbow of the Deep Forest (คันศรมหาไพร) -->
+  <g filter="url(#glow)">
+    <path d="M145,135 C75,260 75,440 165,575" fill="none" stroke="url(#goldLeaf)" stroke-width="10" stroke-linecap="round" />
+    <path d="M145,135 C92,260 92,440 165,575" fill="none" stroke="#85e64c" stroke-width="3" />
+    <!-- Bowstring & Glowing Emerald Spirit Arrow -->
+    <line x1="145" y1="135" x2="265" y2="355" stroke="#d9ff7a" stroke-width="2" opacity="0.85" />
+    <line x1="165" y1="575" x2="265" y2="355" stroke="#d9ff7a" stroke-width="2" opacity="0.85" />
+    <line x1="85" y1="355" x2="285" y2="355" stroke="#ffffff" stroke-width="4" />
+    <polygon points="65,355 105,340 95,355 105,370" fill="#b8f576" />
+  </g>
+
+  <!-- Foreground Jungle Vines & Fireflies -->
+  <g fill="#d9ff70" opacity="0.85" filter="url(#glow)">
+    <circle cx="110" cy="220" r="4" />
+    <circle cx="485" cy="250" r="5" />
+    <circle cx="430" cy="160" r="3.5" />
+    <circle cx="195" cy="520" r="4.5" />
+    <circle cx="460" cy="560" r="4" />
+    <circle cx="240" cy="140" r="3" />
+  </g>
+</svg>
