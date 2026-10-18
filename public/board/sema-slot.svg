@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 126 176">
+  <defs>
+    <radialGradient id="semaDepth" cx="50%" cy="52%" r="60%">
+      <stop offset="0%" stop-color="#0d2229" stop-opacity="0.62"/>
+      <stop offset="100%" stop-color="#040a0d" stop-opacity="0.9"/>
+    </radialGradient>
+    <linearGradient id="semaGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fae094"/>
+      <stop offset="55%" stop-color="#76c7d4"/>
+      <stop offset="100%" stop-color="#c9a243"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ผนังหลุมศิลาฝังพื้น 4 ด้าน -->
+  <polygon points="0,0 126,0 116,10 10,10" fill="#030709" fill-opacity="0.85"/>
+  <polygon points="0,0 10,10 10,166 0,176" fill="#061014" fill-opacity="0.74"/>
+  <polygon points="126,0 126,176 116,166 116,10" fill="#122830" fill-opacity="0.55"/>
+  <polygon points="10,166 116,166 126,176 0,176" fill="#76c7d4" fill-opacity="0.22"/>
+
+  <!-- พื้นหลุมด้านใน -->
+  <rect x="9" y="9" width="108" height="158" rx="4" fill="url(#semaDepth)" stroke="url(#semaGold)" stroke-width="1.3" stroke-opacity="0.6"/>
+
+  <!-- ซุ้มกรอบใบเสมาไทยโบราณ (Bai Sema Boundary Stone) -->
+  <g fill="none" stroke="url(#semaGold)">
+    <!-- โครงใบเสมาชั้นนอก -->
+    <path
+      d="M63,18
+         C73,30 96,42 98,68
+         C100,90 88,112 82,126
+         L90,136 L36,136 L44,126
+         C38,112 26,90 28,68
+         C30,42 53,30 63,18 Z"
+      fill="#76c7d4"
+      fill-opacity="0.06"
+      stroke-opacity="0.72"
+      stroke-width="1.7"
+    />
+    <!-- โครงใบเสมาชั้นใน -->
+    <path
+      d="M63,27
+         C71,37 89,47 90,69
+         C91,87 82,106 76,119
+         L50,119
+         C44,106 35,87 36,69
+         C37,47 55,37 63,27 Z"
+      stroke-opacity="0.42"
+      stroke-width="1.1"
+    />
+    <!-- เส้นอกไก่กลางใบเสมาและประจำยามอกเสมา -->
+    <line x1="63" y1="26" x2="63" y2="122" stroke-opacity="0.38" stroke-width="1.1"/>
+    <polygon points="63,58 75,74 63,90 51,74" fill="#fae094" fill-opacity="0.16" stroke-opacity="0.65" stroke-width="1.3"/>
+    <circle cx="63" cy="74" r="4" fill="#fae094" fill-opacity="0.55" stroke="none"/>
+
+    <!-- ฐานบัวรองรับใบเสมา -->
+    <path d="M30,136 L96,136 L102,146 L24,146 Z" fill="#d9b24c" fill-opacity="0.14" stroke-opacity="0.62" stroke-width="1.3"/>
+    <line x1="22" y1="151" x2="104" y2="151" stroke-opacity="0.5" stroke-width="1.4"/>
+  </g>
+
+  <!-- มุมกรอบ 4 มุม -->
+  <g fill="none" stroke="#fae094" stroke-opacity="0.58" stroke-width="1.5" stroke-linecap="round">
+    <path d="M13,25 L13,13 L25,13"/>
+    <path d="M101,13 L113,13 L113,25"/>
+    <path d="M13,151 L13,163 L25,163"/>
+    <path d="M101,163 L113,163 L113,151"/>
+  </g>
+</svg>
