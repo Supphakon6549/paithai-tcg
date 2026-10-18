@@ -54,18 +54,18 @@ describe('TH05-005 พระอินทร์ จอมอาสนี: ทิ�
   it('ทิ้งการ์ด ลด ATK และตีชนะได้ แล้วหมดผลเมื่อจบเทิร์น', () => {
     const s = setup()
     const after = act(s, { type: 'activate', uid: uidAt(s, PLAYER, 0), discardUid: handUid(s, PLAYER, 0), targetUid: uidAt(s, AI, 0) })
-    expect(getFieldAtk(after, AI, uidAt(s, AI, 0))).toBe(1300)
+    expect(getFieldAtk(after, AI, uidAt(s, AI, 0))).toBe(1100)
     expect(after.players.player.hand).toHaveLength(0)
     expect(graveIds(after)).toEqual(['th01-001'])
-    expect(lastLog(after).details).toEqual(['คุณทิ้ง ลูกพราน ลงสุสาน', 'อสูรทศกัณฐ์จำแลง: ATK 1,800 − 500 = 1,300'])
+    expect(lastLog(after).details).toEqual(['คุณทิ้ง ลูกพราน ลงสุสาน', 'อสูรทศกัณฐ์จำแลง: ATK 1,600 − 500 = 1,100'])
 
-    // ทหารเสือ 1,700 ตีอสูรที่เหลือ 1,300 ชนะ
+    // ทหารเสือ 1,700 ตีอสูรที่เหลือ 1,100 ชนะ
     let battle = act(after, { type: 'enterBattle' })
     battle = act(battle, { type: 'attack', attackerUid: uidAt(s, PLAYER, 1), targetUid: uidAt(s, AI, 0) })
-    expect(battle.players.ai.lp).toBe(8000 - 400)
+    expect(battle.players.ai.lp).toBe(8000 - 600)
 
     const nextTurn = act(after, { type: 'endTurn' })
-    expect(getFieldAtk(nextTurn, AI, uidAt(s, AI, 0))).toBe(1800)
+    expect(getFieldAtk(nextTurn, AI, uidAt(s, AI, 0))).toBe(1600)
   })
 
   it('ATK ต่ำสุด 0', () => {

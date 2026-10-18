@@ -52,8 +52,8 @@ describe('พรานหนุ่ม: ATK +400 เมื่อมีเผ่�
   it('บัฟทำงานตอนตั้งรับด้วย', () => {
     const s = makeState({ phase: 'battle', ai: { field: ['th01-011'] }, player: { field: [HUNTER, BEAST] } })
     const after = attack({ ...s, activePlayer: AI }, AI)
-    expect(after.players.ai.field[0]).toBeNull() // 1,800 แพ้ 2,000
-    expect(after.players.ai.lp).toBe(8000 - 200)
+    expect(after.players.ai.field[0]).toBeNull() // 1,600 แพ้ 2,000
+    expect(after.players.ai.lp).toBe(8000 - 400)
   })
 
   it('บัฟหายเมื่อเผ่าสัตว์ออกจากสนาม', () => {
@@ -172,12 +172,12 @@ describe('พญาครุฑเวนไตย: ทำลายเผ่า�
 })
 
 describe('อสูรทศกัณฐ์จำแลง: ตีทะลุครึ่งหนึ่งของส่วนต่าง', () => {
-  it('1,800 ตี DEF 600 → ศัตรูเสีย (1,800 − 600) ÷ 2 = 600', () => {
+  it('1,600 ตี DEF 600 → ศัตรูเสีย (1,600 − 600) ÷ 2 = 500', () => {
     const s = makeState({ phase: 'battle', player: { field: ['th01-011'] }, ai: { field: [UP_DEF('th01-001')] } })
     const after = attack(s)
     expect(after.players.ai.field[0]).toBeNull()
-    expect(after.players.ai.lp).toBe(8000 - 600)
-    expect(lastLog(after).details).toContain('อสูรทศกัณฐ์จำแลง ตีทะลุครึ่งหนึ่งของส่วนต่าง: (1,800 − 600) ÷ 2 = 600')
+    expect(after.players.ai.lp).toBe(8000 - 500)
+    expect(lastLog(after).details).toContain('อสูรทศกัณฐ์จำแลง ตีทะลุครึ่งหนึ่งของส่วนต่าง: (1,600 − 600) ÷ 2 = 500')
   })
 
   it('ตัวอื่นตีตั้งรับไม่ทะลุ', () => {

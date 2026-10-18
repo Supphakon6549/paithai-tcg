@@ -5,6 +5,7 @@ import {
   getAfterBattleDestroy,
   getAtkBoosts,
   getEffectiveAtk,
+  getEvolve,
   getExtraAttack,
   getNoTributeCondition,
   getPiercing,
@@ -40,7 +41,8 @@ import {
  * }
  * การ์ดในกอง/มือ/สุสาน = { uid, cardId }
  * บนสนามเพิ่ม { hasAttacked, summonedTurn, position: 'attack'|'defense', faceDown, positionChangedTurn,
- *               tempAtk?: [{ amount, reason }] (ตัวปรับ ATK จนจบเทิร์น) }
+ *               tempAtk?: [{ amount, reason }] (ตัวปรับ ATK จนจบเทิร์น),
+ *               xp?: แต้มประสบการณ์, xpReadyTurn?: เทิร์นที่แต้มครบ (เลื่อนยศได้เทิร์นหลังจากนั้น) }
  * ช่องเวท/กับดัก = { uid, cardId, faceDown, setTurn } · ช่องเวทสนาม = { uid, cardId }
  */
 
@@ -435,6 +437,9 @@ export function applyAction(state, action) {
     case 'respond':
       respond(next, action.player, action.trapUid ?? null)
       break
+    case 'evolve':
+      evolve(next, action.player, action.uid, action.from)
+      break
     default:
       throw new GameRuleError(`ไม่รู้จักแอ็กชัน ${action.type}`)
   }
@@ -447,7 +452,7 @@ export function applyAction(state, action) {
  * (kind: summon | position | battle | discard | effect | spell | trap) เป็น entry.event:
  * {
  *   type: 'summon' | 'changePosition' | 'attack' | 'attackNegated' | 'discard'
- *         | 'activate' | 'playSpell' | 'setTrap',
+ *         | 'activate' | 'playSpell' | 'setTrap' | 'evolve',
  *   player, source: uid ตัวที่ทำ, target: uid เป้าหมาย (โจมตีตรง/ไม่มีเป้า = null),
  *   trap: uid กับดักที่เปิด (attackNegated) หรือ null,
  *   placed:       [{ player, uid, cardId, zone, faceDown, position }]  มอนสเตอร์ลงสนามใหม่
@@ -465,7 +470,7 @@ export function applyAction(state, action) {
 function attachEvent(prev, next, action) {
   const entry = next.log
     .slice(prev.log.length)
-    .find((e) => ['summon', 'position', 'battle', 'discard', 'effect', 'spell', 'trap'].includes(e.kind))
+    .find((e) => ['summon', 'position', 'battle', 'discard', 'effect', 'spell', 'trap', 'evolve'].includes(e.kind))
   if (!entry) return
   const placed = []
   const destroyed = []
@@ -784,6 +789,7 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
         details.push(`ATK ${a} > DEF ${d} → ${defenderCard.name} ถูกทำลาย (ท่าตั้งรับ ไม่เสีย LP)`)
       }
       destroyMonster(state, oppId, defender.uid)
+      awardXp(state, attacker, details)
     } else if (result.outcome === 'defender') {
       details.push(`ATK ${a} < DEF ${d} → ตีไม่ผ่าน ไม่มีใครถูกทำลาย (ส่วนต่าง ${d} − ${a} = ${diff})`)
       hitAttackerOwner(result.damage)
@@ -794,10 +800,12 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
     details.push(`${a} > ${d} → ${defenderCard.name} ถูกทำลาย (ส่วนต่าง ${a} − ${d} = ${diff})`)
     hitDefenderOwner(result.damage)
     destroyMonster(state, oppId, defender.uid)
+    awardXp(state, attacker, details)
   } else if (result.outcome === 'defender') {
     details.push(`${a} < ${d} → ${attackerCard.name} ถูกทำลาย (ส่วนต่าง ${d} − ${a} = ${diff})`)
     hitAttackerOwner(result.damage)
     destroyMonster(state, playerId, attacker.uid)
+    awardXp(state, defender, details)
   } else {
     details.push(`${a} = ${d} → เสมอ ทำลายทั้งคู่ ไม่มีใครเสีย LP`)
     destroyMonster(state, playerId, attacker.uid)
@@ -852,6 +860,86 @@ function respond(state, playerId, trapUid) {
     'battle',
     `⚔️ ${cardOf(attacker).name} โจมตี ${cardOf(defender).name} — ถูกยกเลิกด้วยกับดัก`,
     details
+  )
+}
+
+// มอนสเตอร์ที่ชนะการต่อสู้ (ทำลายศัตรูได้และยังอยู่บนสนาม) ได้แต้มประสบการณ์ 1 แต้ม
+function awardXp(state, monster, details) {
+  const card = cardOf(monster)
+  const evolve = getEvolve(card)
+  if (!evolve) return
+  monster.xp = (monster.xp ?? 0) + 1
+  const ready = monster.xp >= evolve.xpNeeded
+  if (ready && monster.xpReadyTurn == null) monster.xpReadyTurn = state.turn
+  const shown = Math.min(monster.xp, evolve.xpNeeded)
+  const next = ready ? ` — เลื่อนยศเป็น ${getCardById(evolve.into).name} ได้ตั้งแต่เทิร์นถัดไปของเรา` : ''
+  details.push(`⭐ ${card.name} ได้ประสบการณ์ 1 แต้ม (${shown}/${evolve.xpNeeded})${next}`)
+}
+
+// ที่มาของร่างใหม่: ใบแรกในมือ และใบแรกในกองการ์ด (null ถ้าไม่มี)
+export function getEvolveSources(state, playerId, uid) {
+  const p = state.players[playerId]
+  const m = p.field.find((x) => x?.uid === uid)
+  const evolve = m && getEvolve(cardOf(m))
+  if (!evolve) return { hand: null, deck: null }
+  return {
+    hand: p.hand.find((c) => c.cardId === evolve.into) ?? null,
+    deck: p.deck.find((c) => c.cardId === evolve.into) ?? null,
+  }
+}
+
+// เหตุผลที่ยังเลื่อนยศไม่ได้ (null = เลื่อนได้)
+export function evolveBlocker(state, playerId, uid) {
+  const m = state.players[playerId].field.find((x) => x?.uid === uid)
+  if (!m) return 'ไม่พบมอนสเตอร์ตัวนี้บนสนาม'
+  const card = cardOf(m)
+  const evolve = getEvolve(card)
+  if (!evolve) return `${card.name} ไม่มีสายประสบการณ์`
+  if (!isPlayersOpenMain(state, playerId)) return 'เลื่อนยศได้เฉพาะเฟสหลักในตาของเรา'
+  if (m.faceDown) return 'การ์ดคว่ำอยู่ เลื่อนยศไม่ได้'
+  const xp = m.xp ?? 0
+  if (xp < evolve.xpNeeded) return `ประสบการณ์ ${xp}/${evolve.xpNeeded} — ทำลายมอนสเตอร์ศัตรูอีก ${evolve.xpNeeded - xp} ตัว`
+  if (state.turn <= m.xpReadyTurn) return 'แต้มเพิ่งครบเทิร์นนี้ — เลื่อนยศได้ในเทิร์นถัดไปของเรา'
+  const sources = getEvolveSources(state, playerId, uid)
+  if (!sources.hand && !sources.deck) return `ไม่มี "${getCardById(evolve.into).name}" ในมือหรือกองการ์ด`
+  return null
+}
+
+// เลื่อนยศ: ร่างเก่าลงสุสาน ร่างใหม่จากมือ/กองลงช่องเดิมท่าโจมตี (ไม่ใช้สิทธิ์อัญเชิญปกติ)
+// ร่างใหม่โจมตีได้ถ้าร่างเก่ายังไม่ได้โจมตีเทิร์นนี้
+function evolve(state, playerId, uid, from) {
+  const blocker = evolveBlocker(state, playerId, uid)
+  if (blocker) throw new GameRuleError(blocker)
+  const p = state.players[playerId]
+  const sources = getEvolveSources(state, playerId, uid)
+  const source = from === 'hand' ? 'hand' : from === 'deck' ? 'deck' : sources.deck ? 'deck' : 'hand'
+  const pile = source === 'hand' ? p.hand : p.deck
+  const newInst = sources[source]
+  if (!newInst) throw new GameRuleError(source === 'hand' ? 'ไม่มีร่างใหม่ในมือ' : 'ไม่มีร่างใหม่ในกองการ์ด')
+
+  const zone = p.field.findIndex((x) => x?.uid === uid)
+  const old = p.field[zone]
+  const oldCard = cardOf(old)
+  p.graveyard.push({ uid: old.uid, cardId: old.cardId })
+  pile.splice(pile.findIndex((c) => c.uid === newInst.uid), 1)
+  p.field[zone] = {
+    uid: newInst.uid,
+    cardId: newInst.cardId,
+    hasAttacked: old.hasAttacked,
+    attackCount: old.attackCount ?? 0,
+    summonedTurn: state.turn,
+    position: 'attack',
+    faceDown: false,
+    positionChangedTurn: null,
+  }
+  const newCard = cardOf(newInst)
+  const where = source === 'hand' ? 'จากมือ' : 'จากกองการ์ด'
+  addLog(
+    state,
+    playerId,
+    'evolve',
+    `🎖️ ${PLAYER_NAMES[playerId]}เลื่อนยศ ${oldCard.name} → ${newCard.name} (ATK ${formatNumber(newCard.atk)}) ${where} ลงช่องที่ ${zone + 1}`,
+    [`${oldCard.name} ลงสุสาน`, ...(old.hasAttacked ? [`${oldCard.name} โจมตีไปแล้วเทิร์นนี้ ${newCard.name} จึงโจมตีไม่ได้อีก`] : [])]
   )
 }
 

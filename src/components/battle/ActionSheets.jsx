@@ -76,10 +76,11 @@ export function HandActionSheet({
 }
 
 /*
- * เมนูมอนสเตอร์ของเราบนสนาม (เฟสหลัก): เปลี่ยนท่า + ใช้ความสามารถ (ถ้ามี)
+ * เมนูมอนสเตอร์ของเราบนสนาม (เฟสหลัก): เลื่อนยศ + ใช้ความสามารถ + เปลี่ยนท่า
  * effect = { label, blocker, onUse } หรือ null
+ * evolve = { intoName, blocker, fromHand, fromDeck, onEvolve(from) } หรือ null
  */
-export function FieldActionSheet({ card, monster, blocker, onChange, effect, onInspect, onClose }) {
+export function FieldActionSheet({ card, monster, blocker, onChange, effect, evolve, onInspect, onClose }) {
   const inDefense = monster.position === 'defense'
   const status = inDefense ? (monster.faceDown ? 'ท่าตั้งรับ (คว่ำ)' : 'ท่าตั้งรับ') : 'ท่าโจมตี'
   const action = inDefense
@@ -96,14 +97,31 @@ export function FieldActionSheet({ card, monster, blocker, onChange, effect, onI
         </span>
         {blocker && <span className="hand-sheet__reason">เปลี่ยนท่า: {blocker}</span>}
         {effect?.blocker && <span className="hand-sheet__reason">ความสามารถ: {effect.blocker}</span>}
+        {evolve?.blocker && <span className="hand-sheet__reason">เลื่อนยศ: {evolve.blocker}</span>}
+        {evolve && !evolve.blocker && <span className="hand-sheet__ok">🎖️ เลื่อนยศเป็น {evolve.intoName} ได้แล้ว</span>}
       </div>
       <SheetButtons onInspect={onInspect} onClose={onClose}>
+        {evolve && !evolve.blocker && evolve.fromDeck && (
+          <button type="button" className="btn btn--primary" onClick={() => evolve.onEvolve('deck')}>
+            🎖️ เลื่อนยศ{evolve.fromHand ? ' · จากกอง' : ''}
+          </button>
+        )}
+        {evolve && !evolve.blocker && evolve.fromHand && (
+          <button type="button" className={evolve.fromDeck ? 'btn' : 'btn btn--primary'} onClick={() => evolve.onEvolve('hand')}>
+            🎖️ {evolve.fromDeck ? 'จากมือ' : 'เลื่อนยศ'}
+          </button>
+        )}
         {effect && (
           <button type="button" className="btn btn--primary" disabled={Boolean(effect.blocker)} onClick={effect.onUse}>
             ✨ {effect.label}
           </button>
         )}
-        <button type="button" className={effect ? 'btn' : 'btn btn--primary'} disabled={Boolean(blocker)} onClick={onChange}>
+        <button
+          type="button"
+          className={effect || (evolve && !evolve.blocker) ? 'btn' : 'btn btn--primary'}
+          disabled={Boolean(blocker)}
+          onClick={onChange}
+        >
           {action}
         </button>
       </SheetButtons>

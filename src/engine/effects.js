@@ -20,6 +20,8 @@ import { TRIBES } from '../data/tribes'
  *   destroysTribeAfterBattle  หลังคำนวณความเสียหาย ทำลายคู่ต่อสู้เผ่านี้
  *   noTributeIf            อัญเชิญสังเวยได้โดยไม่ต้องสังเวยเมื่อเงื่อนไขเป็นจริง
  *   trapLock               เมื่อใบนี้ประกาศโจมตี ศัตรูเปิดกับดักไม่ได้
+ *   evolve                 สายประสบการณ์: ทำลายศัตรูจากการต่อสู้ได้แต้มละ 1 · ครบ xpNeeded
+ *                          แล้วเทิร์นถัดไปของเรากดเลื่อนยศเป็น into (จากมือหรือกองการ์ด)
  *   activated              ความสามารถที่ผู้เล่นกดใช้เองในเฟสหลัก (มอนสเตอร์หงายบนสนาม)
  *                          kind: 'heal' | 'debuff' · oncePer: 'card' (ใบละครั้ง) | 'name' (ชื่อละครั้ง) ต่อเทิร์น
  *   fieldSpell.aura        เวทสนาม: ปรับ ATK มอนสเตอร์หงายฝ่ายเจ้าของที่เข้าเงื่อนไข
@@ -37,8 +39,13 @@ const isWarrior = hasTribe('warrior')
 const isDeva = hasTribe('deva')
 
 export const CARD_EFFECTS = {
+  // ลูกพราน
+  'th01-001': {
+    evolve: { xpNeeded: 2, into: 'th01-002' },
+  },
   // พรานหนุ่ม
   'th01-002': {
+    evolve: { xpNeeded: 3, into: 'th01-003' },
     atkBoosts: [
       {
         amount: 400,
@@ -64,8 +71,13 @@ export const CARD_EFFECTS = {
   'th01-011': {
     piercing: { ratio: 0.5, reason: 'ตีทะลุครึ่งหนึ่งของส่วนต่าง' },
   },
+  // พลทหารอาสา
+  'th01-016': {
+    evolve: { xpNeeded: 1, into: 'th01-017' },
+  },
   // ทหารเสือดาบสองมือ
   'th01-017': {
+    evolve: { xpNeeded: 2, into: 'th01-018' },
     extraAttack: {
       reason: 'ศัตรูมีมอนสเตอร์มากกว่าเรา',
       isActive: ({ allyCount, enemyCount }) => enemyCount > allyCount,
@@ -190,6 +202,10 @@ export function hasAmbush(card) {
 
 export function getPiercing(card) {
   return effectOf(card).piercing ?? null
+}
+
+export function getEvolve(card) {
+  return effectOf(card).evolve ?? null
 }
 
 export function getExtraAttack(card) {

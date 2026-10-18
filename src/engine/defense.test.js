@@ -77,6 +77,7 @@ describe('ATK ปะทะ DEF', () => {
       'ฝ่ายโจมตี — ทหารเสือดาบสองมือ: ATK 1,700 (ไม่มีโบนัส) = 1,700',
       'ฝ่ายรับ — สามเณร: DEF 1,500 (ไม่มีโบนัส) = 1,500',
       'ATK 1,700 > DEF 1,500 → สามเณร ถูกทำลาย (ท่าตั้งรับ ไม่เสีย LP)',
+      '⭐ ทหารเสือดาบสองมือ ได้ประสบการณ์ 1 แต้ม (1/2)',
     ])
   })
 
@@ -182,14 +183,14 @@ describe('AI กับท่าตั้งรับ', () => {
   })
 
   it('ลงท่าโจมตีเมื่อสู้ได้ หรือฝั่งเรามีแต่การ์ดคว่ำ', () => {
-    const strong = makeState({ activePlayer: AI, ai: { hand: ['th01-011'] }, player: { field: ['th01-017'] } })
+    const strong = makeState({ activePlayer: AI, ai: { hand: ['th01-002'] }, player: { field: ['th01-016'] } })
     expect(getAiAction(strong)).toMatchObject({ position: 'attack' })
     const vsHidden = makeState({ activePlayer: AI, ai: { hand: ['th01-001'] }, player: { field: [SET('th01-011')] } })
     expect(getAiAction(vsHidden)).toMatchObject({ position: 'attack' })
   })
 
   it('หงายตัวคว่ำเมื่อสู้ได้แล้ว', () => {
-    const s = makeState({ activePlayer: AI, ai: { field: [SET('th01-011')] }, player: { field: ['th01-017'] } })
+    const s = makeState({ activePlayer: AI, ai: { field: [SET('th01-011')] }, player: { field: ['th01-016'] } })
     expect(getAiAction(s)).toEqual({ type: 'changePosition', player: AI, uid: uidAt(s, AI, 0) })
   })
 

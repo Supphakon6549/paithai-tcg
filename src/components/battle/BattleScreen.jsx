@@ -17,9 +17,12 @@ import {
   cardOf,
   createGame,
   currentActor,
+  evolveBlocker,
   formatNumber,
   getActivated,
   getAiAction,
+  getEvolve,
+  getEvolveSources,
   getFieldAtk,
   getHandOverflow,
   getReadyAttackers,
@@ -70,8 +73,11 @@ const TRIBUTE_BADGE = { tone: 'lose', text: 'สังเวย' }
 const toggle = (list, uid, max = Infinity) =>
   list.includes(uid) ? list.filter((u) => u !== uid) : list.length < max ? [...list, uid] : list
 
-export default function BattleScreen({ active = true, deckList, extraDeckList }) {
-  const [initial] = useState(() => startGame(deckList, extraDeckList))
+// initialGame: สถานะเกมที่จัดเตรียมไว้ (ใช้ทดสอบ / โหมดโจทย์ในอนาคต) — ไม่ระบุ = เริ่มเกมใหม่จากสำรับ
+export default function BattleScreen({ active = true, deckList, extraDeckList, initialGame }) {
+  const [initial] = useState(() =>
+    initialGame ? { game: initialGame, deckError: null } : startGame(deckList, extraDeckList)
+  )
   const [game, setGame] = useState(initial.game)
   const [selectedHandUid, setSelectedHandUid] = useState(null)
   const [selectedFieldUid, setSelectedFieldUid] = useState(null) // มอนสเตอร์ของเราที่เปิดเมนู
@@ -290,6 +296,8 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
       : readyAttackers.size > 0
       ? 'แตะมอนสเตอร์ของคุณเพื่อเลือกตัวโจมตี'
       : 'ไม่มีมอนสเตอร์ที่โจมตีได้แล้ว'
+  } else if (me.field.some((m) => m && !evolveBlocker(game, PLAYER, m.uid))) {
+    hint = '🎖️ มีมอนสเตอร์เลื่อนยศได้ — แตะการ์ดที่มี ⭐ สีทองบนสนาม'
   } else if (summonable.size > 0) hint = 'แตะการ์ดในมือเพื่ออัญเชิญ หรือแตะมอนสเตอร์บนสนามเพื่อเปลี่ยนท่า/ใช้ความสามารถ'
   else if (!canAttackThisTurn(game)) hint = 'เทิร์นแรกของผู้เริ่มก่อน: โจมตีไม่ได้'
   else hint = 'พร้อมเข้าเฟสต่อสู้หรือจบเทิร์น'
@@ -390,6 +398,16 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
   }
 
   const selectedActivated = selectedField ? getActivated(cardOf(selectedField)) : null
+  const selectedEvolve = selectedField ? getEvolve(cardOf(selectedField)) : null
+  const selectedSources = selectedEvolve ? getEvolveSources(game, PLAYER, selectedField.uid) : null
+
+  // ตัวนับแต้มบนการ์ด (มอนสเตอร์หงายที่มีสายประสบการณ์)
+  const xpOf = (owner) => (m) => {
+    const evolve = getEvolve(cardOf(m))
+    if (!evolve || m.faceDown) return null
+    const ready = owner === PLAYER && !evolveBlocker(game, PLAYER, m.uid)
+    return { text: `⭐ ${Math.min(m.xp ?? 0, evolve.xpNeeded)}/${evolve.xpNeeded}`, ready }
+  }
 
   return (
     <div className="battle" data-battle-root>
@@ -405,6 +423,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
             label="ช่องมอนสเตอร์ของคู่ต่อสู้"
             field={opp.field}
             atkOf={(m) => getFieldAtk(game, AI, m.uid)}
+            xpOf={xpOf(AI)}
             hideFaceDown
             renderBadge={targetBadge}
             classFor={(m) => (attacker || (effectPick?.discardUid && !m.faceDown) ? 'mini-card--target' : '')}
@@ -439,6 +458,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
             label="ช่องมอนสเตอร์ของคุณ"
             field={me.field}
             atkOf={(m) => getFieldAtk(game, PLAYER, m.uid)}
+            xpOf={xpOf(PLAYER)}
             renderBadge={(m) => (isTributeSelected(m.uid) ? TRIBUTE_BADGE : null)}
             classFor={(m) =>
               [
@@ -465,6 +485,15 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
             monster={selectedField}
             blocker={positionChangeBlocker(game, PLAYER, selectedField.uid)}
             onChange={() => play({ type: 'changePosition', uid: selectedField.uid })}
+            evolve={
+              selectedEvolve && {
+                intoName: cardOf({ cardId: selectedEvolve.into }).name,
+                blocker: evolveBlocker(game, PLAYER, selectedField.uid),
+                fromHand: Boolean(selectedSources.hand),
+                fromDeck: Boolean(selectedSources.deck),
+                onEvolve: (from) => play({ type: 'evolve', uid: selectedField.uid, from }),
+              }
+            }
             effect={
               selectedActivated && {
                 label: selectedActivated.label,
@@ -566,7 +595,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
   )
 }
 
-function FieldRow({ label, field, atkOf, onTap, classFor, renderBadge, hideFaceDown = false }) {
+function FieldRow({ label, field, atkOf, xpOf, onTap, classFor, renderBadge, hideFaceDown = false }) {
   return (
     <section className="field-row" aria-label={label} data-zone-type="monster">
       {field.map((m, i) =>
@@ -577,6 +606,7 @@ function FieldRow({ label, field, atkOf, onTap, classFor, renderBadge, hideFaceD
             zone={i}
             card={cardOf(m)}
             atk={atkOf(m)}
+            xp={xpOf?.(m)}
             defense={m.position === 'defense'}
             faceDown={m.faceDown}
             hidden={hideFaceDown && m.faceDown}

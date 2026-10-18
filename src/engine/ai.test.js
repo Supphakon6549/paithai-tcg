@@ -10,11 +10,11 @@ describe('getAiAction', () => {
   })
 
   it('อัญเชิญตัวที่ ATK สูงสุดที่อัญเชิญปกติได้', () => {
-    // th01-003 (ATK 2,400) ต้องสังเวย แต่สนามว่าง → เลือก th01-011 (1,800)
+    // th01-003 (ATK 2,400) ต้องสังเวย แต่สนามว่าง → เลือก th01-017 (1,700)
     const s = makeState({ activePlayer: AI, ai: { hand: ['th01-001', 'th01-003', 'th01-011', 'th01-017'] } })
     const action = getAiAction(s)
     expect(action.type).toBe('summon')
-    expect(s.players.ai.hand.find((c) => c.uid === action.uid).cardId).toBe('th01-011')
+    expect(s.players.ai.hand.find((c) => c.uid === action.uid).cardId).toBe('th01-017')
   })
 
   it('สังเวยตัว ATK ต่ำสุดเมื่อคุ้ม', () => {
@@ -43,11 +43,11 @@ describe('getAiAction', () => {
   })
 
   it('โจมตีเมื่อชนะเท่านั้น และเลือกเป้าที่แข็งที่สุดที่ชนะได้', () => {
-    // AI 1,700 · ผู้เล่นมี 300, 900, 1,800 → ตี 900 (ชนะ 1,800 ไม่ได้)
+    // AI 1,700 · ผู้เล่นมี 300, 900, 2,500 → ตี 900 (ชนะ 2,500 ไม่ได้)
     const s = makeState({
       activePlayer: AI, phase: 'battle',
       ai: { field: ['th01-017'] },
-      player: { field: ['th01-004', 'th01-016', 'th01-011'] },
+      player: { field: ['th01-004', 'th01-016', 'th01-018'] },
     })
     expect(getAiAction(s)).toEqual({
       type: 'attack', player: AI, attackerUid: uidAt(s, AI, 0), targetUid: uidAt(s, PLAYER, 1),

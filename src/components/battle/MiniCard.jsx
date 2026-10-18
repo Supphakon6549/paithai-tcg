@@ -17,6 +17,7 @@ export default function MiniCard({
   label,
   uid,
   zone,
+  xp, // { text: '⭐ 1/2', ready } ตัวนับแต้มสายประสบการณ์
 }) {
   const element = ELEMENTS[card.element]
   const boosted = !defense && atk > card.atk
@@ -37,6 +38,11 @@ export default function MiniCard({
         {hidden ? <span className="card-back" /> : <MonsterCard card={card} />}
       </span>
       {faceDown && !hidden && <span className="mini-card__facedown-tag">คว่ำ</span>}
+      {xp && !hidden && (
+        <span className={`mini-card__xp${xp.ready ? ' mini-card__xp--ready' : ''}`} title="แต้มประสบการณ์">
+          {xp.text}
+        </span>
+      )}
       {card.type === 'monster' && !hidden && (
         <span
           className={`mini-card__atk${boosted ? ' mini-card__atk--boosted' : ''}${defense ? ' mini-card__atk--def' : ''}`}

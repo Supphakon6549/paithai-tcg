@@ -5,6 +5,8 @@ import {
   canAttackThisTurn,
   cardOf,
   currentActor,
+  evolveBlocker,
+  getEvolveSources,
   handCardBlocker,
   ritualTributePool,
   ritualTributeProblem,
@@ -33,7 +35,7 @@ const cardValue = (inst) => {
 const cheapestFirst = (a, b) => cardValue(a) - cardValue(b)
 
 /**
- * AI แบบง่าย: เวทสนาม → พิธีกรรม → อัญเชิญตัว ATK สูงสุด (สังเวยเมื่อคุ้ม · วางคว่ำเมื่อสู้ไม่ได้)
+ * AI แบบง่าย: เลื่อนยศ → เวทสนาม → พิธีกรรม → อัญเชิญตัว ATK สูงสุด (สังเวยเมื่อคุ้ม · วางคว่ำเมื่อสู้ไม่ได้)
  * → ใช้ความสามารถ → วางกับดัก → หงายตัวคว่ำที่สู้ได้แล้ว → โจมตีเฉพาะเมื่อชนะ → จบเทิร์น
  * ถูกโจมตีขณะมีกับดักที่เปิดได้ → เปิดเสมอ
  * AI ไม่แอบดูการ์ดคว่ำของผู้เล่น
@@ -52,7 +54,7 @@ export function getAiAction(state, playerId = AI) {
       return { type: 'discard', player: playerId, uid: weakest.uid }
     }
     case 'main1': {
-      const spell = chooseFieldSpell(state, playerId) ?? chooseRitual(state, playerId)
+      const spell = chooseEvolve(state, playerId) ?? chooseFieldSpell(state, playerId) ?? chooseRitual(state, playerId)
       if (spell) return spell
       const summon = chooseSummon(state, playerId)
       if (summon) return summon
@@ -111,6 +113,14 @@ function chooseSummon(state, playerId) {
     uid: bestNormal.uid,
     position: positionFor(state, playerId, cardOf(bestNormal).atk),
   }
+}
+
+// เลื่อนยศทันทีที่ทำได้ (ใช้ร่างใหม่จากกองการ์ดก่อน เก็บการ์ดในมือไว้)
+function chooseEvolve(state, playerId) {
+  const ready = state.players[playerId].field.find((m) => m && !evolveBlocker(state, playerId, m.uid))
+  if (!ready) return null
+  const from = getEvolveSources(state, playerId, ready.uid).deck ? 'deck' : 'hand'
+  return { type: 'evolve', player: playerId, uid: ready.uid, from }
 }
 
 const playable = (state, playerId, predicate) =>
