@@ -12,6 +12,54 @@ import { ELEMENTS } from '../../../data/elements'
  */
 
 const FX_DURATION_MS = 1250
+// แอนิเมชันเปิดกับดักกลางจอ (แสดงครั้งละใบ ต่อคิวได้อีก 1 ใบ)
+const TRAP_MS = 1450
+const TRAP_REDUCED_MS = 1100
+
+const TRAP_EFFECT_LABEL = {
+  negate: '⚡ ยกเลิกการโจมตี!',
+  thorns: '🌿 ขวากหนามสวนกลับ!',
+  weaken: '💨 ม่านควัน ลด ATK!',
+  drum: '🥁 กลองศึกกระหึ่ม!',
+  continuous: '✨ กับดักต่อเนื่อง',
+}
+
+// สร้างข้อมูลการแสดงกับดัก: ตำแหน่งช่องเดิม → กลางจอ → สุสาน (หรือกลับช่อง ถ้าต่อเนื่อง)
+function buildTrapShow(root, trap, reduced, key) {
+  const card = getCardById(trap.cardId)
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const cardW = Math.round(Math.min(vw * 0.44, 190))
+  const center = { x: vw / 2, y: Math.min(vh * 0.44, vh / 2 - 40) }
+  const slot =
+    findCardOrZoneRect(root, trap.player, trap.uid, trap.zone, 'spell-trap') || {
+      x: center.x,
+      y: trap.player === 'player' ? vh * 0.7 : vh * 0.25,
+      w: cardW * 0.3,
+    }
+  const isContinuous = trap.effect === 'continuous'
+  const grave = isContinuous
+    ? null
+    : getCenterRect(root.querySelector(`[data-owner="${trap.player}"] [data-pile="graveyard"]`))
+  const end = grave || slot
+  const clamp = (v) => Math.max(0.12, Math.min(1, v))
+  return {
+    key,
+    reduced,
+    effect: TRAP_EFFECT_LABEL[trap.effect] ? trap.effect : 'negate',
+    cardId: trap.cardId,
+    name: card?.name ?? 'กับดัก',
+    x: slot.x,
+    y: slot.y,
+    cardW,
+    dx: center.x - slot.x,
+    dy: center.y - slot.y,
+    ex: end.x - slot.x,
+    ey: end.y - slot.y,
+    s0: clamp(slot.w / cardW),
+    s1: clamp((end.w || slot.w) / cardW) * 0.8,
+  }
+}
 
 function getCenterRect(el) {
   if (!el) return null
@@ -47,11 +95,16 @@ function findCardOrZoneRect(root, player, uid, zone, zoneType = 'monster') {
   return null
 }
 
+// LP แสดงหลายที่ตามขนาดจอ (แถบบนมือถือ / ป้ายบนกระดาน PC) — ใช้ตัวแรกที่มองเห็นอยู่
+function firstVisible(root, selector) {
+  return [...root.querySelectorAll(selector)].find((el) => el.getBoundingClientRect().width > 0) ?? null
+}
+
 function findPlayerLpRect(root, player) {
   if (!root || !player) return null
   const lpEl =
-    root.querySelector(`[data-player="${player}"] [data-lp]`) ||
-    root.querySelector(`[data-player="${player}"]`)
+    firstVisible(root, `[data-player="${player}"] [data-lp]`) ||
+    firstVisible(root, `[data-player="${player}"]`)
   return getCenterRect(lpEl)
 }
 
@@ -72,6 +125,10 @@ export default function BattleFx({ game }) {
   // ตัวตั้งเวลาลบเอฟเฟกต์ ต้องอยู่รอดข้ามการเปลี่ยนสถานะเกม (AI เล่นเร็วกว่าเอฟเฟกต์จบ)
   // ยกเลิกเฉพาะตอนปิดหน้าจอ ไม่งั้นเอฟเฟกต์จะค้างสะสมจนมือถือกระพริบ
   const removeTimersRef = useRef(new Set())
+  // กับดักแสดงกลางจอครั้งละใบ — ใบถัดไปรอในคิว (เก็บแค่ใบล่าสุด 1 ใบ ไม่ให้ค้างสะสม)
+  const [trapShow, setTrapShow] = useState(null)
+  const trapQueueRef = useRef([])
+  const trapBusyRef = useRef(false)
 
   useEffect(() => {
     const timers = removeTimersRef.current
@@ -112,7 +169,41 @@ export default function BattleFx({ game }) {
       return `fx-${Date.now()}-${fxKeyRef.current}`
     }
 
+    // เล่นกับดักถัดไปในคิว — ตัวตั้งเวลาเก็บใน removeTimersRef (ไม่ผูกกับ cleanup ของ [game])
+    const playNextTrap = () => {
+      const next = trapQueueRef.current.shift()
+      if (!next) {
+        trapBusyRef.current = false
+        setTrapShow(null)
+        return
+      }
+      trapBusyRef.current = true
+      setTrapShow(next)
+      const t = setTimeout(() => {
+        removeTimersRef.current.delete(t)
+        playNextTrap()
+      }, next.reduced ? TRAP_REDUCED_MS : TRAP_MS)
+      removeTimersRef.current.add(t)
+    }
+    let trapQueued = false
+
     for (const entry of newEntries) {
+      // 0. กับดักถูกเปิด (trapActivated) — แสดงการ์ดพลิกกลางจอ
+      for (const trap of entry.event?.trapActivated || []) {
+        trapQueueRef.current.push(buildTrapShow(root, trap, prefersReducedMotion, nextKey()))
+        trapQueueRef.current = trapQueueRef.current.slice(-1)
+        trapQueued = true
+        if (trap.effect === 'continuous' && !prefersReducedMotion) {
+          const trapEl = root.querySelector(`[data-uid="${trap.uid}"]`)
+          if (trapEl) {
+            const t = setTimeout(() => {
+              removeTimersRef.current.delete(t)
+              triggerDomClass(trapEl, 'fx-dom-trap-linger', 900)
+            }, TRAP_MS - 350)
+            removeTimersRef.current.add(t)
+          }
+        }
+      }
       // กรณีประกาศโจมตีแล้วรอฝ่ายรับตัดสินใจเปิดกับดัก (kind === 'pending')
       if (entry.kind === 'pending' && game.pendingResponse) {
         const { attacker, attackerUid, targetUid } = game.pendingResponse
@@ -337,8 +428,9 @@ export default function BattleFx({ game }) {
           )
         }
 
-        // ตำแหน่งช่องกับดักที่เพิ่งเปิดแล้วถูกส่งลงสุสาน
-        for (const rem of ev.spellRemoved || []) {
+        // ตำแหน่งช่องกับดักที่เพิ่งเปิดแล้วถูกส่งลงสุสาน (ถ้ามี trapActivated จะแสดงกลางจอแทน)
+        const hasTrapShow = (ev.trapActivated?.length || 0) > 0
+        for (const rem of hasTrapShow ? [] : ev.spellRemoved || []) {
           const trapCard = getCardById(rem.cardId)
           const trapRect = findCardOrZoneRect(root, rem.player, null, rem.zone, rem.zoneType)
           if (trapRect) {
@@ -381,17 +473,20 @@ export default function BattleFx({ game }) {
         for (const rev of ev.revealed || []) {
           const revEl = root.querySelector(`[data-uid="${rev.uid}"]`)
           if (!prefersReducedMotion && revEl) {
-            triggerDomClass(revEl, 'fx-dom-flip', 620)
+            triggerDomClass(revEl, 'fx-dom-reveal-slow', 950)
           }
           const rect = findCardOrZoneRect(root, rev.player, rev.uid, rev.zone, 'monster')
           const card = getCardById(rev.cardId)
           if (rect) {
             spawned.push({
               key: nextKey(),
-              kind: 'reveal',
+              kind: 'reveal-flip',
               x: rect.x,
-              y: rect.y - 14,
-              label: card ? `เปิดคว่ำ: ${card.name}` : 'เปิดการ์ดคว่ำ!',
+              y: rect.y,
+              w: rect.w,
+              h: rect.h,
+              reduced: prefersReducedMotion,
+              label: card ? `👁 เปิดเผยตัว! ${card.name}` : '👁 เปิดเผยตัว!',
             })
           }
         }
@@ -438,7 +533,7 @@ export default function BattleFx({ game }) {
 
       // 8. ตัวเลขความเสียหาย LP ลดลง (damage)
       for (const dmg of ev.damage || []) {
-        const barEl = root.querySelector(`[data-player="${dmg.player}"]`)
+        const barEl = firstVisible(root, `[data-player="${dmg.player}"]`)
         if (!prefersReducedMotion && barEl) {
           triggerDomClass(barEl, 'fx-dom-lp-shake', 680)
         }
@@ -457,7 +552,7 @@ export default function BattleFx({ game }) {
 
       // 9. ตัวเลขฟื้นฟู LP เพิ่มขึ้น (heal)
       for (const h of ev.heal || []) {
-        const barEl = root.querySelector(`[data-player="${h.player}"]`)
+        const barEl = firstVisible(root, `[data-player="${h.player}"]`)
         if (!prefersReducedMotion && barEl) {
           triggerDomClass(barEl, 'fx-dom-lp-heal', 750)
         }
@@ -475,6 +570,8 @@ export default function BattleFx({ game }) {
       }
     }
 
+    if (trapQueued && !trapBusyRef.current) playNextTrap()
+
     if (spawned.length === 0) return
 
     setFxItems((prev) => [...prev, ...spawned])
@@ -486,10 +583,11 @@ export default function BattleFx({ game }) {
     removeTimersRef.current.add(timer)
   }, [game])
 
-  if (fxItems.length === 0) return null
+  if (fxItems.length === 0 && !trapShow) return null
 
   return (
     <div className="battle-fx-layer" aria-hidden="true">
+      {trapShow && <TrapShow key={trapShow.key} show={trapShow} />}
       {fxItems.map((item) => {
         const style = {
           left: `${item.x}px`,
@@ -536,6 +634,23 @@ export default function BattleFx({ game }) {
             <div key={item.key} className="fx-item fx-item--tribute" style={style}>
               <span className="fx-wisp" />
               <span className="fx-tag fx-tag--tribute">{item.label}</span>
+            </div>
+          )
+        }
+
+        if (item.kind === 'reveal-flip') {
+          return (
+            <div
+              key={item.key}
+              className={`fx-item fx-item--reveal-flip${item.reduced ? ' fx-item--reduced' : ''}`}
+              style={{ ...style, '--rv-w': `${item.w}px`, '--rv-h': `${item.h}px` }}
+            >
+              <span className="fx-rv-back" />
+              <span className="fx-rv-flash" />
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <span key={i} className="fx-rv-spark" style={{ '--a': `${i * 60 + 20}deg` }} />
+              ))}
+              <span className="fx-tag fx-tag--reveal">{item.label}</span>
             </div>
           )
         }
@@ -636,5 +751,91 @@ export default function BattleFx({ game }) {
         return null
       })}
     </div>
+  )
+}
+
+/*
+ * TrapShow — การ์ดกับดักพลิกกลางจอ (ครั้งละใบ)
+ * ช่องเดิม → (พลิกหลังลายไทยเป็นหน้าการ์ด) → ขยายกลางจอพร้อมชื่อ → หดลงสุสาน / กลับช่อง (ต่อเนื่อง)
+ * ทุกชิ้นใช้ transform/opacity · ไม่มี animation infinite · ถูกถอดออกเมื่อ removeTimersRef ครบเวลา
+ */
+function TrapShow({ show }) {
+  const style = {
+    left: `${show.x}px`,
+    top: `${show.y}px`,
+    '--dx': `${show.dx}px`,
+    '--dy': `${show.dy}px`,
+    '--ex': `${show.ex}px`,
+    '--ey': `${show.ey}px`,
+    '--s0': show.s0,
+    '--s1': show.s1,
+    '--card-w': `${show.cardW}px`,
+  }
+  const cls = `fx-trap fx-trap--${show.effect}${show.reduced ? ' fx-trap--reduced' : ''}`
+
+  if (show.reduced) {
+    return (
+      <div className={cls} style={style}>
+        <div className="fx-trap__title">
+          <span className="fx-trap__kicker">🪤 เปิดกับดัก</span>
+          <strong className="fx-trap__name">{show.name}</strong>
+          <span className="fx-trap__effect">{TRAP_EFFECT_LABEL[show.effect]}</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className={`fx-trap-veil fx-trap-veil--${show.effect}`} />
+      <div className={cls} style={style}>
+        <div className="fx-trap__fx">
+          <span className="fx-trap__ring" />
+          {show.effect === 'negate' && (
+            <>
+              <svg className="fx-trap__bolt fx-trap__bolt--l" viewBox="0 0 40 100">
+                <polygon points="26,0 6,52 20,52 10,100 36,40 22,40" />
+              </svg>
+              <svg className="fx-trap__bolt fx-trap__bolt--r" viewBox="0 0 40 100">
+                <polygon points="26,0 6,52 20,52 10,100 36,40 22,40" />
+              </svg>
+            </>
+          )}
+          {show.effect === 'thorns' &&
+            [0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <span key={i} className="fx-trap__spike" style={{ '--a': `${i * 45 + 22}deg` }} />
+            ))}
+          {show.effect === 'weaken' &&
+            [0, 1, 2, 3, 4].map((i) => (
+              <span key={i} className={`fx-trap__smoke fx-trap__smoke--${i}`} />
+            ))}
+          {show.effect === 'drum' &&
+            [0, 1, 2].map((i) => <span key={i} className={`fx-trap__wave fx-trap__wave--${i}`} />)}
+        </div>
+
+        <div className="fx-trap__card">
+          <div className="fx-trap__flipper">
+            <div className="fx-trap__face fx-trap__back" />
+            <div className="fx-trap__face fx-trap__front">
+              <img src={`/cards/${show.cardId}.jpg`} alt="" draggable="false" />
+            </div>
+          </div>
+        </div>
+
+        <div className="fx-trap__title">
+          <span className="fx-trap__kicker">🪤 เปิดกับดัก!</span>
+          <strong className="fx-trap__name">{show.name}</strong>
+          <span className="fx-trap__effect">{TRAP_EFFECT_LABEL[show.effect]}</span>
+        </div>
+
+        {show.effect === 'continuous' && (
+          <div className="fx-trap__linger">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <span key={i} className="fx-trap__glint" style={{ '--a': `${i * 60}deg` }} />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
