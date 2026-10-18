@@ -67,7 +67,15 @@
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
 }
 
-/* 1.1 ฝั่งคู่ต่อสู้ (ครึ่งบนของโต๊ะดวล — โทนชาดแดง-ทอง) */
+/* ซ่อนเฉพาะอีโมจิระบบ ✋ (U+270B) และ 📜 (U+1F4DC) เพื่อแสดงไอคอนทองเปลวไทยแทนโดยไม่แตะ JSX */
+@font-face {
+  font-family: 'PaiThaiHideEmoji';
+  src: local('Segoe UI'), local('Arial'), local('sans-serif');
+  unicode-range: U+270B, U+1F4DC, U+FE0F;
+  size-adjust: 0%;
+}
+
+/* 1.1 ฝั่งคู่ต่อสู้ (ครึ่งบนของโต๊ะดวล — ไม้ลงรักดำลายรดน้ำทอง โทนชาดแดง-ทอง) */
 .board-side--opp {
   margin-bottom: -6px;
   padding-top: 14px;
@@ -76,28 +84,27 @@
   border-radius: 16px 16px 0 0;
   transform-origin: 50% 100%;
   transform: perspective(var(--table-persp)) rotateX(var(--tilt-opp));
-  background-color: #1c0908;
+  background-color: #140807;
   background-image:
-    /* คิ้วบัวคว่ำบัวหงายปิดทองที่ขอบบนของโต๊ะ */
-    url('/board/singha-border.svg'),
-    /* แสงชาดแดง-ทองเรืองกลางลานศิลา */
-    radial-gradient(ellipse 75% 60% at 50% 58%, rgba(224, 72, 54, 0.25) 0%, rgba(140, 28, 18, 0.12) 48%, transparent 78%),
-    /* ลายพื้นศิลาจำหลักประจำยามและกนก */
-    url('/board/thai-stone-pattern.svg'),
-    linear-gradient(180deg, #33100d 0%, #210a08 55%, #160706 100%);
-  background-repeat: repeat-x, no-repeat, repeat, no-repeat;
-  background-position: top center, center center, center center, center center;
-  background-size: 96px 10px, 100% 100%, 110px 110px, 100% 100%;
+    /* ขอบโต๊ะลายกระจัง/กนกทองเปลวโปร่งใส ต่อกันเป็นแถบยาว (tileable) */
+    url('/board/table-border.png'),
+    /* แสงชาดแดง-ทองเรืองจาง ๆ เหนือพื้นไม้ลงรัก */
+    radial-gradient(ellipse 80% 65% at 50% 58%, rgba(190, 38, 28, 0.22) 0%, rgba(18, 8, 6, 0.45) 62%, rgba(8, 4, 3, 0.72) 100%),
+    /* พื้นโต๊ะไม้ลงรักดำลายรดน้ำทอง (มือถือ 1080x1920 ครึ่งบน) */
+    url('/board/table-portrait.webp');
+  background-repeat: repeat-x, no-repeat, no-repeat;
+  background-position: top center, center center, center top;
+  background-size: auto 14px, 100% 100%, 100% 200%;
   box-shadow:
-    inset 0 10px 18px rgba(0, 0, 0, 0.78),
-    inset 0 0 0 1.5px rgba(250, 224, 148, 0.28),
-    inset 6px 0 14px rgba(0, 0, 0, 0.65),
-    inset -6px 0 14px rgba(0, 0, 0, 0.65),
+    inset 0 10px 18px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1.5px rgba(250, 224, 148, 0.3),
+    inset 6px 0 14px rgba(0, 0, 0, 0.68),
+    inset -6px 0 14px rgba(0, 0, 0, 0.68),
     0 -3px 0 #593b0c,
-    0 -6px 16px rgba(0, 0, 0, 0.75);
+    0 -6px 16px rgba(0, 0, 0, 0.78);
 }
 
-/* 1.2 ฝั่งผู้เล่น (ครึ่งล่างของโต๊ะดวล — โทนเขียวมรกต-ทอง พร้อมขอบฐานสิงห์ 3 มิติ) */
+/* 1.2 ฝั่งผู้เล่น (ครึ่งล่างของโต๊ะดวล — ไม้ลงรักดำลายรดน้ำทอง โทนเขียวมรกต-ทอง) */
 .board-side--me {
   margin-top: -6px;
   margin-bottom: 6px;
@@ -107,29 +114,71 @@
   border-radius: 0 0 18px 18px;
   transform-origin: 50% 0%;
   transform: perspective(var(--table-persp)) rotateX(var(--tilt-me));
-  background-color: #081c15;
+  background-color: #07140f;
   background-image:
-    /* คิ้วบัวคว่ำบัวหงายปิดทองที่ขอบหน้าโต๊ะฝั่งผู้เล่น */
-    url('/board/singha-border.svg'),
-    /* แสงเขียวมรกต-ทองเรืองกลางลานศิลา */
-    radial-gradient(ellipse 75% 60% at 50% 42%, rgba(46, 184, 126, 0.24) 0%, rgba(217, 178, 76, 0.1) 52%, transparent 78%),
-    /* ลายพื้นศิลาจำหลักประจำยามและกนก */
-    url('/board/thai-stone-pattern.svg'),
-    linear-gradient(180deg, #0b241b 0%, #0d2e22 50%, #071711 100%);
-  background-repeat: repeat-x, no-repeat, repeat, no-repeat;
-  background-position: bottom center, center center, center center, center center;
-  background-size: 96px 12px, 100% 100%, 110px 110px, 100% 100%;
+    /* ขอบโต๊ะลายกระจัง/กนกทองเปลวโปร่งใส ต่อกันเป็นแถบยาว (tileable) */
+    url('/board/table-border.png'),
+    /* แสงเขียวมรกต-ทองเรืองจาง ๆ เหนือพื้นไม้ลงรัก */
+    radial-gradient(ellipse 80% 65% at 50% 42%, rgba(28, 140, 96, 0.2) 0%, rgba(8, 16, 12, 0.45) 62%, rgba(4, 10, 8, 0.72) 100%),
+    /* พื้นโต๊ะไม้ลงรักดำลายรดน้ำทอง (มือถือ 1080x1920 ครึ่งล่าง) */
+    url('/board/table-portrait.webp');
+  background-repeat: repeat-x, no-repeat, no-repeat;
+  background-position: bottom center, center center, center bottom;
+  background-size: auto 16px, 100% 100%, 100% 200%;
   /* ชั้นความหนา 3 มิติของขอบโต๊ะฐานสิงห์ด้านหน้าผู้เล่น */
   box-shadow:
-    inset 0 -12px 18px rgba(0, 0, 0, 0.8),
-    inset 0 0 0 1.5px rgba(250, 224, 148, 0.3),
-    inset 6px 0 14px rgba(0, 0, 0, 0.65),
-    inset -6px 0 14px rgba(0, 0, 0, 0.65),
+    inset 0 -12px 18px rgba(0, 0, 0, 0.82),
+    inset 0 0 0 1.5px rgba(250, 224, 148, 0.32),
+    inset 6px 0 14px rgba(0, 0, 0, 0.68),
+    inset -6px 0 14px rgba(0, 0, 0, 0.68),
     0 3px 0 #7a5514,
     0 6px 0 #1f1208,
     0 8px 0 #b88a28,
     0 11px 0 #2b180a,
-    0 16px 24px rgba(0, 0, 0, 0.85);
+    0 16px 24px rgba(0, 0, 0, 0.88);
+}
+
+/* 1.2b ฉากเวทสนาม 3 ภาพ (public/board/fields/<cardId>.webp) เปลี่ยนพื้นสนามตามเวทสนามที่เปิดอยู่ */
+.board-side[data-field-spell='th04-007'] {
+  background-image:
+    url('/board/table-border.png'),
+    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(16, 6, 5, 0.28) 0%, rgba(12, 4, 4, 0.58) 100%),
+    url('/board/fields/th04-007.webp') !important;
+  background-size: auto 15px, 100% 100%, cover !important;
+  background-position: center top, center center, center center !important;
+  border-color: #e87a48;
+}
+
+.board-side--me[data-field-spell='th04-007'] {
+  background-position: center bottom, center center, center center !important;
+}
+
+.board-side[data-field-spell='th05-007'] {
+  background-image:
+    url('/board/table-border.png'),
+    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(12, 18, 36, 0.26) 0%, rgba(8, 12, 24, 0.56) 100%),
+    url('/board/fields/th05-007.webp') !important;
+  background-size: auto 15px, 100% 100%, cover !important;
+  background-position: center top, center center, center center !important;
+  border-color: #fae094;
+}
+
+.board-side--me[data-field-spell='th05-007'] {
+  background-position: center bottom, center center, center center !important;
+}
+
+.board-side[data-field-spell='th06-011'] {
+  background-image:
+    url('/board/table-border.png'),
+    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(6, 16, 14, 0.28) 0%, rgba(4, 10, 8, 0.6) 100%),
+    url('/board/fields/th06-011.webp') !important;
+  background-size: auto 15px, 100% 100%, cover !important;
+  background-position: center top, center center, center center !important;
+  border-color: #5fc7a2;
+}
+
+.board-side--me[data-field-spell='th06-011'] {
+  background-position: center bottom, center center, center center !important;
 }
 
 /* เส้นกรอบทองคำชั้นในของขอบโต๊ะ */
@@ -142,7 +191,7 @@
   pointer-events: none;
 }
 
-/* 1.3 สะพานศิลาและตราประจำยามคั่นกลางสนาม (.battle__status) */
+/* 1.3 สะพานศิลาและแถบคั่นกลางสนาม (.battle__status) พร้อมแถบลายกระจังทอง */
 .battle__status {
   position: relative;
   z-index: 12;
@@ -153,9 +202,14 @@
   border-radius: 0;
   border-block: 2px solid #d9b24c;
   border-inline: 4px solid #d9b24c;
-  background:
-    radial-gradient(ellipse 60% 90% at 50% 50%, rgba(217, 178, 76, 0.24) 0%, transparent 72%),
-    linear-gradient(90deg, #120b07 0%, #24170e 22%, #19110b 50%, #24170e 78%, #120b07 100%);
+  background-color: #140d09;
+  background-image:
+    radial-gradient(ellipse 60% 90% at 50% 50%, rgba(217, 178, 76, 0.22) 0%, transparent 72%),
+    linear-gradient(90deg, rgba(14, 9, 6, 0.92) 0%, rgba(28, 18, 11, 0.86) 50%, rgba(14, 9, 6, 0.92) 100%),
+    url('/board/table-border.png');
+  background-repeat: no-repeat, no-repeat, repeat-x;
+  background-position: center, center, center;
+  background-size: 100% 100%, 100% 100%, auto 100%;
   box-shadow:
     0 0 18px rgba(0, 0, 0, 0.85),
     inset 0 1px 0 rgba(255, 240, 185, 0.35),
@@ -171,6 +225,23 @@
   pointer-events: none;
 }
 
+/* ไอคอนเทิร์น (กงล้อธรรมจักรทองเปลว /board/icons/turn.png) หน้าป้ายเทิร์น */
+.battle__turn-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.battle__turn-num::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background: url('/board/icons/turn.png') center / contain no-repeat;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85));
+  flex-shrink: 0;
+}
+
 .battle__phase {
   background: linear-gradient(180deg, rgba(217, 178, 76, 0.24), rgba(140, 100, 24, 0.28));
   border-color: rgba(250, 224, 148, 0.6);
@@ -180,17 +251,16 @@
 }
 
 /* ==========================================================================
-   2. ช่องการ์ดฝังลงในพื้นศิลา (Recessed Architectural Card Zones)
-   - ช่องมอนสเตอร์: แท่นยันต์แปดทิศและฐานบัวแปดกลีบ (/board/lotus-yantra-slot.svg)
-   - ช่องเวท/กับดัก: กรอบใบเสมาโบราณ (/board/sema-slot.svg)
-   - ช่องเวทสนาม/สุสาน/กองพิเศษ/กองการ์ด: ซุ้มหน้าบัน (/board/naban-shrine.svg)
+   2. กรอบช่องการ์ดโปร่งใส (.png 300x450) และไอคอนชุดเดียวกัน 8 อัน (.png 256x256)
+   - ช่องมอนสเตอร์: ฐานบัวทองคำ (/board/slot-monster.png)
+   - ช่องเวท/กับดัก: ซุ้มใบเสมาทองคำ (/board/slot-spell.png)
    ========================================================================== */
 
 .field-row {
   padding: 4px 0 6px;
 }
 
-/* 2.1 ช่องมอนสเตอร์: แท่นยันต์และฐานบัวฝังพื้น (แสดงทั้งช่องว่างและใต้การ์ดที่วางอยู่) */
+/* 2.1 ช่องมอนสเตอร์: กรอบฐานบัวทองเปลวโปร่งใส (/board/slot-monster.png) */
 .field-row__slot,
 .mini-card--field {
   position: relative;
@@ -198,32 +268,31 @@
   display: grid;
   place-items: center;
   border-radius: 6px;
-  background-color: rgba(8, 12, 10, 0.76);
-  background-image: url('/board/lotus-yantra-slot.svg');
+  background-color: rgba(8, 10, 9, 0.52);
+  background-image: url('/board/slot-monster.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
-  border: 1px solid rgba(217, 178, 76, 0.58);
+  background-position: center;
+  border: 1px solid rgba(217, 178, 76, 0.42);
   box-shadow:
-    inset 0 4px 9px rgba(0, 0, 0, 0.9),
-    inset 0 -1px 0 rgba(250, 224, 148, 0.38),
+    inset 0 4px 10px rgba(0, 0, 0, 0.85),
     0 2px 5px rgba(0, 0, 0, 0.65);
 }
 
-/* โทนสีหลุมแท่นยันต์แยกตามฝั่ง */
+/* โทนสีหลุมฐานบัวแยกตามฝั่ง */
 .board-side--opp .field-row__slot,
 .board-side--opp .mini-card--field {
-  background-color: rgba(28, 9, 8, 0.78);
-  border-color: rgba(235, 165, 95, 0.55);
+  background-color: rgba(24, 8, 7, 0.52);
+  border-color: rgba(235, 165, 95, 0.42);
 }
 
 .board-side--me .field-row__slot,
 .board-side--me .mini-card--field {
-  background-color: rgba(7, 24, 18, 0.78);
-  border-color: rgba(217, 178, 76, 0.62);
+  background-color: rgba(6, 20, 15, 0.52);
+  border-color: rgba(217, 178, 76, 0.48);
 }
 
-/* แก้จุดหมุนของการ์ดบนสนาม 3 มิติ (ทั้งท่าตั้งโจมตีและท่าตั้งรับแนวนอน) ให้อยู่กึ่งกลางหลุมแท่นยันต์พอดี
-   โดยใช้ transform scale แทน CSS zoom ภายในระนาบ 3 มิติ */
+/* แก้จุดหมุนของการ์ดบนสนาม 3 มิติ (ทั้งท่าตั้งโจมตีและท่าตั้งรับแนวนอน) ให้อยู่กึ่งกลางหลุมฐานบัวพอดี */
 .mini-card--field .mini-card__scale,
 .mini-card--st .mini-card__scale {
   position: absolute;
@@ -239,7 +308,7 @@
   transform: translate(-50%, -50%) rotate(-90deg) scale(calc(var(--mini-zoom) * 0.716));
 }
 
-/* ยกตัวการ์ดมอนสเตอร์ให้มีมิติลอยเหนือหลุมแท่นบัว */
+/* ยกตัวการ์ดมอนสเตอร์ให้มีมิติลอยเหนือหลุมฐานบัว */
 .mini-card--field .mini-card__scale .tc,
 .mini-card--field .mini-card__scale .card-back {
   box-shadow:
@@ -247,7 +316,7 @@
     0 0 0 2px rgba(250, 224, 148, 0.42);
 }
 
-/* 2.2 ช่องเวทมนตร์และกับดัก: กรอบซุ้มใบเสมาฝังพื้น */
+/* 2.2 ช่องเวทมนตร์และกับดัก: กรอบซุ้มใบเสมาทองเปลวโปร่งใส (/board/slot-spell.png) */
 .zone-slot--st,
 .mini-card--st {
   position: relative;
@@ -255,24 +324,24 @@
   display: grid;
   place-items: center;
   border-radius: 5px;
-  background-color: rgba(6, 16, 20, 0.8);
-  background-image: url('/board/sema-slot.svg');
+  background-color: rgba(6, 12, 14, 0.52);
+  background-image: url('/board/slot-spell.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
-  border: 1px solid rgba(118, 199, 212, 0.56);
+  background-position: center;
+  border: 1px solid rgba(217, 178, 76, 0.38);
   box-shadow:
-    inset 0 3px 8px rgba(0, 0, 0, 0.9),
-    inset 0 -1px 0 rgba(250, 224, 148, 0.3),
+    inset 0 3px 8px rgba(0, 0, 0, 0.85),
     0 1px 4px rgba(0, 0, 0, 0.6);
-  opacity: 0.95;
+  opacity: 0.96;
 }
 
-/* ซ่อนอีโมจิ 📜 ในช่องว่างเพื่อให้เห็นลายซุ้มใบเสมาทองคำเต็มตา */
+/* ซ่อนอีโมจิ 📜 ในช่องว่างเพื่อให้เห็นกรอบซุ้มใบเสมาทองคำเต็มตา */
 .zone-slot--st > span {
   opacity: 0;
 }
 
-/* 2.3 ช่องเวทสนาม / สุสาน / กองพิเศษ / กองการ์ด: ซุ้มหน้าบันและตราไอคอนไทยสีทอง */
+/* 2.3 ช่องเวทสนาม / สุสาน / กองพิเศษ / กองการ์ด: ใช้ไอคอนทองเปลวบนพื้นรัก (.png 256x256) */
 .pile {
   position: relative;
   border: 1px solid rgba(217, 178, 76, 0.58);
@@ -305,38 +374,39 @@ button.pile:hover {
     linear-gradient(180deg, rgba(28, 16, 36, 0.94) 0%, rgba(12, 7, 16, 0.98) 100%);
 }
 
-/* แทนที่อีโมจิระบบใน .pile__icon ด้วยตราสัญลักษณ์ไทยสีทองคำ (SVG) */
+/* แทนที่อีโมจิระบบใน .pile__icon ด้วยไอคอนทองเปลวชุดเดียวกัน (/board/icons/*.png) */
 .pile__icon {
   display: inline-block;
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
   font-size: 0;
   line-height: 0;
   color: transparent;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
   flex-shrink: 0;
 }
 
-/* ตราซุ้มมณฑปเวทสนาม */
+/* ไอคอนเวทสนาม (/board/icons/field-spell.png) */
 .pile--field .pile__icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2L15 8L21 11L17 13V20H7V13L3 11L9 8L12 2Z' fill='%235fc782' fill-opacity='0.3' stroke='%23fae094' stroke-width='1.8' stroke-linejoin='round'/%3E%3Ccircle cx='12' cy='13' r='2.5' fill='%23fae094'/%3E%3C/svg%3E");
+  background-image: url('/board/icons/field-spell.png');
 }
 
-/* ตราพระสถูปเจดีย์สุสาน */
+/* ไอคอนสุสาน (/board/icons/graveyard.png) */
 .pile--grave .pile__icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2L14 7L17 12H19V16H5V12H7L10 7L12 2ZM4 19H20V21H4V19Z' fill='%23c28ef2' fill-opacity='0.3' stroke='%23fae094' stroke-width='1.7' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url('/board/icons/graveyard.png');
 }
 
-/* ตราดารารัศมีพุ่มข้าวบิณฑ์กองพิเศษ */
+/* ไอคอนกองพิเศษ (/board/icons/extra-deck.png) */
 .pile--extra .pile__icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpolygon points='12,2 14.8,9.2 22,12 14.8,14.8 12,22 9.2,14.8 2,12 9.2,9.2' fill='%23fae094' stroke='%23d9b24c' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-image: url('/board/icons/extra-deck.png');
 }
 
-/* ตราสำรับคัมภีร์ทองคำกองการ์ด */
+/* ไอคอนกองการ์ด (/board/icons/deck.png) */
 .pile--deck .pile__icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='5' y='3' width='12' height='16' rx='2' fill='%23591712' stroke='%23fae094' stroke-width='1.7'/%3E%3Cpath d='M8 21H18C19.1 21 20 20.1 20 19V6' fill='none' stroke='%23d9b24c' stroke-width='1.7' stroke-linecap='round'/%3E%3Cpolygon points='11,7 14,11 11,15 8,11' fill='%23fae094'/%3E%3C/svg%3E");
+  background-image: url('/board/icons/deck.png');
 }
 
 /* 2.4 ป้ายค่าพลัง ATK/DEF บนสนาม — ปรับให้อ่านชัดแม้กระดานเอียง */
@@ -353,25 +423,25 @@ button.pile:hover {
 }
 
 /* ==========================================================================
-   3. หลังการ์ดลายไทยลงรักปิดทอง (.card-back & .pile--back)
+   3. หลังการ์ดลายไทยลงรักปิดทอง (/board/card-back.webp)
    ========================================================================== */
 .card-back {
   border-radius: 12px;
-  border: 9px solid #0e0a08;
-  outline: 2px solid #d9b24c;
-  outline-offset: -12px;
-  background-color: #260908;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280'%3E%3Cdefs%3E%3CradialGradient id='g' cx='50%25' cy='50%25' r='55%25'%3E%3Cstop offset='0%25' stop-color='%23591712'/%3E%3Cstop offset='100%25' stop-color='%231a0605'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='200' height='280' fill='url(%23g)'/%3E%3Cg fill='none' stroke='%23e5c158' stroke-width='1.8' stroke-opacity='0.82'%3E%3Crect x='14' y='14' width='172' height='252' rx='6'/%3E%3Crect x='20' y='20' width='160' height='240' rx='3' stroke-opacity='0.45' stroke-width='1'/%3E%3Cpolygon points='100,32 162,140 100,248 38,140' stroke-width='2'/%3E%3Cpolygon points='100,52 146,140 100,228 54,140' stroke-opacity='0.6'/%3E%3Ccircle cx='100' cy='140' r='34' fill='%23210806' stroke-width='2.2'/%3E%3Cpolygon points='100,108 108,132 132,140 108,148 100,172 92,148 68,140 92,132' fill='%23f5dc84'/%3E%3Ccircle cx='100' cy='140' r='7' fill='%23591712' stroke='%23fff2b2' stroke-width='1.5'/%3E%3Cpath d='M26,38 L42,26 M174,38 L158,26 M26,242 L42,254 M174,242 L158,254' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
+  border: 4px solid #120b08;
+  outline: 1.5px solid #d9b24c;
+  outline-offset: -6px;
+  background-color: #1c0806;
+  background-image: url('/board/card-back.webp');
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   box-shadow:
-    inset 0 0 18px rgba(0, 0, 0, 0.8),
+    inset 0 0 14px rgba(0, 0, 0, 0.75),
     0 8px 16px rgba(0, 0, 0, 0.75);
 }
 
 /* ==========================================================================
-   4. จอกว้าง (≥ 720px): โต๊ะดวล 3 มิติเต็มรูปแบบ พร้อมซุ้มหน้าบันและปึกการ์ด 3 มิติข้างสนาม
+   4. จอกว้าง (≥ 720px): โต๊ะดวล 3 มิติเต็มรูปแบบ (ใช้ภาพ /board/table-landscape.webp)
    ========================================================================== */
 @media (min-width: 720px) {
   .battle {
@@ -402,7 +472,12 @@ button.pile:hover {
     padding-bottom: 8px;
     border-width: 5px 6px 1px 6px;
     border-radius: 22px 22px 0 0;
-    background-size: 120px 14px, 100% 100%, 140px 140px, 100% 100%;
+    background-image:
+      url('/board/table-border.png'),
+      radial-gradient(ellipse 80% 65% at 50% 58%, rgba(190, 38, 28, 0.2) 0%, rgba(18, 8, 6, 0.42) 65%, rgba(8, 4, 3, 0.7) 100%),
+      url('/board/table-landscape.webp');
+    background-size: auto 18px, 100% 100%, 100% 200%;
+    background-position: top center, center center, center top;
     box-shadow:
       inset 0 14px 24px rgba(0, 0, 0, 0.82),
       inset 0 0 0 2px rgba(250, 224, 148, 0.32),
@@ -420,7 +495,12 @@ button.pile:hover {
     padding-bottom: 14px;
     border-width: 1px 6px 6px 6px;
     border-radius: 0 0 24px 24px;
-    background-size: 120px 16px, 100% 100%, 140px 140px, 100% 100%;
+    background-image:
+      url('/board/table-border.png'),
+      radial-gradient(ellipse 80% 65% at 50% 42%, rgba(28, 140, 96, 0.18) 0%, rgba(8, 16, 12, 0.42) 65%, rgba(4, 10, 8, 0.7) 100%),
+      url('/board/table-landscape.webp');
+    background-size: auto 20px, 100% 100%, 100% 200%;
+    background-position: bottom center, center center, center bottom;
     /* ขอบหน้าโต๊ะฐานสิงห์ บัวคว่ำบัวหงาย 3 มิติเต็มขั้น */
     box-shadow:
       inset 0 -16px 24px rgba(0, 0, 0, 0.82),
@@ -456,12 +536,12 @@ button.pile:hover {
     flex-basis: 100%;
   }
 
-  /* ซุ้มหน้าบันข้างสนาม (เวทสนาม และ สุสาน) */
+  /* ซุ้มช่องเวทสนามและสุสานข้างสนาม (ใช้กรอบซุ้มใบเสมา/ฐานบัวทองเปลว) */
   .pile--field,
   .pile--grave {
     border-style: solid;
     border-width: 1.5px;
-    background-image: url('/board/naban-shrine.svg');
+    background-image: url('/board/slot-spell.png');
     background-size: 100% 100%;
     background-repeat: no-repeat;
     box-shadow:
@@ -471,35 +551,34 @@ button.pile:hover {
   }
 
   .pile--field {
-    background-color: rgba(8, 28, 20, 0.82);
+    background-color: rgba(8, 28, 20, 0.76);
     border-color: rgba(95, 199, 130, 0.65);
   }
 
   .pile--grave {
-    background-color: rgba(24, 12, 32, 0.82);
+    background-color: rgba(24, 12, 32, 0.76);
     border-color: rgba(212, 166, 255, 0.62);
   }
 
   .pile__icon {
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
   }
 
   .pile--field .pile__body,
   .pile--grave .pile__body {
     padding: 5px 6px;
     border-radius: 6px;
-    background: rgba(10, 8, 6, 0.8);
-    border: 1px solid rgba(217, 178, 76, 0.38);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.78);
+    background: rgba(10, 8, 6, 0.84);
+    border: 1px solid rgba(217, 178, 76, 0.42);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
   }
 
-  /* กองการ์ดหลักและกองพิเศษ: ปึกไพ่ลายไทย 3 มิติวางซ้อนกันในหลุมซุ้มหน้าบัน */
+  /* กองการ์ดหลักและกองพิเศษ: ปึกไพ่ลายไทย 3 มิติ (/board/card-back.webp) วางซ้อนกัน */
   .pile--back {
     border: 2px solid var(--gold-light);
-    background-color: #260908;
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280'%3E%3Crect width='200' height='280' fill='%23240807'/%3E%3Cg fill='none' stroke='%23e5c158' stroke-width='2.2' stroke-opacity='0.82'%3E%3Crect x='14' y='14' width='172' height='252' rx='6'/%3E%3Cpolygon points='100,36 158,140 100,244 42,140'/%3E%3Ccircle cx='100' cy='140' r='32' fill='%231c0605'/%3E%3Cpolygon points='100,114 107,133 126,140 107,147 100,166 93,147 74,140 93,133' fill='%23f5dc84'/%3E%3C/g%3E%3C/svg%3E");
+    background-color: #1c0806;
+    background-image: url('/board/card-back.webp');
     background-size: cover;
     background-position: center;
     transform: translateY(-4px);
@@ -534,7 +613,7 @@ button.pile:hover {
 }
 
 /* ==========================================================================
-   5. แถบผู้เล่นและแถบมือ (ไม่เอียงตามกระดาน 3 มิติ)
+   5. แถบผู้เล่น แถบมือ และไอคอนทองเปลวชุดเดียวกัน (LP, การ์ดในมือ, บันทึกการต่อสู้)
    ========================================================================== */
 .player-bar {
   position: relative;
@@ -548,7 +627,8 @@ button.pile:hover {
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
 }
 
-.player-bar--opp {
+.player-bar--opp,
+.player-bar--opponent {
   border-color: rgba(230, 91, 76, 0.45);
   background:
     linear-gradient(90deg, rgba(64, 18, 14, 0.55) 0%, transparent 45%),
@@ -568,6 +648,67 @@ button.pile:hover {
     0 0 0 1px var(--gold),
     0 0 18px rgba(217, 178, 76, 0.35),
     inset 0 1px 0 rgba(255, 240, 190, 0.3);
+}
+
+/* ไอคอน LP ดวงชะตา/หัวใจทองเปลว (/board/icons/lp.png) */
+.player-bar__lp-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.player-bar__lp-label::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background: url('/board/icons/lp.png') center / contain no-repeat;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85));
+  flex-shrink: 0;
+}
+
+/* ไอคอนการ์ดในมือ (/board/icons/hand.png) แทนอีโมจิ ✋ */
+.player-bar__counts > span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.player-bar__counts > span::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: -18px;
+  position: relative;
+  z-index: 2;
+  border-radius: 4px;
+  background: #140e0a url('/board/icons/hand.png') center / contain no-repeat;
+  box-shadow: 2px 0 4px #140e0a;
+  flex-shrink: 0;
+}
+
+/* ไอคอนบันทึกการต่อสู้ (/board/icons/battle-log.png) แทนอีโมจิ 📜 */
+.battle-log__title,
+.battle__log-fab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.battle-log__title::before,
+.battle__log-fab::before {
+  content: '';
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin-right: -19px;
+  position: relative;
+  z-index: 2;
+  border-radius: 4px;
+  background: #140f0a url('/board/icons/battle-log.png') center / contain no-repeat;
+  box-shadow: 2px 0 4px #140f0a;
+  flex-shrink: 0;
 }
 
 .player-bar__lp-track {
