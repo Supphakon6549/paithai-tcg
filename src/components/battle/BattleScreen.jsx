@@ -13,6 +13,7 @@ import {
   RULES,
   activationBlocker,
   applyAction,
+  canAttackDirectly,
   canAttackThisTurn,
   cardOf,
   createGame,
@@ -24,6 +25,7 @@ import {
   getActivated,
   getActivationTargets,
   getAiAction,
+  getBranchSpell,
   getBuffSpell,
   getContinuousTrap,
   getEquip,
@@ -40,6 +42,7 @@ import {
   getReviveTargets,
   getRitualInfo,
   getSpecialSummon,
+  getSummonOnlyBy,
   getSummonableHand,
   getTributeCost,
   handCardBlocker,
@@ -293,7 +296,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
       setSelectedHandUid(null)
       setRevivePick(inst.uid)
       setError(null)
-    } else if (getEquip(card) || getBuffSpell(card)) {
+    } else if (getEquip(card) || getBuffSpell(card) || getBranchSpell(card)) {
       setSelectedHandUid(null)
       setEquipPick(inst.uid)
       setError(null)
@@ -307,7 +310,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   function activateEffectOf(monster) {
     const activated = getActivated(cardOf(monster))
     const kind = activated.kind
-    if (kind === 'debuff' || kind === 'destroyWeaker' || kind === 'lockAttack') {
+    if (['debuff', 'destroyWeaker', 'lockAttack', 'bind', 'drain', 'curse'].includes(kind)) {
       setSelectedFieldUid(null)
       setEffectPick({
         uid: monster.uid,
@@ -324,6 +327,8 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   // เหตุผลที่อัญเชิญมอนสเตอร์ในมือไม่ได้
   function summonReason(card, inst) {
     if (summonable.has(inst.uid)) return null
+    const onlyBy = getSummonOnlyBy(card)
+    if (onlyBy) return `อัญเชิญได้ด้วย "${cardOf({ cardId: onlyBy }).name}" เท่านั้น`
     if (tributesRequired(card) === 0 && !isNormalSummonable(card)) {
       return card.summonType === 'ritual' ? 'ต้องอัญเชิญด้วยการ์ดพิธีกรรม' : 'ต้องอัญเชิญด้วยคาถาผสานร่าง'
     }
@@ -333,6 +338,13 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
     const cost = getTributeCost(game, PLAYER, card)
     if (cost > me.field.filter(Boolean).length) return `ต้องมีมอนสเตอร์บนสนามให้สังเวย ${cost} ตัว`
     return 'สนามเต็มแล้ว'
+  }
+
+  // ป้ายสถานะบนมอนสเตอร์: คำสาป / ห้ามโจมตี (รากตะเคียน/พระอาจารย์)
+  function statusBadge(m) {
+    if (m.curse?.until >= game.turn) return { tone: 'lose', text: 'ต้องสาป' }
+    if (m.cannotAttackTurn >= game.turn) return { tone: 'lose', text: 'ห้ามโจมตี' }
+    return null
   }
 
   // ป้ายคาดการณ์บนเป้าหมาย (การ์ดคว่ำไม่รู้ค่า จึงแสดง ?)
@@ -375,7 +387,9 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   } else if (revivePick) {
     hint = reviveTargets.length ? 'เลือกมอนสเตอร์ในสุสานที่จะคืนชีพ (ท่าโจมตี)' : 'ไม่มีมอนสเตอร์ในสุสานที่คืนชีพได้'
   } else if (equipPick) {
-    hint = `แตะมอนสเตอร์ของคุณที่จะ${getBuffSpell(cardOf(equipInst)) ? 'ใช้' : 'สวม'} ${cardOf(equipInst).name}`
+    hint = getBranchSpell(cardOf(equipInst))
+      ? 'แตะต้นสายบนสนาม (พรานหนุ่ม / พระอาจารย์) เพื่อเปลี่ยนเป็นร่างสายมืด'
+      : `แตะมอนสเตอร์ของคุณที่จะ${getBuffSpell(cardOf(equipInst)) ? 'ใช้' : 'สวม'} ${cardOf(equipInst).name}`
   } else if (effectPick) {
     hint = pickingDiscard
       ? 'แตะการ์ดในมือที่จะทิ้ง 1 ใบ'
@@ -383,6 +397,12 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
       ? 'แตะมอนสเตอร์ศัตรูหงายหน้าที่ ATK ต่ำกว่า เพื่อทำลาย'
       : effectPick.kind === 'lockAttack'
       ? 'แตะมอนสเตอร์ศัตรูเผ่าอสูร/วิญญาณ ที่จะห้ามโจมตีเทิร์นหน้า'
+      : effectPick.kind === 'bind'
+      ? 'แตะมอนสเตอร์ศัตรูที่จะให้รากตะเคียนพันไว้'
+      : effectPick.kind === 'drain'
+      ? 'แตะมอนสเตอร์ศัตรูที่จะดูดพลัง'
+      : effectPick.kind === 'curse'
+      ? 'แตะมอนสเตอร์ศัตรูที่จะสาป'
       : 'แตะมอนสเตอร์หงายหน้าของคู่ต่อสู้ที่จะลด ATK'
   } else if (tributeCard) {
     hint = `แตะมอนสเตอร์ของคุณที่จะสังเวยให้ ${tributeCard.name} (${tributePick.selected.length}/${tributeNeeded})`
@@ -390,9 +410,11 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
     hint = `การ์ดในมือเกิน ${RULES.handLimit} ใบ — แตะการ์ดเพื่อทิ้งอีก ${getHandOverflow(game, PLAYER)} ใบ`
   } else if (game.phase === 'battle') {
     hint = attacker
-      ? oppHasMonsters
-        ? `เลือกเป้าหมายให้ ${cardOf(attacker).name}`
-        : 'ฝ่ายตรงข้ามไม่มีมอนสเตอร์ — โจมตีตรงได้!'
+      ? !oppHasMonsters
+        ? 'ฝ่ายตรงข้ามไม่มีมอนสเตอร์ — โจมตีตรงได้!'
+        : canAttackDirectly(game, PLAYER, attacker.uid)
+        ? `เลือกเป้าหมาย หรือให้ ${cardOf(attacker).name} บินข้ามการ์ดคว่ำโจมตีตรง`
+        : `เลือกเป้าหมายให้ ${cardOf(attacker).name}`
       : readyAttackers.size > 0
       ? 'แตะมอนสเตอร์ของคุณเพื่อเลือกตัวโจมตี'
       : 'ไม่มีมอนสเตอร์ที่โจมตีได้แล้ว'
@@ -538,7 +560,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   } else if (isMyTurn) {
     actions = (
       <>
-        {attacker && !oppHasMonsters && (
+        {attacker && canAttackDirectly(game, PLAYER, attacker.uid) && (
           <button
             type="button"
             className="btn btn--danger"
@@ -584,7 +606,12 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   }
 
   return (
-    <div className="battle" data-battle-root>
+    <div
+      className="battle"
+      data-battle-root
+      data-field-me={me.fieldSpell?.cardId ?? 'none'}
+      data-field-opp={opp.fieldSpell?.cardId ?? 'none'}
+    >
       <PlayerBar player={opp} isActive={game.activePlayer === AI} isOpponent />
 
       <BoardSide
@@ -600,7 +627,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
             xpOf={xpOf(AI)}
             hideFaceDown
             renderBadge={(m) =>
-              targetBadge(m) ?? (m.cannotAttackTurn >= game.turn ? { tone: 'lose', text: 'ห้ามโจมตี' } : null)
+              targetBadge(m) ?? statusBadge(m)
             }
             classFor={(m) =>
               attacker ||
@@ -650,9 +677,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
             renderBadge={(m) =>
               isTributeSelected(m.uid)
                 ? materialBadge
-                : m.cannotAttackTurn >= game.turn
-                ? { tone: 'lose', text: 'ห้ามโจมตี' }
-                : null
+                : statusBadge(m)
             }
             classFor={(m) =>
               [

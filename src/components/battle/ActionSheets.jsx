@@ -1,4 +1,4 @@
-import { formatNumber, getBuffSpell, getEquip, getFusionSpell, getReviveSpell } from '../../engine'
+import { formatNumber, getBranchSpell, getBuffSpell, getEquip, getFusionSpell, getReviveSpell } from '../../engine'
 
 const nonMonsterAction = (card) => {
   if (card.type === 'ritual') return '🙏 ทำพิธี'
@@ -8,6 +8,7 @@ const nonMonsterAction = (card) => {
   if (getReviveSpell(card)) return '💧 คืนชีพ'
   if (getEquip(card)) return '🗡️ สวมใส่'
   if (getBuffSpell(card)) return '🔥 ใช้'
+  if (getBranchSpell(card)) return '🌑 เปิดสายมืด'
   return 'ใช้'
 }
 

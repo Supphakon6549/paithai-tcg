@@ -19,6 +19,14 @@ import { TRIBES } from '../data/tribes'
  *   attackingBoost         ATK เพิ่มเฉพาะตอนเป็นฝ่ายโจมตี (รวมโจมตีตรง)
  *   battleDamageReduction  ลดความเสียหายจากการต่อสู้ที่ใบนี้ปะทะ (หักหลังตัวคูณอื่น ต่ำสุด 0)
  *   buffSpell              เวทบัฟ ATK มอนสเตอร์หงายของเรา 1 ตัวจนจบเทิร์น
+ *   graveyardBoost         ATK +per ต่อมอนสเตอร์ที่ matches ในสุสานเรา (สูงสุด max)
+ *   shroud                 ศัตรูเลือกใบนี้เป็นเป้าความสามารถไม่ได้ ขณะ isActive({ allies })
+ *   attackGuard            ศัตรูโจมตีผีหงายตัวอื่นของเรา → ย้ายเป้ามาที่ใบนี้ (ใบละครั้ง/เทิร์น) และรอดการต่อสู้นั้น
+ *   returnOnDestroy        ถูกทำลายจากสนาม → กลับท่าตั้งรับหงายตอนจบเทิร์นนั้น (ใบละครั้ง/เกม)
+ *   flyOver                ศัตรูไม่มีมอนสเตอร์หงาย (มีแต่คว่ำ) → โจมตีตรงได้
+ *   millOnKill             ทำลายศัตรูจากการต่อสู้ → เลือกส่งมอนสเตอร์ที่ matches จากกองลงสุสาน 1 ใบ
+ *   summonOnlyBy           อัญเชิญได้ด้วยการ์ดรหัสนี้เท่านั้น (ไม่อัญเชิญสังเวย/คืนชีพ)
+ *   branchSpell            เวทเปิดสายมืด: สังเวยต้นสายหงาย → อัญเชิญพิเศษร่างที่คู่กันจากมือ
  *   noBattleDamageVsTribe  เจ้าของไม่รับความเสียหายจากการต่อสู้ที่ใบนี้ปะทะเผ่านี้
  *   halveBattleDamage      เจ้าของรับความเสียหายจากการต่อสู้ครึ่งเดียว (ปัดลง)
  *   destroysTribeAfterBattle  หลังคำนวณความเสียหาย ทำลายคู่ต่อสู้เผ่านี้
@@ -42,6 +50,9 @@ import { TRIBES } from '../data/tribes'
  *   activated              ความสามารถที่ผู้เล่นกดใช้เองในเฟสหลัก (มอนสเตอร์หงายบนสนาม)
  *                          kind: 'heal' | 'debuff' | 'destroySpellsTraps' | 'destroyWeaker'
  *                                (debuff + discardCost: false = ไม่ต้องทิ้งการ์ด)
+ *                                | 'bind' (ห้ามโจมตี/เปลี่ยนท่าถึงจบเทิร์นศัตรูถัดไป)
+ *                                | 'drain' (เป้า −amount · ตัวเอง +amount จนจบเทิร์น)
+ *                                | 'curse' (ถูกทำลายก่อนหมดอายุ → ผู้ควบคุมเสีย LP amount)
  *                                | 'lockAttack' | 'searchTrap'
  *                          oncePer: 'card' (ใบละครั้ง) | 'name' (ชื่อละครั้ง) ต่อเทิร์น
  *   fieldSpell.aura        เวทสนาม: ปรับ ATK มอนสเตอร์หงายฝ่ายเจ้าของที่เข้าเงื่อนไข
@@ -60,6 +71,8 @@ const isDeva = hasTribe('deva')
 const isDemon = hasTribe('demon')
 const isHunter = hasTribe('hunter')
 const isLargeBeast = hasTribe('largeBeast')
+const isGhost = hasTribe('ghost')
+const hasGhostAlly = ({ allies }) => allies.some(isGhost)
 const isHolyWater = (c) => c.id === 'th01-014' || (c.spellSubtypeName ?? '').includes('น้ำมนต์')
 
 export const CARD_EFFECTS = {
@@ -278,6 +291,69 @@ export const CARD_EFFECTS = {
       reason: 'ม่านควันลงกา: ผู้โจมตี ATK −500 จนจบเทิร์น',
     },
   },
+  // ---------- TH06 ผีไทย (docs/TH06-DESIGN.md) ----------
+  // ผีเรือนเฝ้าชาน
+  'th06-001': {
+    attackGuard: { reason: 'ผีเรือนเฝ้าชาน: รับการโจมตีแทน และไม่ถูกทำลายจากการต่อสู้ครั้งนี้' },
+  },
+  // กุมารทองนำทาง
+  'th06-002': {
+    onSummonSearch: {
+      label: 'มอนสเตอร์เผ่าวิญญาณระดับ 1–4 (ชื่ออื่น)',
+      matches: (c) => c.type === 'monster' && isGhost(c) && c.level <= 4 && c.id !== 'th06-002',
+      oncePerName: true,
+      alsoOnRevive: true,
+    },
+  },
+  // นางตานีม่านใบ
+  'th06-003': {
+    atkBoosts: [{ amount: 200, reason: 'มีผีตัวอื่นหงายบนสนามเรา', isActive: hasGhostAlly }],
+    shroud: { isActive: hasGhostAlly, reason: 'นางตานี: ศัตรูเลือกเป็นเป้าไม่ได้ขณะมีผีตัวอื่น' },
+  },
+  // ผีกองกอยย่องไพร
+  'th06-004': {
+    graveyardBoost: { per: 100, max: 300, matches: isGhost, reason: 'ผีกองกอย: ผีในสุสานเรา' },
+  },
+  // นางตะเคียนพิทักษ์ไพร
+  'th06-005': {
+    activated: { kind: 'bind', label: 'รากพันธนาการ: ห้ามโจมตี/เปลี่ยนท่า', oncePer: 'card' },
+  },
+  // แม่นาคคำมั่นนิรันดร์
+  'th06-006': {
+    shroud: { isActive: hasGhostAlly, reason: 'แม่นาค: ศัตรูเลือกเป็นเป้าไม่ได้ขณะมีผีตัวอื่น' },
+    returnOnDestroy: { reason: 'แม่นาค: คำมั่นที่กลับมา' },
+  },
+  // ปอบเงาสิง
+  'th06-007': {
+    activated: { kind: 'drain', amount: 300, label: 'ดูดพลัง ATK 300', oncePer: 'card' },
+  },
+  // กระสือแสงหลง
+  'th06-008': {
+    flyOver: { reason: 'กระสือบินผ่านความมืด: ศัตรูไม่มีมอนสเตอร์หงาย' },
+  },
+  // พรานไสยเวท
+  'th06-009': {
+    summonOnlyBy: 'th06-012',
+    millOnKill: { matches: (c) => c.type === 'monster' && isGhost(c), label: 'มอนสเตอร์เผ่าวิญญาณ' },
+  },
+  // อาจารย์ไสยดำ
+  'th06-010': {
+    summonOnlyBy: 'th06-012',
+    activated: { kind: 'curse', amount: 500, label: 'สาปศัตรู (ตาย = เสีย 500 LP)', oncePer: 'card' },
+  },
+  // ป่าช้าวัดร้าง (เวทสนามฝ่ายผี)
+  'th06-011': {
+    fieldSpell: { faction: 'ghost', aura: { amount: 200, appliesTo: isGhost, reason: 'ป่าช้าวัดร้าง: ผีฝ่ายเรา' } },
+  },
+  // คำสาปพันธะเงา
+  'th06-012': {
+    branchSpell: {
+      pairs: [
+        { from: 'th01-002', to: 'th06-009' },
+        { from: 'th01-006', to: 'th06-010' },
+      ],
+    },
+  },
   // ช้างศึกไอยรา
   'th01-020': {
     noTributeIf: { reason: 'มีมอนสเตอร์เผ่าทหารหาญบนสนาม', isActive: ({ allies }) => allies.some(isWarrior) },
@@ -351,8 +427,14 @@ export function getAtkBoosts(card, allies = [], enemies = [], extras = {}) {
     .map((e) => effectOf(e).equip)
     .filter((eq) => eq?.appliesTo(card))
     .map((eq) => ({ amount: eq.atk, reason: eq.reason }))
+  const gy = effectOf(card).graveyardBoost
+  const gyCount = gy ? (extras.graveyard ?? []).filter((c) => c.type === 'monster' && gy.matches(c)).length : 0
+  const fromGraveyard = gyCount
+    ? [{ amount: Math.min(gy.max, gy.per * gyCount), reason: `${gy.reason} ${gyCount} ใบ` }]
+    : []
   return [
     ...own,
+    ...fromGraveyard,
     ...fromAllies,
     ...fromEnemies,
     ...fromField,
@@ -454,10 +536,41 @@ export function hasNoDirectAttack(card) {
   return Boolean(effectOf(card).noDirectAttack)
 }
 
+export const cardHasTribe = (card, tribe) => hasTribe(tribe)(card)
+
+export function getShroud(card) {
+  return effectOf(card).shroud ?? null
+}
+
+export function getAttackGuard(card) {
+  return effectOf(card).attackGuard ?? null
+}
+
+export function getReturnOnDestroy(card) {
+  return effectOf(card).returnOnDestroy ?? null
+}
+
+export function getFlyOver(card) {
+  return effectOf(card).flyOver ?? null
+}
+
+export function getMillOnKill(card) {
+  return effectOf(card).millOnKill ?? null
+}
+
+export function getSummonOnlyBy(card) {
+  return effectOf(card).summonOnlyBy ?? null
+}
+
+export function getBranchSpell(card) {
+  return effectOf(card).branchSpell ?? null
+}
+
 export function isPlayableNonMonster(card) {
   if (card?.type === 'spell') {
     return (
-      isFieldSpell(card) || Boolean(getFusionSpell(card) || getReviveSpell(card) || getEquip(card) || getBuffSpell(card))
+      isFieldSpell(card) ||
+      Boolean(getFusionSpell(card) || getReviveSpell(card) || getEquip(card) || getBuffSpell(card) || getBranchSpell(card))
     )
   }
   if (card?.type === 'trap') return Boolean(getTrapEffect(card) || getContinuousTrap(card))

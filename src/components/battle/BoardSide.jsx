@@ -14,6 +14,7 @@ export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, 
       className={`board-side board-side--${isOpponent ? 'opp' : 'me'}`}
       aria-label={`กระดานของ${owner}`}
       data-owner={player.id}
+      data-field-spell={player.fieldSpell?.cardId ?? 'none'}
     >
       <div className="board-side__monsters">{monsterRow}</div>
 

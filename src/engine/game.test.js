@@ -1,20 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import { getCardById } from '../data/cards'
-import { GameRuleError, applyAction, createGame, getSummonableHand, tributesRequired, validateDeck } from './game'
-import { AI, PLAYER, RULES } from './rules'
+import {
+  GameRuleError,
+  applyAction,
+  createGame,
+  expandDeckList,
+  getSummonableHand,
+  tributesRequired,
+  validateDeck,
+} from './game'
+import { AI, PLAYER, RULES, STARTER_DECK_LIST } from './rules'
 import { handUid, lastLog, makeState, uidAt } from './testUtils'
 
+const STARTER_SIZE = expandDeckList(STARTER_DECK_LIST).length
 const countCards = (p) =>
   p.deck.length + p.hand.length + p.graveyard.length + p.field.filter(Boolean).length
 
 describe('createGame', () => {
-  it('ตั้งค่าเริ่มต้นตาม GDD: LP 8,000 มือ 5 ใบ กอง 35 ใบ', () => {
+  it('ตั้งค่าเริ่มต้นตาม GDD: LP 8,000 มือ 5 ใบ ที่เหลืออยู่ในกอง', () => {
     const s = createGame({ seed: 42 })
     for (const id of [PLAYER, AI]) {
       const p = s.players[id]
       expect(p.lp).toBe(8000)
       expect(p.hand).toHaveLength(5)
-      expect(p.deck).toHaveLength(35)
+      expect(p.deck).toHaveLength(STARTER_SIZE - RULES.startingHand)
       expect(p.field).toEqual([null, null, null, null, null])
       expect(p.spellTrap).toEqual([null, null, null, null, null])
       expect(p.fieldSpell).toBeNull()
@@ -42,13 +51,13 @@ describe('สำรับจากหน้าจัดสำรับ', () => {
     expect(mine).toHaveLength(40)
     expect(new Set(mine)).toEqual(new Set(['th01-011', 'th01-017']))
     expect(s.players.player.extraDeck.map((c) => c.cardId)).toEqual(['th01-021'])
-    expect(s.players.ai.deck.length + s.players.ai.hand.length).toBe(40)
+    expect(s.players.ai.deck.length + s.players.ai.hand.length).toBe(STARTER_SIZE)
     expect(s.players.ai.extraDeck).toHaveLength(3)
   })
 
   it('บันทึกบอกขนาดสำรับแยกเมื่อไม่เท่ากัน', () => {
     const s = createGame({ seed: 1, deckList: [['th01-011', 30]] })
-    expect(s.log[0].text).toContain('สำรับคุณ 30 ใบ · คู่ต่อสู้ 40 ใบ')
+    expect(s.log[0].text).toContain(`สำรับคุณ 30 ใบ · คู่ต่อสู้ ${STARTER_SIZE} ใบ`)
   })
 
   it('validateDeck จับรหัสผิด จำนวนผิด และการ์ดผิดกอง', () => {
@@ -73,8 +82,8 @@ describe('การจั่วและเทิร์น', () => {
     expect(s2.turn).toBe(2)
     expect(s2.activePlayer).toBe(AI)
     expect(s2.players.ai.hand).toHaveLength(6)
-    expect(s2.players.ai.deck).toHaveLength(34)
-    expect(lastLog(s2).text).toContain('เหลือในกอง 34 ใบ')
+    expect(s2.players.ai.deck).toHaveLength(STARTER_SIZE - RULES.startingHand - 1)
+    expect(lastLog(s2).text).toContain(`เหลือในกอง ${STARTER_SIZE - RULES.startingHand - 1} ใบ`)
   })
 
   it('ไม่ให้ผู้เล่นทำแอ็กชันนอกเทิร์นตัวเอง', () => {
@@ -338,11 +347,11 @@ describe('จำกัดการ์ดในมือ 6 ใบ', () => {
 })
 
 describe('ความคงที่ของจำนวนการ์ด', () => {
-  it('การ์ดฝ่ายละ 40 ใบเสมอหลังแอ็กชันต่าง ๆ', () => {
+  it('การ์ดฝ่ายละเท่าขนาดสำรับเสมอหลังแอ็กชันต่าง ๆ', () => {
     let s = createGame({ seed: 3 })
-    s = applyAction(s, { type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 0) })
+    s = applyAction(s, { type: 'summon', player: PLAYER, uid: getSummonableHand(s, PLAYER)[0].uid })
     s = applyAction(s, { type: 'endTurn', player: PLAYER })
-    expect(countCards(s.players.player)).toBe(40)
-    expect(countCards(s.players.ai)).toBe(40)
+    expect(countCards(s.players.player)).toBe(STARTER_SIZE)
+    expect(countCards(s.players.ai)).toBe(STARTER_SIZE)
   })
 })

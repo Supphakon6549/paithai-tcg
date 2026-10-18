@@ -164,6 +164,8 @@ describe('ม่านควันลงกา: ลด ATK ผู้โจมต
     expect(text).toContain('ATK 1,700 − 500 = 1,200 · การโจมตีดำเนินต่อ')
     expect(lastLog(after).text).toBe('⚔️ ทหารเสือดาบสองมือ โจมตี ขุนยักษ์ดาบอัคนี')
     expect(after.players.player.graveyard.map((c) => c.cardId)).toContain('th04-009')
+    // การโจมตียังดำเนินต่อ → แอนิเมชันต้องเป็นการโจมตี ไม่ใช่ถูกยกเลิก
+    expect(lastLog(after).event).toMatchObject({ type: 'attack', trap: s.pendingResponse.options[0].id })
   })
 
   it('ไม่เปิด: เทิร์นที่วาง / เป้าไม่ใช่อสูร / เป้าคว่ำ', () => {

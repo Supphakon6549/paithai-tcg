@@ -1,5 +1,6 @@
 import {
   getActivated,
+  getBranchSpell,
   getBuffSpell,
   getContinuousTrap,
   getEquip,
@@ -11,6 +12,7 @@ import {
 import {
   activationBlocker,
   applyAction,
+  canAttackDirectly,
   canAttackThisTurn,
   cardOf,
   currentActor,
@@ -81,7 +83,8 @@ export function getAiAction(state, playerId = AI) {
         chooseFusion(state, playerId) ??
         chooseRitual(state, playerId)
       if (spell) return spell
-      const special = chooseSpecialSummon(state, playerId) ?? chooseReviveSpell(state, playerId)
+      const special =
+        chooseBranchSpell(state, playerId) ?? chooseSpecialSummon(state, playerId) ?? chooseReviveSpell(state, playerId)
       if (special) return special
       const summon = chooseSummon(state, playerId)
       if (summon) return summon
@@ -158,6 +161,7 @@ function chooseEvolve(state, playerId) {
 // ตัวเลือกที่รอ: ค้นการ์ด → เอาใบที่มีค่ามากสุด · คืนชีพ → จ่าย LP ถ้ายังเหลือเยอะ ไม่งั้นใช้น้ำมนต์
 function chooseOption(state, playerId) {
   const choice = state.pendingChoice
+  if (choice.kind === 'mill') return choice.options[0].id
   if (choice.kind === 'search') {
     return [...choice.options].sort((a, b) => cardValue({ cardId: b.id }) - cardValue({ cardId: a.id }))[0].id
   }
@@ -187,6 +191,15 @@ function chooseEquip(state, playerId) {
   for (const spell of playable(state, playerId, (c) => Boolean(getEquip(c)))) {
     const target = [...getEquipTargets(state, playerId, cardOf(spell))].sort(byAtkDesc)[0]
     if (target) return { type: 'playSpell', player: playerId, uid: spell.uid, targetUid: target.uid }
+  }
+  return null
+}
+
+// เปิดสายมืด: ทำทันทีเมื่อมีคู่ (ร่างสายมืดแรงกว่าต้นสาย)
+function chooseBranchSpell(state, playerId) {
+  for (const spell of playable(state, playerId, (c) => Boolean(getBranchSpell(c)))) {
+    const source = getEquipTargets(state, playerId, cardOf(spell))[0]
+    if (source) return { type: 'playSpell', player: playerId, uid: spell.uid, targetUid: source.uid }
   }
   return null
 }
@@ -277,6 +290,15 @@ function chooseActivation(state, playerId) {
     if (activated.kind === 'heal' || activated.kind === 'destroySpellsTraps' || activated.kind === 'searchTrap') {
       return { type: 'activate', player: playerId, uid: m.uid }
     }
+    if (['bind', 'drain', 'curse'].includes(activated.kind)) {
+      // เลือกศัตรูที่ ATK สูงสุด (ภัยใหญ่สุด) · ดูดพลังใช้เฉพาะเทิร์นที่โจมตีได้
+      if (activated.kind === 'drain' && !canAttackThisTurn(state)) continue
+      const oppId = opponentOf(playerId)
+      const target = [...getActivationTargets(state, playerId, m.uid)].sort(
+        (a, b) => getFieldAtk(state, oppId, b.uid) - getFieldAtk(state, oppId, a.uid)
+      )[0]
+      return { type: 'activate', player: playerId, uid: m.uid, targetUid: target.uid }
+    }
     if (activated.kind === 'lockAttack') {
       const oppId = opponentOf(playerId)
       const target = [...getActivationTargets(state, playerId, m.uid)].sort(
@@ -357,7 +379,7 @@ function chooseAttack(state, playerId) {
   const hidden = targets.filter((t) => t.faceDown)
 
   for (const attacker of attackers) {
-    if (targets.length === 0) {
+    if (canAttackDirectly(state, playerId, attacker.uid)) {
       return { type: 'attack', player: playerId, attackerUid: attacker.uid, targetUid: null }
     }
     // เลือกเป้าที่หงายอยู่และชนะได้ แข็งที่สุดในบรรดานั้น

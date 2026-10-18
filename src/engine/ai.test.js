@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { getAiAction, runAiTurn } from './ai'
-import { applyAction, createGame, currentActor } from './game'
-import { AI, PLAYER } from './rules'
+import { applyAction, createGame, currentActor, expandDeckList } from './game'
+import { AI, PLAYER, STARTER_DECK_LIST } from './rules'
 import { makeState, uidAt } from './testUtils'
 
 describe('getAiAction', () => {
@@ -98,7 +98,7 @@ describe('runAiTurn', () => {
 })
 
 describe('จำลองเกมเต็ม AI ปะทะ AI', () => {
-  // การ์ดจากกองหลักต้องครบ 40 ใบเสมอ และกองพิเศษ + ร่างผสานที่ออกมาแล้วรวมได้ 3 ใบ (uid กองพิเศษมี "-x")
+  // การ์ดจากกองหลักต้องครบตามขนาดสำรับเสมอ และกองพิเศษ + ร่างผสานที่ออกมาแล้วรวมได้ 3 ใบ (uid กองพิเศษมี "-x")
   const zonesOf = (p) => [
     ...p.hand, ...p.deck, ...p.graveyard, ...p.field.filter(Boolean),
     ...p.spellTrap.filter(Boolean), ...(p.fieldSpell ? [p.fieldSpell] : []),
@@ -111,7 +111,7 @@ describe('จำลองเกมเต็ม AI ปะทะ AI', () => {
         const p = s.players[id]
         expect(p.lp).toBeGreaterThanOrEqual(0)
         const cards = zonesOf(p)
-        expect(cards.filter((c) => !c.uid.includes('-x'))).toHaveLength(40)
+        expect(cards.filter((c) => !c.uid.includes('-x'))).toHaveLength(expandDeckList(STARTER_DECK_LIST).length)
         expect(cards.filter((c) => c.uid.includes('-x')).length + p.extraDeck.length).toBe(3)
       }
     }
