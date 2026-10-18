@@ -7,7 +7,8 @@ import { cardOf } from '../../engine'
  * ฝ่ายตรงข้ามกลับด้าน (หมุน 180° แบบนั่งตรงข้ามกัน)
  */
 // onSpellTrapTap(inst): แตะการ์ดในช่องเวท/กับดักของเรา (ไม่ระบุ = ดูการ์ด)
-export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, onInspect, onSpellTrapTap }) {
+// lpBadge: ป้าย LP ของฝั่งนี้ (แสดงเฉพาะจอ PC ผ่าน CSS)
+export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, onInspect, onSpellTrapTap, lpBadge }) {
   const owner = isOpponent ? 'คู่ต่อสู้' : 'คุณ'
   return (
     <section
@@ -16,6 +17,7 @@ export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, 
       data-owner={player.id}
       data-field-spell={player.fieldSpell?.cardId ?? 'none'}
     >
+      {lpBadge}
       <div className="board-side__monsters">{monsterRow}</div>
 
       <div className="zone-row zone-row--st" data-zone-type="spell-trap" aria-label={`ช่องเวทมนตร์/กับดักของ${owner}`}>

@@ -18,6 +18,7 @@ export default function MiniCard({
   uid,
   zone,
   xp, // { text: '⭐ 1/2', ready } ตัวนับแต้มสายประสบการณ์
+  onPreview, // (card | null) ชี้เมาส์ค้าง → แสดงการ์ดขยาย (PC)
 }) {
   const element = ELEMENTS[card.element]
   const boosted = !defense && atk > card.atk
@@ -30,11 +31,25 @@ export default function MiniCard({
   ]
     .filter(Boolean)
     .join(' ')
+  const isMonster = card.type === 'monster'
+  // การ์ดเวท/กับดักไม่มี ATK — บอกแค่ชื่อ (ของอีกฝ่ายที่คว่ำ บอกแค่ว่าเป็นการ์ดคว่ำ)
+  const stats = isMonster ? ` ${defense ? `ท่าตั้งรับ DEF ${card.def}` : `ATK ${atk}`}` : ''
   const aria = hidden
-    ? 'มอนสเตอร์คว่ำ (ท่าตั้งรับ)'
-    : label ?? `${card.name} ${defense ? `ท่าตั้งรับ DEF ${card.def}` : `ATK ${atk}`}${faceDown ? ' (คว่ำ)' : ''}`
+    ? isMonster
+      ? 'มอนสเตอร์คว่ำ (ท่าตั้งรับ)'
+      : 'การ์ดคว่ำในช่องเวท/กับดัก'
+    : label ?? `${card.name}${stats}${faceDown ? ' (คว่ำ)' : ''}`
   return (
-    <button type="button" className={classes} onClick={onClick} aria-label={aria} data-uid={uid} data-zone={zone}>
+    <button
+      type="button"
+      className={classes}
+      onClick={onClick}
+      onMouseEnter={onPreview && !hidden ? () => onPreview(card) : undefined}
+      onMouseLeave={onPreview ? () => onPreview(null) : undefined}
+      aria-label={aria}
+      data-uid={uid}
+      data-zone={zone}
+    >
       <span className="mini-card__scale" aria-hidden="true">
         {hidden ? <span className="card-back" /> : <MonsterCard card={card} />}
       </span>

@@ -9,7 +9,7 @@ import {
   tributesRequired,
   validateDeck,
 } from './game'
-import { AI, PLAYER, RULES, STARTER_DECK_LIST } from './rules'
+import { AI, EXTRA_DECK_LIST, PLAYER, RULES, STARTER_DECK_LIST } from './rules'
 import { handUid, lastLog, makeState, uidAt } from './testUtils'
 
 const STARTER_SIZE = expandDeckList(STARTER_DECK_LIST).length
@@ -27,7 +27,7 @@ describe('createGame', () => {
       expect(p.field).toEqual([null, null, null, null, null])
       expect(p.spellTrap).toEqual([null, null, null, null, null])
       expect(p.fieldSpell).toBeNull()
-      expect(p.extraDeck.map((c) => c.cardId)).toEqual(['th01-012', 'th01-021', 'th01-022'])
+      expect(p.extraDeck.map((c) => c.cardId)).toEqual(expandDeckList(EXTRA_DECK_LIST))
     }
     expect(s.turn).toBe(1)
     expect(s.activePlayer).toBe(PLAYER)
@@ -52,7 +52,7 @@ describe('สำรับจากหน้าจัดสำรับ', () => {
     expect(new Set(mine)).toEqual(new Set(['th01-011', 'th01-017']))
     expect(s.players.player.extraDeck.map((c) => c.cardId)).toEqual(['th01-021'])
     expect(s.players.ai.deck.length + s.players.ai.hand.length).toBe(STARTER_SIZE)
-    expect(s.players.ai.extraDeck).toHaveLength(3)
+    expect(s.players.ai.extraDeck).toHaveLength(expandDeckList(EXTRA_DECK_LIST).length)
   })
 
   it('บันทึกบอกขนาดสำรับแยกเมื่อไม่เท่ากัน', () => {

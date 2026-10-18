@@ -5,6 +5,7 @@ import {
   getContinuousTrap,
   getEquip,
   getFusionSpell,
+  getGrowthSpell,
   getReviveSpell,
   getRitualInfo,
   isPlayableNonMonster,
@@ -24,7 +25,9 @@ import {
   getEvolveSources,
   getFusionPairs,
   getFusionTargets,
+  getMountOptions,
   handCardBlocker,
+  mountBlocker,
   ritualTributePool,
   ritualTributeProblem,
   specialSummonBlocker,
@@ -81,6 +84,7 @@ export function getAiAction(state, playerId = AI) {
         chooseEvolve(state, playerId) ??
         chooseFieldSpell(state, playerId) ??
         chooseFusion(state, playerId) ??
+        chooseMount(state, playerId) ??
         chooseRitual(state, playerId)
       if (spell) return spell
       const special =
@@ -91,6 +95,7 @@ export function getAiAction(state, playerId = AI) {
       const effect =
         chooseEquip(state, playerId) ??
         chooseBuffSpell(state, playerId) ??
+        playable(state, playerId, (c) => Boolean(getGrowthSpell(c))).map((spell) => ({ type: 'playSpell', player: playerId, uid: spell.uid }))[0] ??
         chooseActivation(state, playerId) ??
         chooseTrapSet(state, playerId) ??
         chooseContinuousTrap(state, playerId)
@@ -161,7 +166,17 @@ function chooseEvolve(state, playerId) {
 // ตัวเลือกที่รอ: ค้นการ์ด → เอาใบที่มีค่ามากสุด · คืนชีพ → จ่าย LP ถ้ายังเหลือเยอะ ไม่งั้นใช้น้ำมนต์
 function chooseOption(state, playerId) {
   const choice = state.pendingChoice
-  if (choice.kind === 'mill') return choice.options[0].id
+  const realOptions = choice.options.filter((o) => o.id !== 'skip')
+  const inHandOrDeck = (uid) => {
+    const p = state.players[playerId]
+    return [...p.hand, ...p.deck, ...p.graveyard].find((c) => c.uid === uid)
+  }
+  if (choice.kind === 'mill' || choice.kind === 'scout') return choice.options[0].id
+  // เรียกพวก / ดูบนกอง / ลงจากหลัง → เลือกใบที่มีค่ามากสุด
+  if (['summonFromHand', 'look', 'dismount'].includes(choice.kind)) {
+    const best = [...realOptions].sort((a, b) => cardValue(inHandOrDeck(b.id)) - cardValue(inHandOrDeck(a.id)))[0]
+    return best?.id ?? 'skip'
+  }
   if (choice.kind === 'search') {
     return [...choice.options].sort((a, b) => cardValue({ cardId: b.id }) - cardValue({ cardId: a.id }))[0].id
   }
@@ -191,6 +206,22 @@ function chooseEquip(state, playerId) {
   for (const spell of playable(state, playerId, (c) => Boolean(getEquip(c)))) {
     const target = [...getEquipTargets(state, playerId, cardOf(spell))].sort(byAtkDesc)[0]
     if (target) return { type: 'playSpell', player: playerId, uid: spell.uid, targetUid: target.uid }
+  }
+  return null
+}
+
+// ขึ้นขี่: เมื่อร่างขี่แรงกว่าวัตถุดิบตัวที่แรงสุด
+function chooseMount(state, playerId) {
+  if (mountBlocker(state, playerId)) return null
+  for (const option of getMountOptions(state, playerId)) {
+    const rider = cardOf(state.players[playerId].extraDeck.find((c) => c.uid === option.fusionUid))
+    const pair = [...option.pairs].sort(
+      (a, b) =>
+        Math.max(...a.map((uid) => getFieldAtk(state, playerId, uid))) - Math.max(...b.map((uid) => getFieldAtk(state, playerId, uid)))
+    )[0]
+    if (rider.atk > Math.max(...pair.map((uid) => getFieldAtk(state, playerId, uid)))) {
+      return { type: 'mount', player: playerId, fusionUid: option.fusionUid, materials: pair }
+    }
   }
   return null
 }
@@ -290,7 +321,9 @@ function chooseActivation(state, playerId) {
     if (activated.kind === 'heal' || activated.kind === 'destroySpellsTraps' || activated.kind === 'searchTrap') {
       return { type: 'activate', player: playerId, uid: m.uid }
     }
-    if (['bind', 'drain', 'curse'].includes(activated.kind)) {
+    if (activated.kind === 'growthBuff') return { type: 'activate', player: playerId, uid: m.uid }
+    if (activated.kind === 'scout' && canAttackThisTurn(state)) return { type: 'activate', player: playerId, uid: m.uid }
+    if (['bind', 'drain', 'curse', 'vine'].includes(activated.kind)) {
       // เลือกศัตรูที่ ATK สูงสุด (ภัยใหญ่สุด) · ดูดพลังใช้เฉพาะเทิร์นที่โจมตีได้
       if (activated.kind === 'drain' && !canAttackThisTurn(state)) continue
       const oppId = opponentOf(playerId)

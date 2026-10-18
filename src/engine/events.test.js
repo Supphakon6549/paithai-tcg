@@ -24,6 +24,7 @@ describe('ข้อมูลเหตุการณ์สำหรับแอ�
       heal: [],
       spellPlaced: [],
       spellRemoved: [],
+      trapActivated: [],
     })
   })
 
@@ -54,6 +55,7 @@ describe('ข้อมูลเหตุการณ์สำหรับแอ�
       heal: [],
       spellPlaced: [],
       spellRemoved: [],
+      trapActivated: [],
     })
   })
 
@@ -79,5 +81,24 @@ describe('ข้อมูลเหตุการณ์สำหรับแอ�
     const s = makeState()
     const after = applyAction(s, { type: 'endTurn', player: PLAYER })
     expect(after.log.every((e) => e.event === undefined)).toBe(true)
+  })
+
+  it('เปิดกับดัก: trapActivated บอกการ์ด ช่อง และชนิด (ทั้งตอบโต้การโจมตีและกับดักต่อเนื่อง)', () => {
+    const s = makeState({
+      activePlayer: AI,
+      phase: 'battle',
+      player: { field: ['th04-004'], spellTrap: [null, { id: 'th04-009', setTurn: 1 }] },
+      ai: { field: ['th01-017'] },
+    })
+    const pending = applyAction(s, { type: 'attack', player: AI, attackerUid: uidAt(s, AI, 0), targetUid: uidAt(s, PLAYER, 0) })
+    const trapUid = pending.pendingResponse.options[0].id
+    const after = applyAction(pending, { type: 'respond', player: PLAYER, trapUid })
+    expect(lastLog(after).event.trapActivated).toEqual([
+      { player: PLAYER, uid: trapUid, cardId: 'th04-009', zone: 1, wasFaceDown: true, effect: 'weaken' },
+    ])
+
+    const drum = makeState({ player: { spellTrap: [{ id: 'th01-024', setTurn: 1 }] } })
+    const opened = applyAction(drum, { type: 'activateTrap', player: PLAYER, uid: drum.players.player.spellTrap[0].uid })
+    expect(lastLog(opened).event.trapActivated).toMatchObject([{ cardId: 'th01-024', zone: 0, effect: 'continuous' }])
   })
 })

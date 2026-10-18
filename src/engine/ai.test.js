@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { getAiAction, runAiTurn } from './ai'
 import { applyAction, createGame, currentActor, expandDeckList } from './game'
-import { AI, PLAYER, STARTER_DECK_LIST } from './rules'
+import { AI, EXTRA_DECK_LIST, PLAYER, STARTER_DECK_LIST } from './rules'
 import { makeState, uidAt } from './testUtils'
 
 describe('getAiAction', () => {
@@ -112,7 +112,7 @@ describe('จำลองเกมเต็ม AI ปะทะ AI', () => {
         expect(p.lp).toBeGreaterThanOrEqual(0)
         const cards = zonesOf(p)
         expect(cards.filter((c) => !c.uid.includes('-x'))).toHaveLength(expandDeckList(STARTER_DECK_LIST).length)
-        expect(cards.filter((c) => c.uid.includes('-x')).length + p.extraDeck.length).toBe(3)
+        expect(cards.filter((c) => c.uid.includes('-x')).length + p.extraDeck.length).toBe(expandDeckList(EXTRA_DECK_LIST).length)
       }
     }
     expect(s.winner).not.toBeNull()

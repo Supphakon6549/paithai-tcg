@@ -33,7 +33,7 @@ describe('ผสานร่างด้วยคาถาผสานธาต�
     const p = after.players.player
     expect(p.field[0]).toMatchObject({ cardId: 'th01-021', position: 'attack', faceDown: false })
     expect(graveIds(after)).toEqual(['th01-016', 'th01-019', SPELL])
-    expect(p.extraDeck.map((c) => c.cardId)).toEqual(['th01-012', 'th01-022'])
+    expect(p.extraDeck.map((c) => c.cardId).filter((id) => id.startsWith('th01'))).toEqual(['th01-012', 'th01-022'])
     expect(p.hasNormalSummoned).toBe(false)
     expect(getSummonableHand(after, PLAYER).map((c) => c.cardId)).toEqual(['th01-001'])
     expect(lastLog(after).text).toBe(
@@ -56,7 +56,8 @@ describe('ผสานร่างด้วยคาถาผสานธาต�
   })
 
   it('วัตถุดิบไม่ตรงสูตร / ไม่มีวัตถุดิบ / สนามเต็ม → ใช้ไม่ได้', () => {
-    const wrong = makeState({ player: { hand: [SPELL, 'th01-001', 'th01-019'] } })
+    // ลูกพราน + ทหารเสือ: ไม่ตรงสูตรใดเลย (ลูกพราน + ม้าศึก ผสานเป็นพรานขี่เสือ TH03 ได้)
+    const wrong = makeState({ player: { hand: [SPELL, 'th01-001', 'th01-017'] } })
     expect(
       fusionProblem(wrong, PLAYER, handUid(wrong, PLAYER, 0), extraUid(wrong, 'th01-021'), [handUid(wrong, PLAYER, 1), handUid(wrong, PLAYER, 2)])
     ).toBe('วัตถุดิบไม่ตรงสูตร: มอนสเตอร์เผ่าทหารหาญ + ม้าศึกอาชาไนย')

@@ -795,25 +795,143 @@ button.pile:hover {
   .pile--field .mini-card { --mini-zoom: var(--field-zoom); }
 }
 
-/* เดสก์ท็อป: กระดานซ้าย บันทึกขวา */
+/* ----- แถบ LP ย่อ (จอมือถือ): ติดขอบบนตลอด ----- */
+.lp-hud {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(14, 11, 9, 0.98);
+  border: 1px solid var(--panel-line);
+  border-radius: 0 0 10px 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* จอแคบมาก: ซ่อนชื่อและจำนวนการ์ดในมือ เหลือไอคอน + LP */
+@media (max-width: 419px) {
+  .lp-hud__name,
+  .lp-hud__hand { display: none; }
+}
+
+/* แถบ LP ย่อแสดง LP คู่ต่อสู้แล้ว — ซ่อนแถบใหญ่ของคู่ต่อสู้ที่ซ้ำกัน */
+.battle .player-bar--opponent { display: none; }
+
+.lp-hud__side { display: inline-flex; align-items: center; gap: 4px; opacity: 0.75; }
+.lp-hud__side--active { opacity: 1; }
+.lp-hud__side--ai .lp-hud__lp { color: #f08a7d; }
+.lp-hud__side--player .lp-hud__lp { color: #8fe0a6; }
+.lp-hud__lp { font-size: 16px; animation: lp-flash 0.6s ease-out; }
+.lp-hud__hand { color: var(--text-dim); }
+.lp-hud__turn { color: var(--gold-light); font-weight: 700; }
+
+/* ----- ป้าย LP บนกระดาน (PC) ----- */
+.side-lp { display: none; }
+
+/* ----- การ์ดขยายเมื่อชี้เมาส์ (PC เท่านั้น) ----- */
+.hand-preview { display: none; }
+
+.battle-log__toggle {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+/* PC: กระดานเต็มความกว้าง · บันทึกเป็นกล่องเล็กลอยมุมขวาล่าง */
 @media (min-width: 1000px) {
-  .battle {
-    grid-template-columns: minmax(0, 1fr) 340px;
-    align-items: start;
+  .battle { max-width: 1400px; }
+  /* PC: LP อยู่บนกระดานฝั่งของแต่ละคนแทนแถบด้านบน */
+  .lp-hud { display: none; }
+  .side-lp {
+    position: absolute;
+    left: 7%;
+    z-index: 6;
+    display: grid;
+    gap: 3px;
+    min-width: 150px;
+    padding: 6px 12px 7px;
+    border: 1px solid var(--panel-line);
+    border-radius: 8px;
+    background: rgba(14, 10, 7, 0.82);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
   }
-  .battle > :not(.battle-log):not(.battle-modal) { grid-column: 1; }
+  /* มุมซ้ายบนของแต่ละฝั่ง (ฝั่งเราอยู่ใต้แถบกลาง ไม่โดนแถบการ์ดในมือบัง) */
+  .side-lp { top: 10px; }
+  .side-lp--active { border-color: var(--gold-light); }
+  .side-lp__name { display: flex; gap: 6px; align-items: center; color: var(--text-dim); }
+  .side-lp__hand { margin-left: auto; }
+  .side-lp__lp { font-size: 19px; color: var(--gold-light); animation: lp-flash 0.6s ease-out; }
+  .side-lp--opp .side-lp__lp { color: #f3a093; }
+  .side-lp--me .side-lp__lp { color: #9be6b1; }
+  .side-lp__track {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+  }
+  .side-lp__fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--lose), var(--tie) 50%, var(--win));
+    background-size: 300% 100%;
+    background-position: right;
+    transition: width 0.5s ease;
+  }
+  /* PC: แถบ LP ย่อด้านบนแทนแถบใหญ่ (แถบของเราถูกแถบมือที่ลอยอยู่บัง) */
+  .battle .player-bar { display: none; }
   .battle-log {
-    grid-column: 2;
-    grid-row: 1 / span 6;
-    position: sticky;
-    top: 16px;
-    max-height: calc(100svh - 32px);
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 40;
+    width: min(300px, calc(100vw - 32px));
+    background: rgba(23, 18, 14, 0.94);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
   }
-  .battle-log__list { max-height: none; }
+  .battle-log__list { max-height: 190px; }
+  .battle-log--collapsed { width: auto; }
+  /* ขยายการ์ดบนกระดานตามขนาดจอ (ตัวเลือกเจาะจงกว่าธีม เพื่อทับค่าจอ ≥ 720px) */
+  .battle[data-battle-root] { --field-zoom: 0.28; --st-zoom: 0.22; --hand-zoom: 0.38; }
+  /* การ์ดในมืออยู่กึ่งกลาง (margin auto ใช้ได้แม้แถวเลื่อนได้ ต่างจาก justify-content: center) */
+  .hand__row > :first-child { margin-left: auto; }
+  .hand__row > :last-child { margin-right: auto; }
+  @media (hover: hover) {
+    .hand-preview {
+      display: block;
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      z-index: 45;
+      zoom: 0.95;
+      pointer-events: none;
+      filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.85));
+      animation: hand-preview-in 0.15s ease-out;
+    }
+  }
+  @media (min-width: 1300px) and (min-height: 820px) {
+    .battle[data-battle-root] { --field-zoom: 0.34; --st-zoom: 0.27; --hand-zoom: 0.42; }
+  }
+  @media (min-width: 1600px) and (min-height: 980px) {
+    .battle[data-battle-root] { --field-zoom: 0.38; --st-zoom: 0.3; --hand-zoom: 0.46; }
+  }
   /* จอกว้าง: แถบมือยังลอยติดขอบล่าง แต่กว้างเท่าคอลัมน์กระดาน */
   .hand {
     margin: 0;
     padding-inline: 0;
   }
   .hand::before { inset-inline: 0; }
+}
+
+@keyframes hand-preview-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
 }

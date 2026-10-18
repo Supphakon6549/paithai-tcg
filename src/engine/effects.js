@@ -24,6 +24,17 @@ import { TRIBES } from '../data/tribes'
  *   attackGuard            ศัตรูโจมตีผีหงายตัวอื่นของเรา → ย้ายเป้ามาที่ใบนี้ (ใบละครั้ง/เทิร์น) และรอดการต่อสู้นั้น
  *   returnOnDestroy        ถูกทำลายจากสนาม → กลับท่าตั้งรับหงายตอนจบเทิร์นนั้น (ใบละครั้ง/เกม)
  *   flyOver                ศัตรูไม่มีมอนสเตอร์หงาย (มีแต่คว่ำ) → โจมตีตรงได้
+ *   growth                 แต้มเติบโต: +1 ตอนจบเทิร์นเจ้าของ (สูงสุด cap) · ATK/DEF +atkPer/defPer ต่อแต้ม
+ *   rootShield             จะถูกทำลายจากการต่อสู้ → ถอนแต้มเติบโต 1 แทน
+ *   onSummonCall           อัญเชิญหงาย: เรียกมอนสเตอร์ที่ matches จากมือ (ชื่อละครั้ง/เทิร์น)
+ *   onSummonLook           อัญเชิญหงาย: ดูบนกอง count ใบ เลือกที่ matches ขึ้นมือ ที่เหลือไว้ใต้กอง
+ *   sting                  ถูกทำลายจากการต่อสู้ตอนเป็นฝ่ายรับ → ผู้โจมตี ATK amount จนจบเทิร์น
+ *   ambushFlip             ถูกโจมตีจนพลิกหงาย → เปลี่ยนเป็นท่าโจมตีได้ (+bonus เมื่อมีสัตว์ต่างเผ่า)
+ *   huntBonus              โจมตีมอนสเตอร์หงายที่ ATK สูงสุดฝ่ายศัตรู → ATK +amount เฉพาะการต่อสู้นั้น
+ *   mount / dismount       ร่างขี่: ขึ้นขี่จากคน+สัตว์บนสนาม (ไม่ต้องใช้เวท) · ถูกทำลาย → คืนวัตถุดิบ 1 ตัว
+ *   mercy                  ศัตรูเผ่าสัตว์โจมตีสัตว์ตัวอื่นของเรา → ยกเลิกได้ (ชื่อละครั้ง/เทิร์น)
+ *   endTurnGrow            จบเทิร์นเรา: พืชของเรา 1 ตัวเติบโต +1 แล้วฟื้น LP heal
+ *   growthSpell            เวท: พืชทุกตัวของเราเติบโต +amount แล้วจั่ว draw ใบ
  *   burnOnKill             ทำลายศัตรูจากการต่อสู้ → ผู้ควบคุมศัตรูเสีย LP amount (ความเสียหายจากเอฟเฟกต์)
  *   millOnKill             ทำลายศัตรูจากการต่อสู้ → เลือกส่งมอนสเตอร์ที่ matches จากกองลงสุสาน 1 ใบ
  *   summonOnlyBy           อัญเชิญได้ด้วยการ์ดรหัสนี้เท่านั้น (ไม่อัญเชิญสังเวย/คืนชีพ)
@@ -54,6 +65,9 @@ import { TRIBES } from '../data/tribes'
  *                                | 'bind' (ห้ามโจมตี/เปลี่ยนท่าถึงจบเทิร์นศัตรูถัดไป)
  *                                | 'drain' (เป้า −amount · ตัวเอง +amount จนจบเทิร์น)
  *                                | 'curse' (ถูกทำลายก่อนหมดอายุ → ผู้ควบคุมเสีย LP amount)
+ *                                | 'vine' (ถอนแต้มเติบโต · ศัตรู ATK amount ถึงจบเทิร์นถัดไปของศัตรู)
+ *                                | 'growthBuff' (ถอนแต้มพืช · สัตว์ใหญ่ของเรา ATK/DEF +amount)
+ *                                | 'scout' (ดูเวท/กับดักคว่ำศัตรู · ใบนั้นเปิดตอนใบนี้โจมตีไม่ได้)
  *                                | 'lockAttack' | 'searchTrap'
  *                          oncePer: 'card' (ใบละครั้ง) | 'name' (ชื่อละครั้ง) ต่อเทิร์น
  *   fieldSpell.aura        เวทสนาม: ปรับ ATK มอนสเตอร์หงายฝ่ายเจ้าของที่เข้าเงื่อนไข
@@ -73,6 +87,17 @@ const isDemon = hasTribe('demon')
 const isHunter = hasTribe('hunter')
 const isLargeBeast = hasTribe('largeBeast')
 const isGhost = hasTribe('ghost')
+const isInsect = hasTribe('insect')
+const isPlant = hasTribe('plant')
+const ANIMAL_TRIBES = ['bird', 'insect', 'plant', 'reptile', 'largeBeast']
+// เผ่าสัตว์ของการ์ด (เผ่ามนุษย์ไม่นับ)
+export const animalSetOf = (card) => tribesOf(card).filter((t) => ANIMAL_TRIBES.includes(t))
+// มีสัตว์อย่างน้อย 2 ตัวที่เผ่าสัตว์ไม่ทับกัน (ตัวเดียวสองเผ่าไม่นับ)
+const hasDiverseAnimals = (cards) => {
+  const sets = cards.filter((c) => c.type === 'monster').map(animalSetOf).filter((set) => set.length > 0)
+  return sets.some((a, i) => sets.some((b, j) => j > i && !a.some((t) => b.includes(t))))
+}
+const isTiger = (c) => c.id === 'th03-006' || c.id === 'th03-007'
 const hasGhostAlly = ({ allies }) => allies.some(isGhost)
 const isHolyWater = (c) => c.id === 'th01-014' || (c.spellSubtypeName ?? '').includes('น้ำมนต์')
 
@@ -363,6 +388,132 @@ export const CARD_EFFECTS = {
       ],
     },
   },
+  // ---------- TH03 ไพรมหาวัน (docs/TH03-DESIGN.md) ----------
+  // ต้นไทรเดินดิน
+  'th03-001': {
+    growth: { cap: 3, atkPer: 200, defPer: 200 },
+    rootShield: { reason: 'ต้นไทร: รากลึก ถอนแต้มเติบโตแทนการถูกทำลาย' },
+  },
+  // เถาหวายร้อยรัด
+  'th03-002': {
+    growth: { cap: 2, atkPer: 0, defPer: 200 },
+    activated: { kind: 'vine', amount: -300, label: 'ถอนแต้ม · รัดศัตรู ATK −300', oncePer: 'card' },
+  },
+  // ด้วงกว่างเกราะไพร (ออร่าไม่ซ้อนจากหลายใบ)
+  'th03-003': {
+    allyAura: { amount: 200, appliesTo: isInsect, unique: true, reason: 'ด้วงกว่างเกราะไพร: แมลงตัวอื่นฝ่ายเรา' },
+  },
+  // ฝูงต่อหัวเสือ
+  'th03-004': {
+    onSummonCall: {
+      label: 'แมลงระดับ 1–2',
+      matches: (c) => c.type === 'monster' && isInsect(c) && c.level <= 2,
+    },
+    sting: { amount: -300, reason: 'ฝูงต่อ: เหล็กใน' },
+  },
+  // นกเงือกผู้หว่านไพร
+  'th03-005': {
+    onSummonLook: { count: 3, matches: (c) => c.type === 'monster' && animalSetOf(c).length > 0, label: 'สัตว์' },
+  },
+  // พญาเสือโคร่งมหาวัน: จ่าฝูง นับเผ่าสัตว์ของเพื่อนที่ต่างจากใบนี้
+  'th03-006': {
+    atkBoosts: [
+      {
+        reason: 'จ่าฝูง: เผ่าสัตว์ต่างกันบนสนามเรา',
+        isActive: () => true,
+        amountFn: ({ allies }) => {
+          const kinds = new Set(allies.flatMap(animalSetOf).filter((t) => t !== 'largeBeast'))
+          return 200 * Math.min(3, kinds.size)
+        },
+      },
+    ],
+  },
+  // เสือสมิงเงาพฤกษ์
+  'th03-007': {
+    ambushFlip: { bonus: 200, reason: 'เสือสมิง: พลิกซุ่มพร้อมสัตว์ต่างเผ่า' },
+  },
+  // หมอช้างพันธะไพร
+  'th03-008': {
+    activated: { kind: 'growthBuff', amount: 300, label: 'ถอนแต้มพืช · สัตว์ใหญ่ ATK/DEF +300', oncePer: 'name' },
+  },
+  // พรานผู้ผูกมิตร: คืนลูกพรานขึ้นมือ → อัญเชิญพิเศษ แล้วเรียกสัตว์เล็กเผ่าที่ยังไม่มี
+  'th03-009': {
+    specialSummon: {
+      returnId: 'th01-001',
+      oncePerName: true,
+      label: 'คืนลูกพรานขึ้นมือ · เรียกสัตว์เล็กมาช่วย',
+      callAfter: {
+        label: 'สัตว์ระดับ 1–2 เผ่าที่ยังไม่มีบนสนาม',
+        matches: (c) => c.type === 'monster' && animalSetOf(c).length > 0 && c.level <= 2,
+        newTribeOnly: true,
+      },
+    },
+  },
+  // ไพรมหาวัน (เวทสนามฝ่ายป่า)
+  'th03-010': {
+    fieldSpell: {
+      faction: 'forest',
+      aura: {
+        amount: 200,
+        appliesTo: (c) => animalSetOf(c).length > 0,
+        isActive: ({ team }) => hasDiverseAnimals(team),
+        reason: 'ไพรมหาวัน: สัตว์ต่างเผ่าอยู่ร่วมกัน',
+      },
+    },
+  },
+  // ฝนแรกผลิใบ
+  'th03-011': {
+    growthSpell: { amount: 1, draw: 1 },
+  },
+  // สับแนวพงไพร (กับดัก)
+  'th03-012': {
+    trap: {
+      trigger: 'enemyAttacksFaceUp',
+      effect: 'swap',
+      appliesTo: (c) => animalSetOf(c).length > 0,
+      reason: 'สับแนวพงไพร: ถอนสัตว์ขึ้นมือ ส่งตัวใหม่ลงแทน การโจมตีจบลง',
+    },
+  },
+  // พรานขี่เสือ
+  'th03-013': {
+    fusionMaterials: [
+      { label: 'มนุษย์เผ่าพรานป่า', matches: hasTribe('hunter') },
+      { label: 'สัตว์ใหญ่', matches: hasTribe('largeBeast') },
+    ],
+    mount: true,
+    dismount: true,
+    huntBonus: { amount: 300, reason: 'พรานขี่เสือ: ไล่ล่าจ่าฝูง' },
+  },
+  // หลวงตาธุดงค์ทรงพยัคฆ์ (ตัวละครสมมุติ)
+  'th03-014': {
+    fusionMaterials: [
+      { label: 'สายศรัทธา (เด็กวัด/สามเณร/พระอาจารย์/ครูบา)', matches: (c) => c.groupTag === 'ritual-faith' && c.type === 'monster' },
+      { label: 'เสือ (พญาเสือ/เสือสมิง)', matches: isTiger },
+    ],
+    mount: true,
+    dismount: true,
+    mercy: { reason: 'หลวงตาธุดงค์: เมตตาหยุดเขี้ยว' },
+  },
+  // หมอช้างทรงคชสาร
+  'th03-015': {
+    fusionMaterials: [
+      { label: 'มนุษย์เผ่าหมอยา', matches: hasTribe('healer') },
+      { label: 'สัตว์ใหญ่', matches: hasTribe('largeBeast') },
+    ],
+    mount: true,
+    dismount: true,
+    endTurnGrow: { amount: 1, heal: 200, reason: 'หมอช้างทรงคชสาร: ฟื้นราก' },
+  },
+  // โหราจารย์ทรงนกเงือก
+  'th03-016': {
+    fusionMaterials: [
+      { label: 'มนุษย์เผ่าโหราจารย์', matches: hasTribe('astrologer') },
+      { label: 'นก', matches: hasTribe('bird') },
+    ],
+    mount: true,
+    dismount: true,
+    activated: { kind: 'scout', label: 'ดูกับดักคว่ำศัตรู 1 ใบ', oncePer: 'name' },
+  },
   // ช้างศึกไอยรา
   'th01-020': {
     noTributeIf: { reason: 'มีมอนสเตอร์เผ่าทหารหาญบนสนาม', isActive: ({ allies }) => allies.some(isWarrior) },
@@ -427,11 +578,23 @@ const continuousAuras = (card, extras) =>
   (extras.continuous ?? []).map((t) => effectOf(t).continuousTrap?.aura).filter((aura) => aura?.appliesTo(card))
 
 export function getAtkBoosts(card, allies = [], enemies = [], extras = {}) {
-  const own = (effectOf(card).atkBoosts ?? []).filter((b) => b.isActive({ allies, enemies }))
-  const fromAllies = allies.map((a) => effectOf(a).allyAura).filter((aura) => aura?.appliesTo(card))
+  const own = (effectOf(card).atkBoosts ?? [])
+    .filter((b) => b.isActive({ allies, enemies }))
+    .map((b) => (b.amountFn ? { ...b, amount: b.amountFn({ allies, enemies }) } : b))
+    .filter((b) => b.amount !== 0)
+  // ออร่า unique (เช่น ด้วงกว่าง) ให้ผลครั้งเดียวแม้มีหลายใบ
+  const seenUnique = new Set()
+  const fromAllies = allies
+    .map((a) => effectOf(a).allyAura && { ...effectOf(a).allyAura, sourceId: a.id })
+    .filter((aura) => aura?.appliesTo(card))
+    .filter((aura) => !aura.unique || (!seenUnique.has(aura.sourceId) && seenUnique.add(aura.sourceId)))
   const fromEnemies = enemies.map((e) => effectOf(e).enemyAura).filter((aura) => aura?.appliesTo(card))
   const fieldAura = effectOf(extras.fieldSpell).fieldSpell?.aura
-  const fromField = fieldAura?.appliesTo(card) ? [fieldAura] : []
+  const fieldActive = !fieldAura?.isActive || fieldAura.isActive({ team: [card, ...allies] })
+  const fromField = fieldAura?.appliesTo(card) && fieldActive ? [fieldAura] : []
+  const growth = effectOf(card).growth
+  const fromGrowth =
+    growth?.atkPer && extras.growth ? [{ amount: growth.atkPer * extras.growth, reason: `แต้มเติบโต ${extras.growth}` }] : []
   const fromEquips = (extras.equips ?? [])
     .map((e) => effectOf(e).equip)
     .filter((eq) => eq?.appliesTo(card))
@@ -443,6 +606,7 @@ export function getAtkBoosts(card, allies = [], enemies = [], extras = {}) {
     : []
   return [
     ...own,
+    ...fromGrowth,
     ...fromGraveyard,
     ...fromAllies,
     ...fromEnemies,
@@ -453,9 +617,12 @@ export function getAtkBoosts(card, allies = [], enemies = [], extras = {}) {
   ].map(toModifier)
 }
 
-// ตัวปรับ DEF จากเอฟเฟกต์ (ตอนนี้มีแค่กับดักต่อเนื่อง)
+// ตัวปรับ DEF จากเอฟเฟกต์: กับดักต่อเนื่อง + แต้มเติบโต + ตัวปรับ DEF บนตัวมอนสเตอร์
 export function getDefBoosts(card, extras = {}) {
-  return continuousAuras(card, extras).map(toModifier)
+  const growth = effectOf(card).growth
+  const fromGrowth =
+    growth?.defPer && extras.growth ? [{ amount: growth.defPer * extras.growth, reason: `แต้มเติบโต ${extras.growth}` }] : []
+  return [...continuousAuras(card, extras), ...fromGrowth, ...(extras.defTemp ?? [])].map(toModifier)
 }
 
 // ธาตุที่ได้เพิ่มจากเวทสวมใส่
@@ -575,6 +742,21 @@ export function getSummonOnlyBy(card) {
   return effectOf(card).summonOnlyBy ?? null
 }
 
+export const getGrowth = (card) => effectOf(card).growth ?? null
+export const hasRootShield = (card) => effectOf(card).rootShield ?? null
+export const getOnSummonCall = (card) => effectOf(card).onSummonCall ?? null
+export const getOnSummonLook = (card) => effectOf(card).onSummonLook ?? null
+export const getSting = (card) => effectOf(card).sting ?? null
+export const getAmbushFlip = (card) => effectOf(card).ambushFlip ?? null
+export const getHuntBonus = (card) => effectOf(card).huntBonus ?? null
+export const canMount = (card) => effectOf(card).mount === true
+export const canDismount = (card) => effectOf(card).dismount === true
+export const getMercy = (card) => effectOf(card).mercy ?? null
+export const getEndTurnGrow = (card) => effectOf(card).endTurnGrow ?? null
+export const getGrowthSpell = (card) => effectOf(card).growthSpell ?? null
+export const isPlantCard = isPlant
+export const hasDiverseAnimalTeam = hasDiverseAnimals
+
 export function getBranchSpell(card) {
   return effectOf(card).branchSpell ?? null
 }
@@ -583,7 +765,14 @@ export function isPlayableNonMonster(card) {
   if (card?.type === 'spell') {
     return (
       isFieldSpell(card) ||
-      Boolean(getFusionSpell(card) || getReviveSpell(card) || getEquip(card) || getBuffSpell(card) || getBranchSpell(card))
+      Boolean(
+        getFusionSpell(card) ||
+          getReviveSpell(card) ||
+          getEquip(card) ||
+          getBuffSpell(card) ||
+          getBranchSpell(card) ||
+          getGrowthSpell(card)
+      )
     )
   }
   if (card?.type === 'trap') return Boolean(getTrapEffect(card) || getContinuousTrap(card))
