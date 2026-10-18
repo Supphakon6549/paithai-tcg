@@ -10,11 +10,11 @@ describe('getAiAction', () => {
   })
 
   it('อัญเชิญตัวที่ ATK สูงสุดที่อัญเชิญปกติได้', () => {
-    // th01-003 (ATK 2,400) ต้องสังเวย แต่สนามว่าง → เลือก th01-017 (1,700)
+    // th01-003 (ATK 2,400) ต้องสังเวย แต่สนามว่าง → เลือก th01-011 (1,800)
     const s = makeState({ activePlayer: AI, ai: { hand: ['th01-001', 'th01-003', 'th01-011', 'th01-017'] } })
     const action = getAiAction(s)
     expect(action.type).toBe('summon')
-    expect(s.players.ai.hand.find((c) => c.uid === action.uid).cardId).toBe('th01-017')
+    expect(s.players.ai.hand.find((c) => c.uid === action.uid).cardId).toBe('th01-011')
   })
 
   it('สังเวยตัว ATK ต่ำสุดเมื่อคุ้ม', () => {

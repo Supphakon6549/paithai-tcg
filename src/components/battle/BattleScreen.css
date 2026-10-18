@@ -159,6 +159,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.mini-card__atk--weakened {
+  color: #ffb3aa;
+  border-color: var(--lose);
+}
+
 .mini-card__atk--boosted {
   color: #9ff0b4;
   border-color: var(--win);

@@ -21,6 +21,7 @@ export default function MiniCard({
 }) {
   const element = ELEMENTS[card.element]
   const boosted = !defense && atk > card.atk
+  const weakened = !defense && atk < card.atk
   const classes = [
     'mini-card',
     defense && 'mini-card--defense',
@@ -45,12 +46,13 @@ export default function MiniCard({
       )}
       {card.type === 'monster' && !hidden && (
         <span
-          className={`mini-card__atk${boosted ? ' mini-card__atk--boosted' : ''}${defense ? ' mini-card__atk--def' : ''}`}
+          className={`mini-card__atk${boosted ? ' mini-card__atk--boosted' : ''}${weakened ? ' mini-card__atk--weakened' : ''}${defense ? ' mini-card__atk--def' : ''}`}
           style={{ '--element-color': element?.color }}
-          title={boosted ? `ATK ${formatNumber(card.atk)} + เอฟเฟกต์ ${formatNumber(atk - card.atk)}` : undefined}
+          title={boosted || weakened ? `ATK ${formatNumber(card.atk)} ${boosted ? '+' : '−'} เอฟเฟกต์ ${formatNumber(Math.abs(atk - card.atk))}` : undefined}
         >
           {defense ? `🛡 ${formatNumber(card.def)}` : `${element?.symbol} ${formatNumber(atk)}`}
           {boosted && '▲'}
+          {weakened && '▼'}
         </span>
       )}
       {hidden && <span className="mini-card__atk mini-card__atk--def">🛡 ?</span>}

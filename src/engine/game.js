@@ -4,6 +4,7 @@ import {
   getActivated,
   getAfterBattleDestroy,
   getAtkBoosts,
+  getAttackDecay,
   getEffectiveAtk,
   getEvolve,
   getExtraAttack,
@@ -42,7 +43,8 @@ import {
  * การ์ดในกอง/มือ/สุสาน = { uid, cardId }
  * บนสนามเพิ่ม { hasAttacked, summonedTurn, position: 'attack'|'defense', faceDown, positionChangedTurn,
  *               tempAtk?: [{ amount, reason }] (ตัวปรับ ATK จนจบเทิร์น),
- *               xp?: แต้มประสบการณ์, xpReadyTurn?: เทิร์นที่แต้มครบ (เลื่อนยศได้เทิร์นหลังจากนั้น) }
+ *               xp?: แต้มประสบการณ์, xpReadyTurn?: เทิร์นที่แต้มครบ (เลื่อนยศได้เทิร์นหลังจากนั้น),
+ *               decayStep?: จำนวนครั้งที่อ่อนแรงจาก attackDecay (ค้างจนออกจากสนาม) }
  * ช่องเวท/กับดัก = { uid, cardId, faceDown, setTurn } · ช่องเวทสนาม = { uid, cardId }
  */
 
@@ -273,10 +275,48 @@ export function getAllies(state, playerId, excludeUid) {
   return state.players[playerId].field.filter((m) => m && m.uid !== excludeUid && !m.faceDown).map(cardOf)
 }
 
-// ตัวปรับ ATK ที่ไม่ได้มาจากมอนสเตอร์: เวทสนามของเจ้าของ + ตัวปรับชั่วคราวบนตัวมอนสเตอร์
+// ATK ที่หายไปจากการอ่อนแรงหลังโจมตี (attackDecay)
+function decayModifiers(m) {
+  const decay = m?.decayStep ? getAttackDecay(cardOf(m)) : null
+  if (!decay) return []
+  const step = Math.min(m.decayStep, decay.penalties.length)
+  return [{ amount: -decay.penalties[step - 1], reason: `${decay.reason} (โจมตีแล้ว ${m.decayStep} ครั้ง)` }]
+}
+
+// ตัวปรับ ATK ที่ไม่ได้มาจากมอนสเตอร์ตัวอื่น: เวทสนามของเจ้าของ + ตัวปรับบนตัวมอนสเตอร์เอง
 function atkExtras(state, playerId, m) {
   const fieldSpell = state.players[playerId].fieldSpell
-  return { fieldSpell: fieldSpell ? cardOf(fieldSpell) : null, temp: m?.tempAtk ?? [] }
+  return {
+    fieldSpell: fieldSpell ? cardOf(fieldSpell) : null,
+    temp: [...(m?.tempAtk ?? []), ...decayModifiers(m)],
+  }
+}
+
+// หลังประกาศโจมตี: มอนสเตอร์ที่มี attackDecay อ่อนแรงลง (ถ้ายังอยู่บนสนามและไม่มีเงื่อนไขป้องกัน)
+function applyAttackDecay(state, playerId, attackerUid, details) {
+  const p = state.players[playerId]
+  const m = p.field.find((x) => x?.uid === attackerUid)
+  const decay = m && getAttackDecay(cardOf(m))
+  if (!decay) return
+  const card = cardOf(m)
+  const protectedReason = decay.protectedBy({
+    allies: getAllies(state, playerId, m.uid),
+    fieldSpell: p.fieldSpell ? cardOf(p.fieldSpell) : null,
+  })
+  if (protectedReason) {
+    details.push(`🌑 ${card.name} ไม่อ่อนแรง: ${protectedReason}`)
+    return
+  }
+  const prevStep = Math.min(m.decayStep ?? 0, decay.penalties.length)
+  const nextStep = Math.min(prevStep + 1, decay.penalties.length)
+  const before = card.atk - (prevStep ? decay.penalties[prevStep - 1] : 0)
+  const after = card.atk - decay.penalties[nextStep - 1]
+  m.decayStep = (m.decayStep ?? 0) + 1
+  details.push(
+    before === after
+      ? `🌑 ${card.name} ${decay.reason}: ATK ต่ำสุดแล้ว ${formatNumber(after)}`
+      : `🌑 ${card.name} ${decay.reason}: ATK ${formatNumber(before)} → ${formatNumber(after)}`
+  )
 }
 
 // ATK จริงบนสนามรวมบัฟจากเอฟเฟกต์ (ยังไม่รวมโบนัสธาตุ/เผ่าซึ่งขึ้นกับคู่ต่อสู้)
@@ -707,6 +747,7 @@ function attack(state, playerId, attackerUid, targetUid) {
       `ฝ่ายตรงข้ามไม่มีมอนสเตอร์ → โจมตีตรงด้วย ATK ${formatNumber(attackerCard.atk)}${boostText ? `${boostText} = ${formatNumber(power)}` : ''}`
     )
     damagePlayer(state, oppId, power, details, { opposingMonster: attackerCard })
+    applyAttackDecay(state, playerId, attacker.uid, details)
     addLog(state, playerId, 'battle', `⚔️ ${attackerCard.name} โจมตีตรง${PLAYER_NAMES[oppId]}!`, details)
     logLpKnockout(state)
     return
@@ -824,6 +865,7 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
     }
   }
 
+  applyAttackDecay(state, playerId, attacker.uid, details)
   const target = `${defenderCard.name}${inDefense ? ' (ท่าตั้งรับ)' : ''}`
   addLog(state, playerId, 'battle', `⚔️ ${attackerCard.name} โจมตี ${target}`, details)
   logLpKnockout(state)
@@ -854,6 +896,7 @@ function respond(state, playerId, trapUid) {
     `${getTrapEffect(trapCard).reason} → ไม่มีความเสียหาย ไม่มีใครถูกทำลาย`,
     `${cardOf(attacker).name} ใช้สิทธิ์โจมตีครั้งนี้ไปแล้ว · ${trapCard.name} ลงสุสาน`
   )
+  applyAttackDecay(state, pending.attacker, pending.attackerUid, details)
   addLog(
     state,
     pending.attacker,

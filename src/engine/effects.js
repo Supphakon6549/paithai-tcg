@@ -20,6 +20,8 @@ import { TRIBES } from '../data/tribes'
  *   destroysTribeAfterBattle  หลังคำนวณความเสียหาย ทำลายคู่ต่อสู้เผ่านี้
  *   noTributeIf            อัญเชิญสังเวยได้โดยไม่ต้องสังเวยเมื่อเงื่อนไขเป็นจริง
  *   trapLock               เมื่อใบนี้ประกาศโจมตี ศัตรูเปิดกับดักไม่ได้
+ *   attackDecay            หลังประกาศโจมตีแต่ละครั้ง ATK ลดลงสะสมตาม penalties (ค้างจนออกจากสนาม)
+ *                          ไม่ลดเมื่อ protectedBy คืนเหตุผล · เวทสนามระบุฝ่ายด้วย fieldSpell.faction
  *   evolve                 สายประสบการณ์: ทำลายศัตรูจากการต่อสู้ได้แต้มละ 1 · ครบ xpNeeded
  *                          แล้วเทิร์นถัดไปของเรากดเลื่อนยศเป็น into (จากมือหรือกองการ์ด)
  *   activated              ความสามารถที่ผู้เล่นกดใช้เองในเฟสหลัก (มอนสเตอร์หงายบนสนาม)
@@ -37,6 +39,7 @@ const inTribeGroup = (group) => (card) => tribesOf(card).some((t) => TRIBES[t]?.
 const isAnimal = inTribeGroup('animal')
 const isWarrior = hasTribe('warrior')
 const isDeva = hasTribe('deva')
+const isDemon = hasTribe('demon')
 
 export const CARD_EFFECTS = {
   // ลูกพราน
@@ -67,9 +70,18 @@ export const CARD_EFFECTS = {
   'th01-009': {
     destroysTribeAfterBattle: { tribe: 'reptile', reason: 'พญาครุฑเวนไตยทำลายเผ่าสัตว์เลื้อยคลานหลังการต่อสู้' },
   },
-  // อสูรทศกัณฐ์จำแลง
+  // อสูรทศกัณฐ์จำแลง: ตีแรงในจังหวะแรก แล้วร่างจำแลงค่อย ๆ อ่อนแรง
   'th01-011': {
     piercing: { ratio: 0.5, reason: 'ตีทะลุครึ่งหนึ่งของส่วนต่าง' },
+    attackDecay: {
+      penalties: [200, 300, 400], // ATK ที่หายไปสะสม หลังโจมตีครั้งที่ 1, 2, 3+ (1,800 → 1,600 → 1,500 → 1,400)
+      reason: 'ร่างจำแลงอ่อนแรง',
+      protectedBy: ({ allies, fieldSpell }) => {
+        if (allies.some(isDemon)) return 'มีมอนสเตอร์เผ่าอสูรตัวอื่นบนสนาม'
+        if (effectOf(fieldSpell).fieldSpell?.faction === 'demon') return 'มีเวทสนามฝ่ายอสูร'
+        return null
+      },
+    },
   },
   // พลทหารอาสา
   'th01-016': {
@@ -202,6 +214,10 @@ export function hasAmbush(card) {
 
 export function getPiercing(card) {
   return effectOf(card).piercing ?? null
+}
+
+export function getAttackDecay(card) {
+  return effectOf(card).attackDecay ?? null
 }
 
 export function getEvolve(card) {
