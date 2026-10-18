@@ -24,9 +24,15 @@ export function makeState({ turn = 3, activePlayer = PLAYER, phase = 'main1', pl
       const { id, position = 'attack', faceDown = false } = typeof entry === 'string' ? { id: entry } : entry
       p.field[i] = { ...inst(id), hasAttacked: false, summonedTurn: 1, position, faceDown, positionChangedTurn: null }
     })
+    // spellTrap: [{ id: 'th05-008', setTurn: 1 }] (คว่ำเสมอ) · fieldSpell: 'th05-007'
+    ;(spec.spellTrap ?? []).forEach((entry, i) => {
+      if (entry) p.spellTrap[i] = { ...inst(entry.id), faceDown: true, setTurn: entry.setTurn ?? 1 }
+    })
+    p.fieldSpell = spec.fieldSpell ? inst(spec.fieldSpell) : null
     p.graveyard = []
     p.lp = spec.lp ?? RULES.startingLP
     p.hasNormalSummoned = spec.hasNormalSummoned ?? false
+    p.usedEffects = {}
   }
   return state
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import MonsterCard from '../cards/MonsterCard'
+import { FieldActionSheet, HandActionSheet } from './ActionSheets'
 import BattleLog from './BattleLog'
 import BoardSide, { PileViewer } from './BoardSide'
 import MiniCard from './MiniCard'
@@ -10,25 +11,35 @@ import {
   PLAYER,
   PLAYER_NAMES,
   RULES,
+  activationBlocker,
   applyAction,
   canAttackThisTurn,
   cardOf,
   createGame,
+  currentActor,
   formatNumber,
+  getActivated,
   getAiAction,
   getFieldAtk,
   getHandOverflow,
   getReadyAttackers,
+  getRitualInfo,
   getSummonableHand,
+  getTributeCost,
+  handCardBlocker,
   isNormalSummonable,
   positionChangeBlocker,
   previewBattle,
-  getTributeCost,
+  ritualTributePool,
+  ritualTributeProblem,
   tributesRequired,
 } from '../../engine'
 import './BattleScreen.css'
+// ธีมและแอนิเมชัน (ทีมภาพดูแล) — โหลดหลัง BattleScreen.css เพื่อทับสไตล์พื้นฐานได้
+import './BattleTheme.css'
+import BattleFx from './fx/BattleFx'
 
-const AI_STEP_DELAY = { attack: 1100, default: 750 }
+const AI_STEP_DELAY = { attack: 1100, respond: 1100, default: 750 }
 
 // deckList / extraDeckList จากหน้าจัดสำรับ (ไม่ระบุ = สำรับเริ่มต้น) — AI ใช้สำรับเริ่มต้นเสมอ
 const newGame = (deckList, extraDeckList) =>
@@ -54,47 +65,70 @@ const OUTCOME_BADGE = {
   tie: { tone: 'tie', label: 'เสมอ' },
 }
 
+const TRIBUTE_BADGE = { tone: 'lose', text: 'สังเวย' }
+
+const toggle = (list, uid, max = Infinity) =>
+  list.includes(uid) ? list.filter((u) => u !== uid) : list.length < max ? [...list, uid] : list
+
 export default function BattleScreen({ active = true, deckList, extraDeckList }) {
   const [initial] = useState(() => startGame(deckList, extraDeckList))
   const [game, setGame] = useState(initial.game)
   const [selectedHandUid, setSelectedHandUid] = useState(null)
+  const [selectedFieldUid, setSelectedFieldUid] = useState(null) // มอนสเตอร์ของเราที่เปิดเมนู
   const [attackerUid, setAttackerUid] = useState(null)
+  const [tributePick, setTributePick] = useState(null) // อัญเชิญสังเวย { handUid, selected, position }
+  const [ritualPick, setRitualPick] = useState(null) // พิธีกรรม { ritualUid, selected }
+  const [effectPick, setEffectPick] = useState(null) // ความสามารถที่ต้องเลือก { uid, discardUid }
   const [inspectCard, setInspectCard] = useState(null)
   const [openPile, setOpenPile] = useState(null) // { playerId, kind }
-  const [tributePick, setTributePick] = useState(null) // { handUid, selected: [uid], position }
-  const [selectedFieldUid, setSelectedFieldUid] = useState(null) // มอนสเตอร์ของเราที่เปิดเมนูเปลี่ยนท่า
   const [error, setError] = useState(initial.deckError)
 
   const me = game.players[PLAYER]
   const opp = game.players[AI]
-  const isMyTurn = game.activePlayer === PLAYER && !game.winner
+  const pending = game.pendingResponse
+  const mustRespond = pending?.responder === PLAYER && !game.winner
+  const isMyTurn = game.activePlayer === PLAYER && !game.winner && !pending
 
   const summonable = new Set(getSummonableHand(game, PLAYER).map((c) => c.uid))
   const readyAttackers = new Set(getReadyAttackers(game, PLAYER).map((m) => m.uid))
   const attacker = me.field.find((m) => m?.uid === attackerUid) ?? null
   const selectedHand = me.hand.find((c) => c.uid === selectedHandUid) ?? null
+  const selectedField = me.field.find((m) => m?.uid === selectedFieldUid) ?? null
   const oppHasMonsters = opp.field.some(Boolean)
+
   const tributeInst = tributePick ? me.hand.find((c) => c.uid === tributePick.handUid) : null
   const tributeCard = tributeInst ? cardOf(tributeInst) : null
   const tributeNeeded = tributeCard ? getTributeCost(game, PLAYER, tributeCard) : 0
+
+  const ritualInst = ritualPick ? me.hand.find((c) => c.uid === ritualPick.ritualUid) : null
+  const ritual = ritualInst ? getRitualInfo(cardOf(ritualInst)) : null
+  const ritualPool = new Set(ritual ? ritualTributePool(game, PLAYER, ritualInst.uid).map((c) => c.uid) : [])
+  const ritualProblem = ritual ? ritualTributeProblem(game, PLAYER, ritualInst.uid, ritualPick.selected) : null
+  const isTributeSelected = (uid) => Boolean(tributePick?.selected.includes(uid) || ritualPick?.selected.includes(uid))
+
+  function clearSelections() {
+    setSelectedHandUid(null)
+    setSelectedFieldUid(null)
+    setAttackerUid(null)
+    setTributePick(null)
+    setRitualPick(null)
+    setEffectPick(null)
+  }
 
   // ทำแอ็กชันของผู้เล่น — ผิดกติกาจะแสดงข้อความแทน
   function play(action) {
     try {
       setGame(applyAction(game, { ...action, player: PLAYER }))
       setError(null)
-      setSelectedHandUid(null)
-      setAttackerUid(null)
-      setTributePick(null)
-      setSelectedFieldUid(null)
+      clearSelections()
     } catch (e) {
       setError(e.message)
     }
   }
 
-  // AI เล่นทีละขั้นพร้อมหน่วงเวลาให้เห็นแต่ละการกระทำ
+  // AI เล่นทีละขั้นพร้อมหน่วงเวลา (รวมตอนต้องตัดสินใจเปิดกับดักระหว่างตาของเรา)
   useEffect(() => {
-    if (!active || game.winner || game.activePlayer !== AI) return
+    if (!active || game.winner || currentActor(game) !== AI) return
     const action = getAiAction(game)
     if (!action) return
     const delay = AI_STEP_DELAY[action.type] ?? AI_STEP_DELAY.default
@@ -105,14 +139,22 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
   function restart() {
     const next = startGame(deckList, extraDeckList)
     setGame(next.game)
-    setSelectedHandUid(null)
-    setAttackerUid(null)
-    setTributePick(null)
-    setSelectedFieldUid(null)
+    clearSelections()
     setError(next.deckError)
   }
 
+  // ---------- การแตะการ์ด ----------
   function onHandCardTap(inst) {
+    if (ritualPick) {
+      if (ritualPool.has(inst.uid)) {
+        setRitualPick((r) => ({ ...r, selected: toggle(r.selected, inst.uid) }))
+      }
+      return
+    }
+    if (effectPick && !effectPick.discardUid) {
+      setEffectPick((e) => ({ ...e, discardUid: inst.uid }))
+      return
+    }
     setAttackerUid(null)
     setTributePick(null)
     setSelectedFieldUid(null)
@@ -120,19 +162,15 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
   }
 
   function onMyMonsterTap(monster) {
-    if (tributePick) {
-      // เลือก/ยกเลิกตัวสังเวย (เลือกได้ไม่เกินจำนวนที่ต้องใช้)
-      setTributePick(({ handUid, selected, position }) => ({
-        handUid,
-        position,
-        selected: selected.includes(monster.uid)
-          ? selected.filter((u) => u !== monster.uid)
-          : selected.length < tributeNeeded
-          ? [...selected, monster.uid]
-          : selected,
-      }))
+    if (ritualPick) {
+      setRitualPick((r) => ({ ...r, selected: toggle(r.selected, monster.uid) }))
       return
     }
+    if (tributePick) {
+      setTributePick((t) => ({ ...t, selected: toggle(t.selected, monster.uid, tributeNeeded) }))
+      return
+    }
+    if (effectPick) return
     setSelectedHandUid(null)
     if (game.phase === 'battle') {
       if (readyAttackers.has(monster.uid)) {
@@ -142,8 +180,24 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
       }
       return
     }
-    // เฟสหลัก: เปิดเมนูเปลี่ยนท่า / ดูการ์ด
+    // เฟสหลัก: เปิดเมนูเปลี่ยนท่า / ความสามารถ
     setSelectedFieldUid((uid) => (uid === monster.uid ? null : monster.uid))
+  }
+
+  function onOpponentMonsterTap(monster) {
+    if (effectPick?.discardUid) {
+      if (monster.faceDown) {
+        setError('เลือกได้เฉพาะมอนสเตอร์ที่หงายหน้า')
+        return
+      }
+      play({ type: 'activate', uid: effectPick.uid, discardUid: effectPick.discardUid, targetUid: monster.uid })
+    } else if (attacker) {
+      play({ type: 'attack', attackerUid: attacker.uid, targetUid: monster.uid })
+    } else if (monster.faceDown) {
+      setError('การ์ดคว่ำ — ยังไม่รู้ว่าเป็นการ์ดอะไร')
+    } else {
+      setInspectCard(cardOf(monster))
+    }
   }
 
   function startSummon(inst, position) {
@@ -156,14 +210,41 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
     }
   }
 
-  function onOpponentMonsterTap(monster) {
-    if (attacker) {
-      play({ type: 'attack', attackerUid: attacker.uid, targetUid: monster.uid })
-    } else if (monster.faceDown) {
-      setError('การ์ดคว่ำ — ยังไม่รู้ว่าเป็นการ์ดอะไร')
+  function playNonMonster(inst) {
+    const card = cardOf(inst)
+    if (card.type === 'ritual') {
+      setSelectedHandUid(null)
+      setRitualPick({ ritualUid: inst.uid, selected: [] })
+      setError(null)
+    } else if (card.type === 'trap') {
+      play({ type: 'setTrap', uid: inst.uid })
     } else {
-      setInspectCard(cardOf(monster))
+      play({ type: 'playSpell', uid: inst.uid })
     }
+  }
+
+  function activateEffectOf(monster) {
+    if (getActivated(cardOf(monster)).kind === 'debuff') {
+      setSelectedFieldUid(null)
+      setEffectPick({ uid: monster.uid, discardUid: null })
+      setError(null)
+    } else {
+      play({ type: 'activate', uid: monster.uid })
+    }
+  }
+
+  // เหตุผลที่อัญเชิญมอนสเตอร์ในมือไม่ได้
+  function summonReason(card, inst) {
+    if (summonable.has(inst.uid)) return null
+    if (tributesRequired(card) === 0 && !isNormalSummonable(card)) {
+      return card.summonType === 'ritual' ? 'ต้องอัญเชิญด้วยการ์ดพิธีกรรม' : 'ต้องอัญเชิญผสานร่าง (ยังไม่เปิดในขั้นนี้)'
+    }
+    if (!isMyTurn) return 'ยังไม่ถึงตาของคุณ'
+    if (game.phase !== 'main1' && game.phase !== 'main2') return 'อัญเชิญได้ในเฟสหลักเท่านั้น'
+    if (me.hasNormalSummoned) return 'อัญเชิญไปแล้วในเทิร์นนี้'
+    const cost = getTributeCost(game, PLAYER, card)
+    if (cost > me.field.filter(Boolean).length) return `ต้องมีมอนสเตอร์บนสนามให้สังเวย ${cost} ตัว`
+    return 'สนามเต็มแล้ว'
   }
 
   // ป้ายคาดการณ์บนเป้าหมาย (การ์ดคว่ำไม่รู้ค่า จึงแสดง ?)
@@ -180,16 +261,26 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
     return { tone: b.tone, text: b.label, detail: numbers }
   }
 
-  const selectedField = me.field.find((m) => m?.uid === selectedFieldUid) ?? null
-
-  // ---------- คำแนะนำ / ปุ่มตามเฟส ----------
+  // ---------- คำแนะนำ ----------
   let hint
   if (game.winner) hint = 'เกมจบแล้ว'
-  else if (!isMyTurn) hint = `${PLAYER_NAMES[AI]}กำลังเล่น…`
-  else if (tributeCard) {
+  else if (mustRespond) {
+    const atk = cardOf(opp.field.find((m) => m?.uid === pending.attackerUid))
+    const target = cardOf(me.field.find((m) => m?.uid === pending.targetUid))
+    hint = `${atk.name} ของคู่ต่อสู้ประกาศโจมตี ${target.name} — จะเปิดกับดักไหม?`
+  } else if (!isMyTurn) hint = `${PLAYER_NAMES[AI]}กำลังเล่น…`
+  else if (ritual) {
+    const target = cardOf({ cardId: ritual.target })
+    const total = ritualPick.selected.reduce((sum, uid) => {
+      const inst = me.hand.find((c) => c.uid === uid) ?? me.field.find((m) => m?.uid === uid)
+      return sum + cardOf(inst).level
+    }, 0)
+    hint = `เลือกเครื่องสังเวยจากมือ/สนามให้ ${target.name}: ระดับรวม ${total}/${ritual.requiredLevel}`
+  } else if (effectPick) {
+    hint = effectPick.discardUid ? 'แตะมอนสเตอร์หงายหน้าของคู่ต่อสู้ที่จะลด ATK' : 'แตะการ์ดในมือที่จะทิ้ง 1 ใบ'
+  } else if (tributeCard) {
     hint = `แตะมอนสเตอร์ของคุณที่จะสังเวยให้ ${tributeCard.name} (${tributePick.selected.length}/${tributeNeeded})`
-  }
-  else if (game.phase === 'discard') {
+  } else if (game.phase === 'discard') {
     hint = `การ์ดในมือเกิน ${RULES.handLimit} ใบ — แตะการ์ดเพื่อทิ้งอีก ${getHandOverflow(game, PLAYER)} ใบ`
   } else if (game.phase === 'battle') {
     hint = attacker
@@ -199,12 +290,109 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
       : readyAttackers.size > 0
       ? 'แตะมอนสเตอร์ของคุณเพื่อเลือกตัวโจมตี'
       : 'ไม่มีมอนสเตอร์ที่โจมตีได้แล้ว'
-  } else if (summonable.size > 0) hint = 'แตะการ์ดในมือเพื่ออัญเชิญ (เทิร์นละ 1 ตัว)'
+  } else if (summonable.size > 0) hint = 'แตะการ์ดในมือเพื่ออัญเชิญ หรือแตะมอนสเตอร์บนสนามเพื่อเปลี่ยนท่า/ใช้ความสามารถ'
   else if (!canAttackThisTurn(game)) hint = 'เทิร์นแรกของผู้เริ่มก่อน: โจมตีไม่ได้'
   else hint = 'พร้อมเข้าเฟสต่อสู้หรือจบเทิร์น'
 
+  // ---------- ปุ่มกลางกระดาน ----------
+  let actions = null
+  if (mustRespond) {
+    actions = (
+      <>
+        {pending.trapUids.map((trapUid) => {
+          const trap = me.spellTrap.find((t) => t?.uid === trapUid)
+          return (
+            <button key={trapUid} type="button" className="btn btn--danger" onClick={() => play({ type: 'respond', trapUid })}>
+              🪤 เปิด {cardOf(trap).name}
+            </button>
+          )
+        })}
+        <button type="button" className="btn" onClick={() => play({ type: 'respond', trapUid: null })}>
+          ไม่เปิด
+        </button>
+      </>
+    )
+  } else if (isMyTurn && ritualPick) {
+    actions = (
+      <>
+        <button
+          type="button"
+          className="btn btn--primary"
+          disabled={Boolean(ritualProblem)}
+          title={ritualProblem ?? undefined}
+          onClick={() => play({ type: 'playSpell', uid: ritualPick.ritualUid, tributes: ritualPick.selected })}
+        >
+          🙏 ยืนยันพิธี
+        </button>
+        <button type="button" className="btn" onClick={() => setRitualPick(null)}>
+          ยกเลิก
+        </button>
+      </>
+    )
+  } else if (isMyTurn && effectPick) {
+    actions = (
+      <button type="button" className="btn" onClick={() => setEffectPick(null)}>
+        ยกเลิก
+      </button>
+    )
+  } else if (isMyTurn && tributePick) {
+    actions = (
+      <>
+        <button
+          type="button"
+          className="btn btn--primary"
+          disabled={tributePick.selected.length !== tributeNeeded}
+          onClick={() =>
+            play({ type: 'summon', uid: tributePick.handUid, tributes: tributePick.selected, position: tributePick.position })
+          }
+        >
+          {tributePick.position === 'defense' ? '🛡 ยืนยันสังเวย (วางคว่ำ)' : '✨ ยืนยันสังเวย'}
+        </button>
+        <button type="button" className="btn" onClick={() => setTributePick(null)}>
+          ยกเลิก
+        </button>
+      </>
+    )
+  } else if (isMyTurn) {
+    actions = (
+      <>
+        {attacker && !oppHasMonsters && (
+          <button
+            type="button"
+            className="btn btn--danger"
+            onClick={() => play({ type: 'attack', attackerUid: attacker.uid, targetUid: null })}
+          >
+            ⚔️ โจมตีตรง {formatNumber(getFieldAtk(game, PLAYER, attacker.uid))}
+          </button>
+        )}
+        {game.phase === 'main1' && (
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={!canAttackThisTurn(game)}
+            onClick={() => play({ type: 'enterBattle' })}
+          >
+            ⚔️ เข้าเฟสต่อสู้
+          </button>
+        )}
+        {game.phase === 'battle' && (
+          <button type="button" className="btn" onClick={() => play({ type: 'endBattle' })}>
+            จบเฟสต่อสู้
+          </button>
+        )}
+        {game.phase !== 'discard' && (
+          <button type="button" className="btn" onClick={() => play({ type: 'endTurn' })}>
+            จบเทิร์น ⏭
+          </button>
+        )}
+      </>
+    )
+  }
+
+  const selectedActivated = selectedField ? getActivated(cardOf(selectedField)) : null
+
   return (
-    <div className="battle">
+    <div className="battle" data-battle-root>
       <PlayerBar player={opp} isActive={game.activePlayer === AI} isOpponent />
 
       <BoardSide
@@ -219,7 +407,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
             atkOf={(m) => getFieldAtk(game, AI, m.uid)}
             hideFaceDown
             renderBadge={targetBadge}
-            classFor={() => (attacker ? 'mini-card--target' : '')}
+            classFor={(m) => (attacker || (effectPick?.discardUid && !m.faceDown) ? 'mini-card--target' : '')}
             onTap={onOpponentMonsterTap}
           />
         }
@@ -239,61 +427,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
             ⚠️ {error}
           </p>
         )}
-        {isMyTurn && tributePick && (
-          <div className="battle__actions">
-            <button
-              type="button"
-              className="btn btn--primary"
-              disabled={tributePick.selected.length !== tributeNeeded}
-              onClick={() =>
-                play({
-                  type: 'summon',
-                  uid: tributePick.handUid,
-                  tributes: tributePick.selected,
-                  position: tributePick.position,
-                })
-              }
-            >
-              {tributePick.position === 'defense' ? '🛡 ยืนยันสังเวย (วางคว่ำ)' : '✨ ยืนยันสังเวย'}
-            </button>
-            <button type="button" className="btn" onClick={() => setTributePick(null)}>
-              ยกเลิก
-            </button>
-          </div>
-        )}
-        {isMyTurn && !tributePick && (
-          <div className="battle__actions">
-            {attacker && !oppHasMonsters && (
-              <button
-                type="button"
-                className="btn btn--danger"
-                onClick={() => play({ type: 'attack', attackerUid: attacker.uid, targetUid: null })}
-              >
-                ⚔️ โจมตีตรง {formatNumber(getFieldAtk(game, PLAYER, attacker.uid))}
-              </button>
-            )}
-            {game.phase === 'main1' && (
-              <button
-                type="button"
-                className="btn btn--primary"
-                disabled={!canAttackThisTurn(game)}
-                onClick={() => play({ type: 'enterBattle' })}
-              >
-                ⚔️ เข้าเฟสต่อสู้
-              </button>
-            )}
-            {game.phase === 'battle' && (
-              <button type="button" className="btn" onClick={() => play({ type: 'endBattle' })}>
-                จบเฟสต่อสู้
-              </button>
-            )}
-            {game.phase !== 'discard' && (
-              <button type="button" className="btn" onClick={() => play({ type: 'endTurn' })}>
-                จบเทิร์น ⏭
-              </button>
-            )}
-          </div>
-        )}
+        {actions && <div className="battle__actions">{actions}</div>}
       </div>
 
       <BoardSide
@@ -305,12 +439,12 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
             label="ช่องมอนสเตอร์ของคุณ"
             field={me.field}
             atkOf={(m) => getFieldAtk(game, PLAYER, m.uid)}
-            renderBadge={(m) => (tributePick?.selected.includes(m.uid) ? { tone: 'lose', text: 'สังเวย' } : null)}
+            renderBadge={(m) => (isTributeSelected(m.uid) ? TRIBUTE_BADGE : null)}
             classFor={(m) =>
               [
                 (m.uid === attackerUid || m.uid === selectedFieldUid) && 'mini-card--selected',
-                tributePick?.selected.includes(m.uid) && 'mini-card--tribute',
-                (tributePick || readyAttackers.has(m.uid)) && 'mini-card--ready',
+                isTributeSelected(m.uid) && 'mini-card--tribute',
+                (tributePick || ritualPick || readyAttackers.has(m.uid)) && 'mini-card--ready',
                 m.hasAttacked && !readyAttackers.has(m.uid) && 'mini-card--spent',
               ]
                 .filter(Boolean)
@@ -321,52 +455,70 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
         }
       />
 
-      {selectedField && (
-        <FieldActionSheet
-          card={cardOf(selectedField)}
-          monster={selectedField}
-          blocker={positionChangeBlocker(game, PLAYER, selectedField.uid)}
-          onChange={() => play({ type: 'changePosition', uid: selectedField.uid })}
-          onInspect={() => setInspectCard(cardOf(selectedField))}
-          onClose={() => setSelectedFieldUid(null)}
-        />
-      )}
-
       <PlayerBar player={me} isActive={game.activePlayer === PLAYER} />
 
+      {/* แถบมือ: ลอยติดขอบล่างจอบนมือถือ — เมนูการ์ดอยู่เหนือแถวการ์ดให้กดถึงง่าย */}
       <section className="hand" aria-label="การ์ดในมือ">
-        <div className="hand__row">
-          {me.hand.map((inst) => {
-            const card = cardOf(inst)
-            const cls = [
-              'mini-card--hand',
-              (inst.uid === selectedHandUid || inst.uid === tributePick?.handUid) && 'mini-card--selected',
-              summonable.has(inst.uid) && 'mini-card--ready',
-              game.phase === 'discard' && isMyTurn && 'mini-card--discardable',
-            ]
-              .filter(Boolean)
-              .join(' ')
-            return <MiniCard key={inst.uid} card={card} className={cls} onClick={() => onHandCardTap(inst)} />
-          })}
-          {me.hand.length === 0 && <p className="hand__empty">ไม่มีการ์ดในมือ</p>}
-        </div>
-
+        {selectedField && (
+          <FieldActionSheet
+            card={cardOf(selectedField)}
+            monster={selectedField}
+            blocker={positionChangeBlocker(game, PLAYER, selectedField.uid)}
+            onChange={() => play({ type: 'changePosition', uid: selectedField.uid })}
+            effect={
+              selectedActivated && {
+                label: selectedActivated.label,
+                blocker: activationBlocker(game, PLAYER, selectedField.uid),
+                onUse: () => activateEffectOf(selectedField),
+              }
+            }
+            onInspect={() => setInspectCard(cardOf(selectedField))}
+            onClose={() => setSelectedFieldUid(null)}
+          />
+        )}
         {selectedHand && (
           <HandActionSheet
             card={cardOf(selectedHand)}
-            canSummon={summonable.has(selectedHand.uid)}
             canDiscard={isMyTurn && game.phase === 'discard'}
-            hasSummoned={me.hasNormalSummoned}
-            monsterCount={me.field.filter(Boolean).length}
+            canSummon={summonable.has(selectedHand.uid)}
+            summonReason={summonReason(cardOf(selectedHand), selectedHand)}
             tributeCost={getTributeCost(game, PLAYER, cardOf(selectedHand))}
-            isMyTurn={isMyTurn}
-            phase={game.phase}
+            blocker={cardOf(selectedHand).type === 'monster' ? null : handCardBlocker(game, PLAYER, selectedHand.uid)}
             onSummon={(position) => startSummon(selectedHand, position)}
+            onPlay={() => playNonMonster(selectedHand)}
             onDiscard={() => play({ type: 'discard', uid: selectedHand.uid })}
             onInspect={() => setInspectCard(cardOf(selectedHand))}
             onClose={() => setSelectedHandUid(null)}
           />
         )}
+        <div className="hand__row">
+          {me.hand.map((inst) => {
+            const card = cardOf(inst)
+            const picking = ritualPick || effectPick
+            const cls = [
+              'mini-card--hand',
+              [selectedHandUid, tributePick?.handUid, ritualPick?.ritualUid].includes(inst.uid) && 'mini-card--selected',
+              isTributeSelected(inst.uid) && 'mini-card--tribute',
+              !picking && summonable.has(inst.uid) && 'mini-card--ready',
+              ritualPick && ritualPool.has(inst.uid) && 'mini-card--ready',
+              ((game.phase === 'discard' && isMyTurn) || (effectPick && !effectPick.discardUid)) && 'mini-card--discardable',
+            ]
+              .filter(Boolean)
+              .join(' ')
+            return (
+              <MiniCard
+                key={inst.uid}
+                uid={inst.uid}
+                card={card}
+                className={cls}
+                badge={isTributeSelected(inst.uid) ? TRIBUTE_BADGE : effectPick?.discardUid === inst.uid ? { tone: 'lose', text: 'ทิ้ง' } : null}
+                onClick={() => onHandCardTap(inst)}
+              />
+            )
+          })}
+          {me.hand.length === 0 && <p className="hand__empty">ไม่มีการ์ดในมือ</p>}
+        </div>
+
       </section>
 
       <BattleLog log={game.log} />
@@ -389,6 +541,8 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
           <p className="battle-modal__hint">แตะที่ใดก็ได้เพื่อปิด</p>
         </div>
       )}
+
+      <BattleFx game={game} />
 
       {game.winner && (
         <div className="battle-modal battle-modal--result" role="dialog" aria-label="ผลการต่อสู้">
@@ -414,11 +568,13 @@ export default function BattleScreen({ active = true, deckList, extraDeckList })
 
 function FieldRow({ label, field, atkOf, onTap, classFor, renderBadge, hideFaceDown = false }) {
   return (
-    <section className="field-row" aria-label={label}>
+    <section className="field-row" aria-label={label} data-zone-type="monster">
       {field.map((m, i) =>
         m ? (
           <MiniCard
             key={m.uid}
+            uid={m.uid}
+            zone={i}
             card={cardOf(m)}
             atk={atkOf(m)}
             defense={m.position === 'defense'}
@@ -429,84 +585,9 @@ function FieldRow({ label, field, atkOf, onTap, classFor, renderBadge, hideFaceD
             onClick={() => onTap(m)}
           />
         ) : (
-          <div key={`empty-${i}`} className="field-row__slot" aria-label={`ช่องว่าง ${i + 1}`} />
+          <div key={`empty-${i}`} className="field-row__slot" aria-label={`ช่องว่าง ${i + 1}`} data-zone={i} />
         )
       )}
     </section>
-  )
-}
-
-function HandActionSheet({ card, canSummon, canDiscard, hasSummoned, monsterCount, tributeCost, isMyTurn, phase, onSummon, onDiscard, onInspect, onClose }) {
-  const required = tributeCost
-  let reason = null
-  if (!canSummon && !canDiscard) {
-    if (tributesRequired(card) === 0 && !isNormalSummonable(card)) {
-      reason = card.type === 'monster' ? 'ต้องใช้พิธีกรรม/ผสานร่าง (ยังไม่เปิดในขั้นนี้)' : 'การ์ดเวท/กับดักยังใช้ไม่ได้ในขั้นนี้'
-    } else if (!isMyTurn) reason = 'ยังไม่ถึงตาของคุณ'
-    else if (phase !== 'main1' && phase !== 'main2') reason = 'อัญเชิญได้ในเฟสหลักเท่านั้น'
-    else if (hasSummoned) reason = 'อัญเชิญไปแล้วในเทิร์นนี้'
-    else if (required > monsterCount) reason = `ต้องมีมอนสเตอร์บนสนามให้สังเวย ${required} ตัว`
-    else reason = 'สนามเต็มแล้ว'
-  }
-  return (
-    <div className="hand-sheet">
-      <div className="hand-sheet__info">
-        <strong>{card.name}</strong>
-        <span>
-          ระดับ {card.level} · ATK {formatNumber(card.atk)} / DEF {formatNumber(card.def)}
-        </span>
-        {reason && <span className="hand-sheet__reason">{reason}</span>}
-      </div>
-      <div className="hand-sheet__buttons">
-        {canDiscard ? (
-          <button type="button" className="btn btn--danger" onClick={onDiscard}>
-            🗑 ทิ้ง
-          </button>
-        ) : (
-          <>
-            <button type="button" className="btn btn--primary" disabled={!canSummon} onClick={() => onSummon('attack')}>
-              {required > 0 ? `✨ สังเวย ${required} ตัว` : '⚔️ โจมตี'}
-            </button>
-            <button type="button" className="btn" disabled={!canSummon} onClick={() => onSummon('defense')}>
-              🛡 วางคว่ำ
-            </button>
-          </>
-        )}
-        <button type="button" className="btn" onClick={onInspect} aria-label="ดูการ์ดขนาดเต็ม">
-          🔍
-        </button>
-        <button type="button" className="btn" onClick={onClose} aria-label="ยกเลิก">
-          ✕
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function FieldActionSheet({ card, monster, blocker, onChange, onInspect, onClose }) {
-  const inDefense = monster.position === 'defense'
-  const status = inDefense ? (monster.faceDown ? 'ท่าตั้งรับ (คว่ำ)' : 'ท่าตั้งรับ') : 'ท่าโจมตี'
-  const action = inDefense ? (monster.faceDown ? '⚔️ หงายเป็นท่าโจมตี' : '⚔️ เปลี่ยนเป็นท่าโจมตี') : '🛡 เปลี่ยนเป็นท่าตั้งรับ'
-  return (
-    <div className="hand-sheet">
-      <div className="hand-sheet__info">
-        <strong>{card.name}</strong>
-        <span>
-          {status} · ATK {formatNumber(card.atk)} / DEF {formatNumber(card.def)}
-        </span>
-        {blocker && <span className="hand-sheet__reason">{blocker}</span>}
-      </div>
-      <div className="hand-sheet__buttons">
-        <button type="button" className="btn btn--primary" disabled={Boolean(blocker)} onClick={onChange}>
-          {action}
-        </button>
-        <button type="button" className="btn" onClick={onInspect} aria-label="ดูการ์ดขนาดเต็ม">
-          🔍
-        </button>
-        <button type="button" className="btn" onClick={onClose} aria-label="ปิด">
-          ✕
-        </button>
-      </div>
-    </div>
   )
 }

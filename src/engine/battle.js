@@ -37,9 +37,9 @@ export function getAdvantageBonuses(card, opponent) {
 
 // stat: 'atk' (ท่าโจมตี) หรือ 'def' (ท่าตั้งรับ) — บัฟ ATK จากเอฟเฟกต์ไม่บวกเข้า DEF
 // แต่โบนัสธาตุ/เผ่าบวกได้ทั้งสองค่า
-function computeSide(card, opponent, { allies = [], enemies = [], ambushed = false, stat = 'atk' } = {}) {
+function computeSide(card, opponent, { allies = [], enemies = [], extras = {}, ambushed = false, stat = 'atk' } = {}) {
   const advantage = getAdvantageBonuses(card, opponent)
-  const effects = stat === 'atk' ? getAtkBoosts(card, allies, enemies) : []
+  const effects = stat === 'atk' ? getAtkBoosts(card, allies, enemies, extras) : []
   const bonuses = [...effects, ...(ambushed ? [] : advantage)]
   const total = bonuses.reduce((sum, b) => sum + b.amount, 0)
   const base = stat === 'def' ? card.def : card.atk
@@ -60,13 +60,26 @@ function computeSide(card, opponent, { allies = [], enemies = [], ambushed = fal
 export function resolveBattle(
   attackerCard,
   defenderCard,
-  { attackerAllies = [], attackerEnemies = [], defenderAllies = [], defenderEnemies = [], defenderStat = 'atk' } = {}
+  {
+    attackerAllies = [],
+    attackerEnemies = [],
+    attackerExtras = {},
+    defenderAllies = [],
+    defenderEnemies = [],
+    defenderExtras = {},
+    defenderStat = 'atk',
+  } = {}
 ) {
   const ambush = hasAmbush(attackerCard)
-  const attacker = computeSide(attackerCard, defenderCard, { allies: attackerAllies, enemies: attackerEnemies })
+  const attacker = computeSide(attackerCard, defenderCard, {
+    allies: attackerAllies,
+    enemies: attackerEnemies,
+    extras: attackerExtras,
+  })
   const defender = computeSide(defenderCard, attackerCard, {
     allies: defenderAllies,
     enemies: defenderEnemies,
+    extras: defenderExtras,
     ambushed: ambush,
     stat: defenderStat,
   })

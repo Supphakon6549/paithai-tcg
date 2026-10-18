@@ -1,7 +1,13 @@
+import { getActivated, getRitualInfo, isPlayableNonMonster } from './effects'
 import {
+  activationBlocker,
   applyAction,
   canAttackThisTurn,
   cardOf,
+  currentActor,
+  handCardBlocker,
+  ritualTributePool,
+  ritualTributeProblem,
   getOpponentMonsters,
   getReadyAttackers,
   getFieldAtk,
@@ -16,27 +22,42 @@ import { AI, opponentOf } from './rules'
 // ตีการ์ดคว่ำ (ไม่รู้ DEF) เมื่อตัวที่ตีมี ATK อย่างน้อยเท่านี้
 const BLIND_ATTACK_MIN_ATK = 1500
 
-const byAtkDesc = (a, b) => cardOf(b).atk - cardOf(a).atk
+const byAtkDesc = (a, b) => (cardOf(b).atk ?? 0) - (cardOf(a).atk ?? 0)
+
+// มูลค่าการ์ดในมือ (ใช้เลือกใบที่จะทิ้ง): มอนสเตอร์ = ATK · เวท/กับดักที่ใช้ได้ = 1,500 · ใบที่ยังใช้ไม่ได้ = 0
+const cardValue = (inst) => {
+  const card = cardOf(inst)
+  if (card.type === 'monster') return card.atk
+  return isPlayableNonMonster(card) ? 1500 : 0
+}
+const cheapestFirst = (a, b) => cardValue(a) - cardValue(b)
 
 /**
- * AI แบบง่าย: อัญเชิญตัว ATK สูงสุด (สังเวยเมื่อคุ้ม · วางคว่ำเมื่อสู้ไม่ได้)
- * → หงายตัวคว่ำที่สู้ได้แล้ว → โจมตีเฉพาะเมื่อชนะ → จบเทิร์น
+ * AI แบบง่าย: เวทสนาม → พิธีกรรม → อัญเชิญตัว ATK สูงสุด (สังเวยเมื่อคุ้ม · วางคว่ำเมื่อสู้ไม่ได้)
+ * → ใช้ความสามารถ → วางกับดัก → หงายตัวคว่ำที่สู้ได้แล้ว → โจมตีเฉพาะเมื่อชนะ → จบเทิร์น
+ * ถูกโจมตีขณะมีกับดักที่เปิดได้ → เปิดเสมอ
  * AI ไม่แอบดูการ์ดคว่ำของผู้เล่น
  * คืนแอ็กชันถัดไป 1 ขั้น (UI จะเล่นทีละขั้นให้เห็น) หรือ null ถ้าไม่ใช่ตาของ AI
  */
 export function getAiAction(state, playerId = AI) {
-  if (state.winner || state.activePlayer !== playerId) return null
+  if (state.winner || currentActor(state) !== playerId) return null
+  if (state.pendingResponse) {
+    return { type: 'respond', player: playerId, trapUid: state.pendingResponse.trapUids[0] }
+  }
   const me = state.players[playerId]
 
   switch (state.phase) {
     case 'discard': {
-      // ทิ้งตัว ATK ต่ำสุด
-      const weakest = [...me.hand].sort(byAtkDesc).at(-1)
+      const weakest = [...me.hand].sort(cheapestFirst)[0]
       return { type: 'discard', player: playerId, uid: weakest.uid }
     }
     case 'main1': {
+      const spell = chooseFieldSpell(state, playerId) ?? chooseRitual(state, playerId)
+      if (spell) return spell
       const summon = chooseSummon(state, playerId)
       if (summon) return summon
+      const effect = chooseActivation(state, playerId) ?? chooseTrapSet(state, playerId)
+      if (effect) return effect
       const flip = chooseFlip(state, playerId)
       if (flip) return flip
       if (canAttackThisTurn(state) && me.field.some((m) => m && m.position !== 'defense')) {
@@ -90,6 +111,78 @@ function chooseSummon(state, playerId) {
     uid: bestNormal.uid,
     position: positionFor(state, playerId, cardOf(bestNormal).atk),
   }
+}
+
+const playable = (state, playerId, predicate) =>
+  state.players[playerId].hand.filter((c) => predicate(cardOf(c)) && !handCardBlocker(state, playerId, c.uid))
+
+// เวทสนาม: ลงเมื่อยังไม่มีเวทสนาม
+function chooseFieldSpell(state, playerId) {
+  if (state.players[playerId].fieldSpell) return null
+  const spell = playable(state, playerId, (c) => c.type === 'spell')[0]
+  return spell ? { type: 'playSpell', player: playerId, uid: spell.uid } : null
+}
+
+// พิธีกรรม: ใช้ตัวแทน (เช่น เอราวัณ) ถ้ามี ไม่งั้นสังเวยตัวถูกที่สุดจากมือก่อน แล้วค่อยจากสนาม
+function chooseRitual(state, playerId) {
+  for (const ritualInst of playable(state, playerId, (c) => c.type === 'ritual')) {
+    const ritual = getRitualInfo(cardOf(ritualInst))
+    const pool = ritualTributePool(state, playerId, ritualInst.uid)
+    const substitute = pool.find((c) => ritual.substitutes.includes(c.cardId))
+    const plans = substitute ? [[substitute]] : []
+    const handSet = new Set(state.players[playerId].hand.map((c) => c.uid))
+    const ordered = [...pool].sort((a, b) => (handSet.has(b.uid) - handSet.has(a.uid)) || cheapestFirst(a, b))
+    const greedy = []
+    let total = 0
+    for (const c of ordered) {
+      if (total >= ritual.requiredLevel) break
+      greedy.push(c)
+      total += cardOf(c).level
+    }
+    plans.push(greedy)
+    for (const plan of plans) {
+      const tributes = plan.map((c) => c.uid)
+      if (!ritualTributeProblem(state, playerId, ritualInst.uid, tributes)) {
+        return { type: 'playSpell', player: playerId, uid: ritualInst.uid, tributes }
+      }
+    }
+  }
+  return null
+}
+
+// ความสามารถ: ฟื้น LP ใช้ทันที · ลด ATK ใช้กับตัวที่แรงที่สุดของศัตรูเมื่อทำให้ตีชนะได้
+function chooseActivation(state, playerId) {
+  for (const m of state.players[playerId].field) {
+    if (!m || activationBlocker(state, playerId, m.uid)) continue
+    const activated = getActivated(cardOf(m))
+    if (activated.kind === 'heal') return { type: 'activate', player: playerId, uid: m.uid }
+    if (activated.kind === 'debuff' && canAttackThisTurn(state)) {
+      const oppId = opponentOf(playerId)
+      const ourBest = Math.max(
+        0,
+        ...state.players[playerId].field
+          .filter((x) => x && x.position === 'attack')
+          .map((x) => getFieldAtk(state, playerId, x.uid))
+      )
+      const target = state.players[oppId].field
+        .filter((x) => x && !x.faceDown)
+        .sort((a, b) => getFieldAtk(state, oppId, b.uid) - getFieldAtk(state, oppId, a.uid))
+        .find((x) => {
+          const atk = getFieldAtk(state, oppId, x.uid)
+          return atk >= ourBest && atk + activated.amount < ourBest
+        })
+      const discard = [...state.players[playerId].hand].sort(cheapestFirst)[0]
+      if (target && discard) {
+        return { type: 'activate', player: playerId, uid: m.uid, discardUid: discard.uid, targetUid: target.uid }
+      }
+    }
+  }
+  return null
+}
+
+function chooseTrapSet(state, playerId) {
+  const trap = playable(state, playerId, (c) => c.type === 'trap')[0]
+  return trap ? { type: 'setTrap', player: playerId, uid: trap.uid } : null
 }
 
 // ATK สูงสุดของมอนสเตอร์ท่าโจมตีที่หงายอยู่ของอีกฝ่าย (สิ่งที่ AI มองเห็นว่าเป็นภัย)

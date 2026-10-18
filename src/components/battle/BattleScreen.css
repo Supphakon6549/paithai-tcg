@@ -493,18 +493,34 @@ button.pile:hover {
   color: #fff;
 }
 
-/* ----- มือ ----- */
+/* ----- มือ: ลอยติดขอบล่างจอ เลื่อนดูกระดานแล้วยังเห็นการ์ดในมือเสมอ ----- */
 .hand {
   --mini-zoom: var(--hand-zoom);
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  /* ขยายเต็มความกว้างจอ (ชดเชย padding 16px ของหน้า) */
+  margin: 0 -16px;
+  padding: 18px 16px calc(4px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent 0, rgba(14, 11, 9, 0.94) 16px, #0e0b09 100%);
+}
+
+.hand::before {
+  content: '';
+  position: absolute;
+  inset: 14px 16px auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--panel-line), transparent);
+  pointer-events: none;
 }
 
 .hand__row {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 12px 4px 14px;
+  padding: 6px 4px 12px;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
 }
@@ -760,4 +776,10 @@ button.pile:hover {
     max-height: calc(100svh - 32px);
   }
   .battle-log__list { max-height: none; }
+  /* จอกว้าง: แถบมือยังลอยติดขอบล่าง แต่กว้างเท่าคอลัมน์กระดาน */
+  .hand {
+    margin: 0;
+    padding-inline: 0;
+  }
+  .hand::before { inset-inline: 0; }
 }

@@ -1,12 +1,18 @@
 import { getCardById } from '../data/cards'
 import { describeSide, resolveBattle } from './battle'
 import {
+  getActivated,
   getAfterBattleDestroy,
   getAtkBoosts,
   getEffectiveAtk,
   getExtraAttack,
   getNoTributeCondition,
   getPiercing,
+  getRitualInfo,
+  getTrapEffect,
+  hasTrapLock,
+  isFieldSpell,
+  isPlayableNonMonster,
   reduceBattleDamage,
 } from './effects'
 import { createRng, shuffle } from './random'
@@ -27,11 +33,15 @@ import {
  *   turn, activePlayer, phase: 'main1'|'battle'|'main2'|'discard'|'over',
  *   winner, endReason: 'lp'|'deckOut'|null,
  *   players: { [id]: { id, lp, deck, hand, field[5], spellTrap[5], fieldSpell, graveyard,
- *                      extraDeck, hasNormalSummoned } },
- *   log: [{ id, turn, actor, kind, text, details? }], logSeq
+ *                      extraDeck, hasNormalSummoned, usedEffects: { [key]: turn } } },
+ *   pendingResponse: null | { responder, attacker, attackerUid, targetUid, trapUids, details }
+ *                    (การโจมตีที่รอฝ่ายรับตัดสินใจเปิดกับดัก — ตอนนี้ responder เป็นคนเล่น)
+ *   log: [{ id, turn, actor, kind, text, details?, event? }], logSeq
  * }
  * การ์ดในกอง/มือ/สุสาน = { uid, cardId }
- * บนสนามเพิ่ม { hasAttacked, summonedTurn, position: 'attack'|'defense', faceDown, positionChangedTurn }
+ * บนสนามเพิ่ม { hasAttacked, summonedTurn, position: 'attack'|'defense', faceDown, positionChangedTurn,
+ *               tempAtk?: [{ amount, reason }] (ตัวปรับ ATK จนจบเทิร์น) }
+ * ช่องเวท/กับดัก = { uid, cardId, faceDown, setTurn } · ช่องเวทสนาม = { uid, cardId }
  */
 
 export class GameRuleError extends Error {
@@ -143,6 +153,7 @@ export function createGame({
       graveyard: [],
       extraDeck: expandDeckList(extraDeckList).map((cardId, i) => ({ uid: `${id}-x${i + 1}`, cardId })),
       hasNormalSummoned: false,
+      usedEffects: {},
     }
   }
 
@@ -153,6 +164,7 @@ export function createGame({
     winner: null,
     endReason: null,
     players: { [PLAYER]: makePlayer(PLAYER), [opponentOf(PLAYER)]: makePlayer(opponentOf(PLAYER)) },
+    pendingResponse: null,
     log: [],
     logSeq: 0,
   }
@@ -178,9 +190,18 @@ export function createGame({
 
 // ---------- ตัวช่วยสำหรับ UI / AI (อ่านอย่างเดียว) ----------
 
+// ผู้ที่ต้องทำแอ็กชันถัดไป: ปกติคือเจ้าของเทิร์น แต่ระหว่างรอเปิดกับดักคือฝ่ายรับ
+export function currentActor(state) {
+  return state.pendingResponse ? state.pendingResponse.responder : state.activePlayer
+}
+
+const inMainPhase = (state) => state.phase === 'main1' || state.phase === 'main2'
+const isPlayersOpenMain = (state, playerId) =>
+  !state.winner && state.activePlayer === playerId && !state.pendingResponse && inMainPhase(state)
+
 export function getSummonableHand(state, playerId) {
   const p = state.players[playerId]
-  if (state.winner || state.activePlayer !== playerId) return []
+  if (state.winner || state.activePlayer !== playerId || state.pendingResponse) return []
   if (state.phase !== 'main1' && state.phase !== 'main2') return []
   if (p.hasNormalSummoned) return []
   const hasEmptyZone = p.field.includes(null)
@@ -208,7 +229,7 @@ export function canAttackThisTurn(state) {
 
 export function getReadyAttackers(state, playerId) {
   if (state.winner || state.activePlayer !== playerId || state.phase !== 'battle') return []
-  if (!canAttackThisTurn(state)) return []
+  if (state.pendingResponse || !canAttackThisTurn(state)) return []
   return state.players[playerId].field.filter((m) => m && canDeclareAttack(state, playerId, m))
 }
 
@@ -250,10 +271,21 @@ export function getAllies(state, playerId, excludeUid) {
   return state.players[playerId].field.filter((m) => m && m.uid !== excludeUid && !m.faceDown).map(cardOf)
 }
 
+// ตัวปรับ ATK ที่ไม่ได้มาจากมอนสเตอร์: เวทสนามของเจ้าของ + ตัวปรับชั่วคราวบนตัวมอนสเตอร์
+function atkExtras(state, playerId, m) {
+  const fieldSpell = state.players[playerId].fieldSpell
+  return { fieldSpell: fieldSpell ? cardOf(fieldSpell) : null, temp: m?.tempAtk ?? [] }
+}
+
 // ATK จริงบนสนามรวมบัฟจากเอฟเฟกต์ (ยังไม่รวมโบนัสธาตุ/เผ่าซึ่งขึ้นกับคู่ต่อสู้)
 export function getFieldAtk(state, playerId, uid) {
   const monster = state.players[playerId].field.find((m) => m?.uid === uid)
-  return getEffectiveAtk(cardOf(monster), getAllies(state, playerId, uid), getAllies(state, opponentOf(playerId), null))
+  return getEffectiveAtk(
+    cardOf(monster),
+    getAllies(state, playerId, uid),
+    getAllies(state, opponentOf(playerId), null),
+    atkExtras(state, playerId, monster)
+  )
 }
 
 // คำนวณผลต่อสู้ล่วงหน้าโดยไม่เปลี่ยนสถานะ — ใช้ทั้งตอนโจมตีจริง, AI และ UI
@@ -264,8 +296,10 @@ export function previewBattle(state, playerId, attackerUid, defenderUid) {
   return resolveBattle(cardOf(attacker), cardOf(defender), {
     attackerAllies: getAllies(state, playerId, attackerUid),
     attackerEnemies: getAllies(state, oppId, null),
+    attackerExtras: atkExtras(state, playerId, attacker),
     defenderAllies: getAllies(state, oppId, defenderUid),
     defenderEnemies: getAllies(state, playerId, null),
+    defenderExtras: atkExtras(state, oppId, defender),
     defenderStat: defender.position === 'defense' ? 'def' : 'atk',
   })
 }
@@ -274,12 +308,97 @@ export function getHandOverflow(state, playerId) {
   return Math.max(0, state.players[playerId].hand.length - RULES.handLimit)
 }
 
+const usedKey = (activated, m) => (activated.oncePer === 'name' ? `name:${m.cardId}` : `card:${m.uid}`)
+
+// เหตุผลที่ยังกดใช้ความสามารถของมอนสเตอร์บนสนามไม่ได้ (null = ใช้ได้)
+export function activationBlocker(state, playerId, uid) {
+  const p = state.players[playerId]
+  const m = p.field.find((x) => x?.uid === uid)
+  if (!m) return 'ไม่พบมอนสเตอร์ตัวนี้บนสนาม'
+  const card = cardOf(m)
+  const activated = getActivated(card)
+  if (!activated) return `${card.name} ไม่มีความสามารถที่กดใช้ได้`
+  if (state.winner || state.activePlayer !== playerId || state.pendingResponse) return 'ยังไม่ถึงตาของคุณ'
+  if (!inMainPhase(state)) return 'ใช้ความสามารถได้เฉพาะเฟสหลัก'
+  if (m.faceDown) return 'การ์ดคว่ำอยู่ ใช้ความสามารถไม่ได้'
+  if ((p.usedEffects ?? {})[usedKey(activated, m)] === state.turn) {
+    return activated.oncePer === 'name'
+      ? `ใช้ความสามารถของ "${card.name}" ไปแล้วเทิร์นนี้`
+      : 'ใช้ความสามารถไปแล้วเทิร์นนี้'
+  }
+  if (activated.isReady && !activated.isReady({ allies: getAllies(state, playerId, uid) })) {
+    return activated.notReadyReason
+  }
+  if (activated.kind === 'debuff') {
+    if (p.hand.length === 0) return 'ต้องมีการ์ดในมือให้ทิ้ง 1 ใบ'
+    if (getAllies(state, opponentOf(playerId), null).length === 0) return 'ฝ่ายตรงข้ามไม่มีมอนสเตอร์หงายหน้า'
+  }
+  return null
+}
+
+// การ์ดพิธีกรรม: มอนสเตอร์ที่ใช้เป็นเครื่องสังเวยได้ (มือ ยกเว้นตัวที่จะอัญเชิญ 1 ใบ + บนสนาม ทั้งหงายและคว่ำ)
+export function ritualTributePool(state, playerId, ritualUid) {
+  const p = state.players[playerId]
+  const ritual = getRitualInfo(cardOf(p.hand.find((c) => c.uid === ritualUid) ?? {}))
+  if (!ritual) return []
+  const targetInst = p.hand.find((c) => c.cardId === ritual.target)
+  const fromHand = p.hand.filter((c) => c.uid !== targetInst?.uid && cardOf(c).type === 'monster')
+  return [...fromHand, ...p.field.filter(Boolean)]
+}
+
+// ตรวจเครื่องสังเวยที่เลือกสำหรับพิธีกรรม (null = ใช้ได้)
+export function ritualTributeProblem(state, playerId, ritualUid, tributeUids = []) {
+  const p = state.players[playerId]
+  const ritual = getRitualInfo(cardOf(p.hand.find((c) => c.uid === ritualUid) ?? {}))
+  if (!ritual) return 'ไม่ใช่การ์ดพิธีกรรม'
+  const pool = ritualTributePool(state, playerId, ritualUid)
+  const chosen = [...new Set(tributeUids)].map((uid) => pool.find((c) => c.uid === uid))
+  if (chosen.length === 0) return 'เลือกมอนสเตอร์ที่จะสังเวย'
+  if (chosen.includes(undefined)) return 'สังเวยได้เฉพาะมอนสเตอร์ในมือหรือบนสนามของเรา'
+  const usesSubstitute = chosen.length === 1 && ritual.substitutes.includes(chosen[0].cardId)
+  const total = chosen.reduce((sum, c) => sum + cardOf(c).level, 0)
+  if (!usesSubstitute && total < ritual.requiredLevel) {
+    return `ระดับรวม ${total} ยังไม่ถึง ${ritual.requiredLevel}`
+  }
+  const fieldTributes = chosen.filter((c) => p.field.some((m) => m?.uid === c.uid)).length
+  if (!p.field.includes(null) && fieldTributes === 0) return 'ไม่มีช่องมอนสเตอร์ว่างให้อัญเชิญ'
+  return null
+}
+
+// เหตุผลที่ยังใช้การ์ดเวท / พิธีกรรม / วางกับดักใบนี้จากมือไม่ได้ (null = ใช้ได้)
+export function handCardBlocker(state, playerId, uid) {
+  const p = state.players[playerId]
+  const inst = p.hand.find((c) => c.uid === uid)
+  if (!inst) return 'ไม่พบการ์ดนี้ในมือ'
+  const card = cardOf(inst)
+  if (card.type === 'monster') return 'การ์ดมอนสเตอร์ใช้วิธีอัญเชิญ'
+  if (!isPlayableNonMonster(card)) return 'การ์ดใบนี้ยังใช้ไม่ได้ในเกมขั้นนี้'
+  if (!isPlayersOpenMain(state, playerId)) return 'ใช้ได้เฉพาะเฟสหลักในตาของเรา'
+  if (card.type === 'trap' && !p.spellTrap.includes(null)) return 'ช่องเวท/กับดักเต็มแล้ว'
+  const ritual = getRitualInfo(card)
+  if (ritual) {
+    if (!p.hand.some((c) => c.cardId === ritual.target)) return `ต้องมี "${getCardById(ritual.target).name}" อยู่ในมือ`
+    const pool = ritualTributePool(state, playerId, uid)
+    const hasSubstitute = pool.some((c) => ritual.substitutes.includes(c.cardId))
+    const total = pool.reduce((sum, c) => sum + cardOf(c).level, 0)
+    if (!hasSubstitute && total < ritual.requiredLevel) {
+      return `มอนสเตอร์ในมือและบนสนามมีระดับรวม ${total} ยังไม่ถึง ${ritual.requiredLevel}`
+    }
+  }
+  return null
+}
+
 // ---------- แอ็กชัน ----------
 
 export function applyAction(state, action) {
   if (state.winner) throw new GameRuleError('เกมจบแล้ว')
-  if (action.player !== state.activePlayer) {
-    throw new GameRuleError('ยังไม่ถึงเทิร์นของผู้เล่นนี้')
+  if (action.player !== currentActor(state)) {
+    throw new GameRuleError(
+      state.pendingResponse ? 'รอฝ่ายรับตัดสินใจเปิดกับดักก่อน' : 'ยังไม่ถึงเทิร์นของผู้เล่นนี้'
+    )
+  }
+  if (state.pendingResponse && action.type !== 'respond') {
+    throw new GameRuleError('ต้องตัดสินใจก่อนว่าจะเปิดกับดักหรือไม่')
   }
   const next = structuredClone(state)
   switch (action.type) {
@@ -304,10 +423,110 @@ export function applyAction(state, action) {
     case 'discard':
       discard(next, action.player, action.uid)
       break
+    case 'activate':
+      activate(next, action.player, action.uid, action.discardUid, action.targetUid)
+      break
+    case 'playSpell':
+      playSpell(next, action.player, action.uid, action.tributes)
+      break
+    case 'setTrap':
+      setTrap(next, action.player, action.uid)
+      break
+    case 'respond':
+      respond(next, action.player, action.trapUid ?? null)
+      break
     default:
       throw new GameRuleError(`ไม่รู้จักแอ็กชัน ${action.type}`)
   }
+  attachEvent(state, next, action)
   return next
+}
+
+/*
+ * ข้อมูลเหตุการณ์สำหรับแอนิเมชัน (ภาพ/เสียง) — แนบที่บันทึกหลักของแอ็กชัน
+ * (kind: summon | position | battle | discard | effect | spell | trap) เป็น entry.event:
+ * {
+ *   type: 'summon' | 'changePosition' | 'attack' | 'attackNegated' | 'discard'
+ *         | 'activate' | 'playSpell' | 'setTrap',
+ *   player, source: uid ตัวที่ทำ, target: uid เป้าหมาย (โจมตีตรง/ไม่มีเป้า = null),
+ *   trap: uid กับดักที่เปิด (attackNegated) หรือ null,
+ *   placed:       [{ player, uid, cardId, zone, faceDown, position }]  มอนสเตอร์ลงสนามใหม่
+ *   destroyed:    [{ player, uid, cardId, zone }]                      มอนสเตอร์ออกจากสนามลงสุสาน
+ *   revealed:     [{ player, uid, cardId, zone }]                      การ์ดคว่ำถูกเปิด
+ *   damage:       [{ player, amount, lpBefore, lpAfter }]              LP ที่ลดลง
+ *   heal:         [{ player, amount, lpBefore, lpAfter }]              LP ที่เพิ่มขึ้น
+ *   spellPlaced:  [{ player, uid, cardId, zoneType: 'spell-trap'|'field', zone, faceDown }]
+ *   spellRemoved: [{ player, uid, cardId, zoneType: 'spell-trap'|'field', zone }]
+ * }
+ * การโจมตีที่ต้องรอกับดัก: บันทึกตอนประกาศเป็น kind 'pending' (ไม่มี event)
+ * แล้ว event มาพร้อมผล (type 'attack' หรือ 'attackNegated') หลังฝ่ายรับตัดสินใจ
+ * ทุก uid ตรงกับ data-uid บนหน้าจอ ใช้หาตำแหน่งการ์ดได้
+ */
+function attachEvent(prev, next, action) {
+  const entry = next.log
+    .slice(prev.log.length)
+    .find((e) => ['summon', 'position', 'battle', 'discard', 'effect', 'spell', 'trap'].includes(e.kind))
+  if (!entry) return
+  const placed = []
+  const destroyed = []
+  const revealed = []
+  const damage = []
+  const heal = []
+  const spellPlaced = []
+  const spellRemoved = []
+  const spellZones = (pl) => [
+    ...pl.spellTrap.map((t, zone) => t && { ...t, zone, zoneType: 'spell-trap' }),
+    pl.fieldSpell && { ...pl.fieldSpell, zone: 0, zoneType: 'field' },
+  ].filter(Boolean)
+  for (const id of Object.keys(next.players)) {
+    const before = prev.players[id]
+    const after = next.players[id]
+    before.field.forEach((m, zone) => {
+      if (!m) return
+      const now = after.field.find((x) => x?.uid === m.uid)
+      if (!now) destroyed.push({ player: id, uid: m.uid, cardId: m.cardId, zone })
+      else if (m.faceDown && !now.faceDown) revealed.push({ player: id, uid: m.uid, cardId: m.cardId, zone })
+    })
+    after.field.forEach((m, zone) => {
+      if (m && !before.field.some((x) => x?.uid === m.uid)) {
+        placed.push({ player: id, uid: m.uid, cardId: m.cardId, zone, faceDown: m.faceDown, position: m.position })
+      }
+    })
+    if (after.lp < before.lp) {
+      damage.push({ player: id, amount: before.lp - after.lp, lpBefore: before.lp, lpAfter: after.lp })
+    }
+    if (after.lp > before.lp) {
+      heal.push({ player: id, amount: after.lp - before.lp, lpBefore: before.lp, lpAfter: after.lp })
+    }
+    const beforeSpells = spellZones(before)
+    const afterSpells = spellZones(after)
+    for (const t of afterSpells) {
+      if (!beforeSpells.some((b) => b.uid === t.uid)) {
+        spellPlaced.push({ player: id, uid: t.uid, cardId: t.cardId, zoneType: t.zoneType, zone: t.zone, faceDown: Boolean(t.faceDown) })
+      }
+    }
+    for (const t of beforeSpells) {
+      if (!afterSpells.some((a) => a.uid === t.uid)) {
+        spellRemoved.push({ player: id, uid: t.uid, cardId: t.cardId, zoneType: t.zoneType, zone: t.zone })
+      }
+    }
+  }
+  const pending = prev.pendingResponse
+  const isRespond = action.type === 'respond'
+  entry.event = {
+    type: isRespond ? (action.trapUid ? 'attackNegated' : 'attack') : action.type,
+    player: isRespond ? pending.attacker : action.player,
+    source: isRespond ? pending.attackerUid : (action.attackerUid ?? action.uid ?? null),
+    target: isRespond ? pending.targetUid : (action.targetUid ?? null),
+    trap: isRespond ? (action.trapUid ?? null) : null,
+    placed,
+    destroyed,
+    revealed,
+    damage,
+    heal,
+    spellPlaced,
+    spellRemoved,
+  }
 }
 
 function summon(state, playerId, uid, zone, tributeUids = [], position = 'attack') {
@@ -469,7 +688,12 @@ function attack(state, playerId, attackerUid, targetUid) {
       throw new GameRuleError('โจมตีตรงได้เมื่อฝ่ายตรงข้ามไม่มีมอนสเตอร์บนสนามเท่านั้น')
     }
     markAttacked()
-    const boosts = getAtkBoosts(attackerCard, getAllies(state, playerId, attacker.uid), getAllies(state, oppId, null))
+    const boosts = getAtkBoosts(
+      attackerCard,
+      getAllies(state, playerId, attacker.uid),
+      getAllies(state, oppId, null),
+      atkExtras(state, playerId, attacker)
+    )
     const power = getFieldAtk(state, playerId, attacker.uid)
     const boostText = boosts
       .map((b) => `${b.amount < 0 ? ' − ' : ' + '}${formatNumber(Math.abs(b.amount))} (${b.label}: ${b.reason})`)
@@ -485,8 +709,40 @@ function attack(state, playerId, attackerUid, targetUid) {
 
   const defender = opp.field.find((m) => m?.uid === targetUid)
   if (!defender) throw new GameRuleError('ไม่พบมอนสเตอร์เป้าหมาย')
-  const defenderCard = cardOf(defender)
   markAttacked()
+
+  // จังหวะเปิดกับดักของฝ่ายรับ: หยุดรอให้ฝ่ายรับตัดสินใจก่อนคำนวณ (การโจมตีนับว่าใช้สิทธิ์แล้ว)
+  const responses = getTrapResponses(state, oppId, attackerCard, defender)
+  if (responses.length > 0) {
+    state.pendingResponse = { responder: oppId, attacker: playerId, attackerUid, targetUid, trapUids: responses, details }
+    addLog(
+      state,
+      playerId,
+      'pending',
+      `⚔️ ${attackerCard.name} ประกาศโจมตี ${cardOf(defender).name} — รอ${PLAYER_NAMES[oppId]}ตัดสินใจเปิดกับดัก`
+    )
+    return
+  }
+  resolveMonsterAttack(state, playerId, attacker, defender, details)
+}
+
+// กับดักของ defenderId ที่เปิดตอบโต้การโจมตีนี้ได้ (กับดักต้องวางไว้ก่อนเทิร์นนี้)
+function getTrapResponses(state, defenderId, attackerCard, target) {
+  if (hasTrapLock(attackerCard) || target.faceDown) return []
+  const targetCard = cardOf(target)
+  return state.players[defenderId].spellTrap
+    .filter((t) => {
+      if (!t?.faceDown || t.setTurn >= state.turn) return false
+      const trap = getTrapEffect(cardOf(t))
+      return trap?.trigger === 'enemyAttacksFaceUp' && trap.appliesTo(targetCard)
+    })
+    .map((t) => t.uid)
+}
+
+function resolveMonsterAttack(state, playerId, attacker, defender, details) {
+  const oppId = opponentOf(playerId)
+  const attackerCard = cardOf(attacker)
+  const defenderCard = cardOf(defender)
 
   // เปิดการ์ดคว่ำก่อนคำนวณ เอฟเฟกต์ของการ์ดที่เพิ่งเปิดจึงมีผลในการต่อสู้นี้
   const inDefense = defender.position === 'defense'
@@ -565,6 +821,152 @@ function attack(state, playerId, attackerUid, targetUid) {
   logLpKnockout(state)
 }
 
+function respond(state, playerId, trapUid) {
+  const pending = state.pendingResponse
+  if (!pending) throw new GameRuleError('ไม่มีการโจมตีที่รอการตอบโต้')
+  state.pendingResponse = null
+  const attacker = state.players[pending.attacker].field.find((m) => m?.uid === pending.attackerUid)
+  const defender = state.players[playerId].field.find((m) => m?.uid === pending.targetUid)
+  const details = pending.details
+
+  if (trapUid === null) {
+    details.push(`${PLAYER_NAMES[playerId]}ไม่เปิดกับดัก`)
+    resolveMonsterAttack(state, pending.attacker, attacker, defender, details)
+    return
+  }
+  if (!pending.trapUids.includes(trapUid)) throw new GameRuleError('กับดักใบนี้เปิดตอบโต้การโจมตีนี้ไม่ได้')
+  const p = state.players[playerId]
+  const zone = p.spellTrap.findIndex((t) => t?.uid === trapUid)
+  const trapInst = p.spellTrap[zone]
+  p.spellTrap[zone] = null
+  p.graveyard.push({ uid: trapInst.uid, cardId: trapInst.cardId })
+  const trapCard = cardOf(trapInst)
+  details.push(
+    `🪤 ${PLAYER_NAMES[playerId]}เปิดกับดัก ${trapCard.name}!`,
+    `${getTrapEffect(trapCard).reason} → ไม่มีความเสียหาย ไม่มีใครถูกทำลาย`,
+    `${cardOf(attacker).name} ใช้สิทธิ์โจมตีครั้งนี้ไปแล้ว · ${trapCard.name} ลงสุสาน`
+  )
+  addLog(
+    state,
+    pending.attacker,
+    'battle',
+    `⚔️ ${cardOf(attacker).name} โจมตี ${cardOf(defender).name} — ถูกยกเลิกด้วยกับดัก`,
+    details
+  )
+}
+
+function activate(state, playerId, uid, discardUid, targetUid) {
+  const blocker = activationBlocker(state, playerId, uid)
+  if (blocker) throw new GameRuleError(blocker)
+  const p = state.players[playerId]
+  const m = p.field.find((x) => x?.uid === uid)
+  const card = cardOf(m)
+  const activated = getActivated(card)
+  const name = PLAYER_NAMES[playerId]
+
+  if (activated.kind === 'heal') {
+    const before = p.lp
+    p.lp += activated.amount
+    addLog(state, playerId, 'effect', `✨ ${card.name}: ${name}ฟื้น LP ${formatNumber(activated.amount)}`, [
+      `LP ${formatNumber(before)} + ${formatNumber(activated.amount)} = ${formatNumber(p.lp)}`,
+    ])
+  } else if (activated.kind === 'debuff') {
+    const handIndex = p.hand.findIndex((c) => c.uid === discardUid)
+    if (handIndex === -1) throw new GameRuleError('เลือกการ์ดในมือที่จะทิ้ง 1 ใบ')
+    const oppId = opponentOf(playerId)
+    const target = state.players[oppId].field.find((x) => x?.uid === targetUid)
+    if (!target || target.faceDown) throw new GameRuleError('เลือกมอนสเตอร์ที่หงายหน้าของฝ่ายตรงข้าม 1 ตัว')
+    const before = getFieldAtk(state, oppId, target.uid)
+    const [discarded] = p.hand.splice(handIndex, 1)
+    p.graveyard.push(discarded)
+    target.tempAtk = [...(target.tempAtk ?? []), { amount: activated.amount, reason: activated.reason }]
+    const after = getFieldAtk(state, oppId, target.uid)
+    const targetCard = cardOf(target)
+    const size = formatNumber(Math.abs(activated.amount))
+    addLog(state, playerId, 'effect', `✨ ${card.name}: ${targetCard.name} ATK −${size} จนจบเทิร์น`, [
+      `${name}ทิ้ง ${cardOf(discarded).name} ลงสุสาน`,
+      `${targetCard.name}: ATK ${formatNumber(before)} − ${size} = ${formatNumber(after)}${after === 0 ? ' (ต่ำสุด 0)' : ''}`,
+    ])
+  }
+  p.usedEffects = { ...(p.usedEffects ?? {}), [usedKey(activated, m)]: state.turn }
+}
+
+function playSpell(state, playerId, uid, tributeUids = []) {
+  const blocker = handCardBlocker(state, playerId, uid)
+  if (blocker) throw new GameRuleError(blocker)
+  const p = state.players[playerId]
+  const handIndex = p.hand.findIndex((c) => c.uid === uid)
+  const card = cardOf(p.hand[handIndex])
+  const name = PLAYER_NAMES[playerId]
+
+  if (isFieldSpell(card)) {
+    const details = []
+    if (p.fieldSpell) {
+      details.push(`ส่งเวทสนามเดิม ${cardOf(p.fieldSpell).name} ลงสุสาน`)
+      p.graveyard.push(p.fieldSpell)
+    }
+    const [inst] = p.hand.splice(handIndex, 1)
+    p.fieldSpell = { uid: inst.uid, cardId: inst.cardId }
+    addLog(state, playerId, 'spell', `🏞️ ${name}ใช้เวทสนาม ${card.name}`, details.length ? details : undefined)
+    return
+  }
+
+  const ritual = getRitualInfo(card)
+  if (!ritual) throw new GameRuleError(`${card.name} ใช้แบบนี้ไม่ได้ (กับดักต้องวางคว่ำ)`)
+  const problem = ritualTributeProblem(state, playerId, uid, tributeUids)
+  if (problem) throw new GameRuleError(problem)
+
+  const chosen = [...new Set(tributeUids)]
+  const target = getCardById(ritual.target)
+  const tributeText = chosen.map((tUid) => {
+    const fieldZone = p.field.findIndex((m) => m?.uid === tUid)
+    let inst
+    if (fieldZone >= 0) {
+      inst = p.field[fieldZone]
+      p.field[fieldZone] = null
+    } else {
+      inst = p.hand.splice(p.hand.findIndex((c) => c.uid === tUid), 1)[0]
+    }
+    p.graveyard.push({ uid: inst.uid, cardId: inst.cardId })
+    const tc = cardOf(inst)
+    return `${tc.name} (ระดับ ${tc.level}${fieldZone >= 0 ? ' · สนาม' : ' · มือ'})`
+  })
+  const ritualInst = p.hand.splice(p.hand.findIndex((c) => c.uid === uid), 1)[0]
+  const targetInst = p.hand.splice(p.hand.findIndex((c) => c.cardId === ritual.target), 1)[0]
+  p.graveyard.push(ritualInst)
+  const zone = p.field.indexOf(null)
+  p.field[zone] = {
+    ...targetInst,
+    hasAttacked: false,
+    summonedTurn: state.turn,
+    position: 'attack',
+    faceDown: false,
+    positionChangedTurn: null,
+  }
+
+  addLog(
+    state,
+    playerId,
+    'summon',
+    `🙏 ${name}ใช้ ${card.name} → อัญเชิญพิธีกรรม ${target.name} (ระดับ ${target.level} · ATK ${formatNumber(target.atk)} / DEF ${formatNumber(target.def)}) ลงช่องที่ ${zone + 1}`,
+    [`สังเวย: ${tributeText.join(' + ')}`, `${card.name} ลงสุสาน`]
+  )
+}
+
+function setTrap(state, playerId, uid) {
+  const blocker = handCardBlocker(state, playerId, uid)
+  if (blocker) throw new GameRuleError(blocker)
+  const p = state.players[playerId]
+  const handIndex = p.hand.findIndex((c) => c.uid === uid)
+  const card = cardOf(p.hand[handIndex])
+  if (card.type !== 'trap') throw new GameRuleError(`${card.name} ไม่ใช่การ์ดกับดัก`)
+  const [inst] = p.hand.splice(handIndex, 1)
+  const zone = p.spellTrap.indexOf(null)
+  p.spellTrap[zone] = { uid: inst.uid, cardId: inst.cardId, faceDown: true, setTurn: state.turn }
+  const what = playerId === PLAYER ? `กับดัก ${card.name}` : 'การ์ด 1 ใบ'
+  addLog(state, playerId, 'trap', `🪤 ${PLAYER_NAMES[playerId]}วาง${what}คว่ำในช่องเวท/กับดักที่ ${zone + 1}`)
+}
+
 function logLpKnockout(state) {
   if (state.endReason !== 'lp') return
   const loser = opponentOf(state.winner)
@@ -601,6 +1003,11 @@ function discard(state, playerId, uid) {
 function startNextTurn(state, endingPlayerId) {
   const nextId = opponentOf(endingPlayerId)
   const next = state.players[nextId]
+
+  // ตัวปรับ "จนจบเทิร์นนี้" หมดอายุ
+  for (const pl of Object.values(state.players)) {
+    for (const m of pl.field) if (m?.tempAtk) delete m.tempAtk
+  }
 
   state.turn += 1
   state.activePlayer = nextId

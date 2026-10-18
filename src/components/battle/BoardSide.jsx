@@ -9,20 +9,28 @@ import { cardOf } from '../../engine'
 export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, onInspect }) {
   const owner = isOpponent ? 'คู่ต่อสู้' : 'คุณ'
   return (
-    <section className={`board-side board-side--${isOpponent ? 'opp' : 'me'}`} aria-label={`กระดานของ${owner}`}>
+    <section
+      className={`board-side board-side--${isOpponent ? 'opp' : 'me'}`}
+      aria-label={`กระดานของ${owner}`}
+      data-owner={player.id}
+    >
       <div className="board-side__monsters">{monsterRow}</div>
 
-      <div className="zone-row zone-row--st" aria-label={`ช่องเวทมนตร์/กับดักของ${owner}`}>
+      <div className="zone-row zone-row--st" data-zone-type="spell-trap" aria-label={`ช่องเวทมนตร์/กับดักของ${owner}`}>
         {player.spellTrap.map((inst, i) =>
           inst ? (
             <MiniCard
               key={inst.uid}
+              uid={inst.uid}
+              zone={i}
               card={cardOf(inst)}
+              faceDown={inst.faceDown}
+              hidden={isOpponent && inst.faceDown}
               className="mini-card--st"
-              onClick={() => onInspect(cardOf(inst))}
+              onClick={isOpponent && inst.faceDown ? undefined : () => onInspect(cardOf(inst))}
             />
           ) : (
-            <div key={`st-${i}`} className="zone-slot zone-slot--st" aria-label={`ช่องเวท/กับดัก ${i + 1} ว่าง`}>
+            <div key={`st-${i}`} className="zone-slot zone-slot--st" data-zone={i} aria-label={`ช่องเวท/กับดัก ${i + 1} ว่าง`}>
               <span aria-hidden="true">📜</span>
             </div>
           )
@@ -30,9 +38,10 @@ export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, 
       </div>
 
       <div className="pile-row">
-        <div className="pile pile--field">
+        <div className="pile pile--field" data-pile="field">
           {player.fieldSpell ? (
             <MiniCard
+              uid={player.fieldSpell.uid}
               card={cardOf(player.fieldSpell)}
               className="mini-card--st"
               onClick={() => onInspect(cardOf(player.fieldSpell))}
@@ -46,7 +55,7 @@ export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, 
           )}
         </div>
 
-        <button type="button" className="pile pile--grave" onClick={() => onOpenPile(player.id, 'graveyard')}>
+        <button type="button" className="pile pile--grave" data-pile="graveyard" onClick={() => onOpenPile(player.id, 'graveyard')}>
           <span className="pile__body">
             <span className="pile__icon" aria-hidden="true">🪦</span>
             <span className="pile__label">สุสาน</span>
@@ -54,7 +63,7 @@ export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, 
           </span>
         </button>
 
-        <button type="button" className="pile pile--extra pile--back" onClick={() => onOpenPile(player.id, 'extraDeck')}>
+        <button type="button" className="pile pile--extra pile--back" data-pile="extraDeck" onClick={() => onOpenPile(player.id, 'extraDeck')}>
           <span className="pile__body">
             <span className="pile__icon" aria-hidden="true">✦</span>
             <span className="pile__label">กองพิเศษ</span>
@@ -62,7 +71,7 @@ export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, 
           </span>
         </button>
 
-        <div className="pile pile--deck pile--back" aria-label={`กองการ์ดของ${owner} เหลือ ${player.deck.length} ใบ`}>
+        <div className="pile pile--deck pile--back" data-pile="deck" aria-label={`กองการ์ดของ${owner} เหลือ ${player.deck.length} ใบ`}>
           <span className="pile__body">
             <span className="pile__icon" aria-hidden="true">🂠</span>
             <span className="pile__label">กองการ์ด</span>

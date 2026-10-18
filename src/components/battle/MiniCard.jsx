@@ -15,6 +15,8 @@ export default function MiniCard({
   badge,
   onClick,
   label,
+  uid,
+  zone,
 }) {
   const element = ELEMENTS[card.element]
   const boosted = !defense && atk > card.atk
@@ -30,7 +32,7 @@ export default function MiniCard({
     ? 'มอนสเตอร์คว่ำ (ท่าตั้งรับ)'
     : label ?? `${card.name} ${defense ? `ท่าตั้งรับ DEF ${card.def}` : `ATK ${atk}`}${faceDown ? ' (คว่ำ)' : ''}`
   return (
-    <button type="button" className={classes} onClick={onClick} aria-label={aria}>
+    <button type="button" className={classes} onClick={onClick} aria-label={aria} data-uid={uid} data-zone={zone}>
       <span className="mini-card__scale" aria-hidden="true">
         {hidden ? <span className="card-back" /> : <MonsterCard card={card} />}
       </span>
