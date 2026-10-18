@@ -66,7 +66,7 @@ export interface BaseCard {
   image: string;
   effectText: string;
   flavorText: string;
-  groupTag: 'xp-hunter' | 'ritual-faith' | 'himmapan-fusion' | 'warrior-beast' | 'spell-trap' | 'promo' | 'celestial-court' | 'asura-war' | 'thai-spirits';
+  groupTag: 'xp-hunter' | 'ritual-faith' | 'himmapan-fusion' | 'warrior-beast' | 'spell-trap' | 'promo' | 'celestial-court' | 'asura-war' | 'thai-spirits' | 'wild-forest';
   evolution?: EvolutionInfo;
 }
 
@@ -83,6 +83,7 @@ export interface MonsterCardData extends BaseCard {
 
 export interface SpellCardData extends BaseCard {
   type: 'spell';
+  faction?: 'forest'; // TH03 field identity; does not imply an animal tribe
   spellSubtype: 'normal' | 'continuous' | 'field' | 'equip' | 'fusion' | 'spirit';
   spellSubtypeName: string;
 }
