@@ -24,6 +24,7 @@ import { TRIBES } from '../data/tribes'
  *   attackGuard            ศัตรูโจมตีผีหงายตัวอื่นของเรา → ย้ายเป้ามาที่ใบนี้ (ใบละครั้ง/เทิร์น) และรอดการต่อสู้นั้น
  *   returnOnDestroy        ถูกทำลายจากสนาม → กลับท่าตั้งรับหงายตอนจบเทิร์นนั้น (ใบละครั้ง/เกม)
  *   flyOver                ศัตรูไม่มีมอนสเตอร์หงาย (มีแต่คว่ำ) → โจมตีตรงได้
+ *   burnOnKill             ทำลายศัตรูจากการต่อสู้ → ผู้ควบคุมศัตรูเสีย LP amount (ความเสียหายจากเอฟเฟกต์)
  *   millOnKill             ทำลายศัตรูจากการต่อสู้ → เลือกส่งมอนสเตอร์ที่ matches จากกองลงสุสาน 1 ใบ
  *   summonOnlyBy           อัญเชิญได้ด้วยการ์ดรหัสนี้เท่านั้น (ไม่อัญเชิญสังเวย/คืนชีพ)
  *   branchSpell            เวทเปิดสายมืด: สังเวยต้นสายหงาย → อัญเชิญพิเศษร่างที่คู่กันจากมือ
@@ -196,6 +197,14 @@ export const CARD_EFFECTS = {
   // พิธีบรรพชาและบารมีธรรม → ครูบาศรีวิชัย (สังเวยพระอาจารย์ใบเดียวแทนได้)
   'th01-008': {
     ritual: { substitutes: ['th01-006'] },
+  },
+  // เทวบริบาลเมฆา: ผู้เตรียมพิธีบวงสรวง
+  'th05-001': {
+    ritualLevel: { forGroup: 'celestial-court', level: 4 },
+  },
+  // เทวทหารอาสนี: สายฟ้าฟาดซ้ำ
+  'th05-002': {
+    burnOnKill: { amount: 300, reason: 'เทวทหารอาสนี: สายฟ้าฟาดซ้ำ' },
   },
   // กินนรีขับลำนำฟ้า
   'th05-003': {
@@ -552,6 +561,10 @@ export function getReturnOnDestroy(card) {
 
 export function getFlyOver(card) {
   return effectOf(card).flyOver ?? null
+}
+
+export function getBurnOnKill(card) {
+  return effectOf(card).burnOnKill ?? null
 }
 
 export function getMillOnKill(card) {

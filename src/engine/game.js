@@ -10,6 +10,7 @@ import {
   getAttackingBoost,
   getBranchSpell,
   getBuffSpell,
+  getBurnOnKill,
   getFlyOver,
   getMillOnKill,
   getReturnOnDestroy,
@@ -1345,10 +1346,12 @@ function battleDestroy(state, ownerId, monster, details) {
   return true
 }
 
-// ชนะการต่อสู้ (ทำลายศัตรูได้): แต้มประสบการณ์ + พรานไสยเวทส่งผีจากกองลงสุสาน
+// ชนะการต่อสู้ (ทำลายศัตรูได้): แต้มประสบการณ์ + สายฟ้าฟาดซ้ำ + พรานไสยเวทส่งผีจากกองลงสุสาน
 function onBattleWin(state, ownerId, monster, details) {
   awardXp(state, monster, details)
   const card = cardOf(monster)
+  const burn = getBurnOnKill(card)
+  if (burn) effectDamage(state, opponentOf(ownerId), burn.amount, details, `⚡ ${burn.reason}`)
   const mill = getMillOnKill(card)
   if (!mill) return
   const ids = [...new Set(state.players[ownerId].deck.filter((c) => mill.matches(cardOf(c))).map((c) => c.cardId))]

@@ -8,6 +8,7 @@ import {
   getFieldAtk,
   getSummonableHand,
   handCardBlocker,
+  previewBattle,
   ritualTributeProblem,
 } from './game'
 import { CARD_EFFECTS } from './effects'
@@ -279,6 +280,43 @@ describe('TH05-008 ม่านอาสนีพิทักษ์ (กับ�
     } finally {
       CARD_EFFECTS['th01-014'] = saved
     }
+  })
+})
+
+describe('TH05-001 เทวบริบาลเมฆา: นับเป็นระดับ 4 ในพิธีบวงสรวงจอมเทวา', () => {
+  it('เทวบริบาล 4 + เทวทหาร 4 = 8 ผ่าน', () => {
+    const s = makeState({ player: { hand: ['th05-006', 'th05-005', 'th05-001'], field: ['th05-002'] } })
+    const ok = ritualTributeProblem(s, PLAYER, handUid(s, PLAYER, 0), [handUid(s, PLAYER, 2), uidAt(s, PLAYER, 0)])
+    expect(ok).toBeNull()
+    const after = act(s, { type: 'playSpell', uid: handUid(s, PLAYER, 0), tributes: [handUid(s, PLAYER, 2), uidAt(s, PLAYER, 0)] })
+    expect(after.players.player.field.some((m) => m?.cardId === 'th05-005')).toBe(true)
+  })
+
+  it('พิธีอื่น (บรรพชา) ยังนับระดับ 2 ตามปกติ', () => {
+    const s = makeState({ player: { hand: ['th01-008', 'th01-007', 'th05-001'], field: ['th01-017', 'th01-016'] } })
+    expect(
+      ritualTributeProblem(s, PLAYER, handUid(s, PLAYER, 0), [handUid(s, PLAYER, 2), uidAt(s, PLAYER, 0), uidAt(s, PLAYER, 1)])
+    ).toBeNull()
+    expect(ritualTributeProblem(s, PLAYER, handUid(s, PLAYER, 0), [handUid(s, PLAYER, 2), uidAt(s, PLAYER, 0)])).toBe(
+      'ระดับรวม 6 ยังไม่ถึง 8'
+    )
+  })
+})
+
+describe('TH05-002 เทวทหารอาสนี: สายฟ้าฟาดซ้ำ', () => {
+  it('ทำลายศัตรูจากการต่อสู้ → ศัตรูเสีย LP เพิ่ม 300', () => {
+    const s = makeState({ phase: 'battle', player: { field: ['th05-002'] }, ai: { field: ['th01-016'] } })
+    const diff = previewBattle(s, PLAYER, uidAt(s, PLAYER, 0), uidAt(s, AI, 0)).damage
+    const after = act(s, { type: 'attack', attackerUid: uidAt(s, PLAYER, 0), targetUid: uidAt(s, AI, 0) })
+    expect(after.players.ai.lp).toBe(8000 - diff - 300)
+    expect(lastLog(after).details.join(' ')).toContain('⚡ เทวทหารอาสนี: สายฟ้าฟาดซ้ำ → คู่ต่อสู้เสีย LP 300')
+  })
+
+  it('ตีตัวตั้งรับตาย ไม่มีความเสียหายจากการต่อสู้ แต่ยังได้ 300 · โจมตีตรงไม่ได้ 300', () => {
+    const s = makeState({ phase: 'battle', player: { field: ['th05-002'] }, ai: { field: [SET('th01-001')] } })
+    expect(act(s, { type: 'attack', attackerUid: uidAt(s, PLAYER, 0), targetUid: uidAt(s, AI, 0) }).players.ai.lp).toBe(7700)
+    const direct = makeState({ phase: 'battle', player: { field: ['th05-002'] } })
+    expect(act(direct, { type: 'attack', attackerUid: uidAt(direct, PLAYER, 0), targetUid: null }).players.ai.lp).toBe(8000 - 1700)
   })
 })
 
