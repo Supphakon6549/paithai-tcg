@@ -69,6 +69,17 @@ export default function BattleFx({ game }) {
   const lastLogIdRef = useRef(null)
   const fxKeyRef = useRef(0)
   const [fxItems, setFxItems] = useState([])
+  // ตัวตั้งเวลาลบเอฟเฟกต์ ต้องอยู่รอดข้ามการเปลี่ยนสถานะเกม (AI เล่นเร็วกว่าเอฟเฟกต์จบ)
+  // ยกเลิกเฉพาะตอนปิดหน้าจอ ไม่งั้นเอฟเฟกต์จะค้างสะสมจนมือถือกระพริบ
+  const removeTimersRef = useRef(new Set())
+
+  useEffect(() => {
+    const timers = removeTimersRef.current
+    return () => {
+      timers.forEach(clearTimeout)
+      timers.clear()
+    }
+  }, [])
 
   useEffect(() => {
     if (!game?.log?.length) {
@@ -469,10 +480,10 @@ export default function BattleFx({ game }) {
     setFxItems((prev) => [...prev, ...spawned])
     const keysToRemove = new Set(spawned.map((s) => s.key))
     const timer = setTimeout(() => {
+      removeTimersRef.current.delete(timer)
       setFxItems((prev) => prev.filter((item) => !keysToRemove.has(item.key)))
     }, FX_DURATION_MS)
-
-    return () => clearTimeout(timer)
+    removeTimersRef.current.add(timer)
   }, [game])
 
   if (fxItems.length === 0) return null
