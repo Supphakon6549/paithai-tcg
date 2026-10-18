@@ -184,7 +184,19 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
     const action = getAiAction(game)
     if (!action) return
     const delay = AI_STEP_DELAY[action.type] ?? AI_STEP_DELAY.default
-    const timer = setTimeout(() => setGame(applyAction(game, action)), delay)
+    // AI ทำผิดกติกา/เกิดข้อผิดพลาด → แจ้งบนจอและจบเทิร์น AI แทน เพื่อไม่ให้เกมค้างเงียบ
+    const timer = setTimeout(() => {
+      try {
+        setGame(applyAction(game, action))
+      } catch (e) {
+        setError(`คู่ต่อสู้ทำ "${action.type}" ไม่ได้: ${e.message} (กรุณาแจ้งผู้พัฒนา)`)
+        try {
+          setGame(applyAction(game, { type: 'endTurn', player: AI }))
+        } catch {
+          // จบเทิร์นไม่ได้ด้วย — คงสถานะเดิมไว้ ข้อความด้านบนช่วยให้แจ้งปัญหาได้
+        }
+      }
+    }, delay)
     return () => clearTimeout(timer)
   }, [game, active])
 
