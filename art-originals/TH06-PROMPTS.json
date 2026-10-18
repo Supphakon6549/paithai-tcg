@@ -1,0 +1,200 @@
+[
+  {
+    "id": "th06-001",
+    "prompt": "EDIT this existing Thai TCG artwork into a CHARACTER-DRIVEN illustration. Preserve the established person's identity, folk clothing and polished painterly rendering, muted jade/purple-gray night palette, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Landscape 4:3. Radically reduce scenic panorama: main character face/body/action occupy 75–85% of frame; background subdued simple atmosphere, no repeated full moon village skyline, no huge temples. Face, expression, hands and unique gesture sharply readable at card thumbnail size. Keep anatomy natural and magical gestures coherent. Not a photographic fashion model pose. No text, lettering, watermarks, borders, blood, wounds or exposed organs. Keep key face/hands comfortably inside edges. Household guardian: same Thai ancestral man and indigo clothes, now lunging protectively across a doorway, fierce compassionate eyes fixed toward approaching danger, one open palm projecting a curved translucent jade shield, other hand gripping his lantern. Waist-up low angle, palm foreshortened, face clear. One subtle arrow of shadow strikes shield, no violence. Read 'I take the blow for my family'.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-b523cb34-4c76-4320-b97f-9e9e1fd17e29.png",
+    "original": "art-originals/th06-001.png",
+    "image": "/cards/th06-001.jpg",
+    "previousVersions": [
+      {
+        "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. A protective adult ancestral household spirit in plain indigo traditional Thai clothing, seated on the steps of a wooden stilt house, holding a small oil lantern; faint green spectral hands shelter the doorway. Three-quarter medium-wide eye-level view, family offerings and bamboo shadows.",
+        "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-8a92e253-1386-4617-9bc5-f5016822afd6.png",
+        "original": "art-originals/TH06-v1/th06-001.png",
+        "image": "art-originals/TH06-v1/th06-001.jpg"
+      }
+    ],
+    "editReference": "art-originals/TH06-v1/th06-001.jpg",
+    "revision": "character-focus-v2"
+  },
+  {
+    "id": "th06-002",
+    "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. A benevolent small golden child spirit wearing modest old Thai cloth, full body crouching beside a clay toy horse, glowing pale amber inside jade mist, abandoned wooden veranda, low camera close to floor. Innocent but mysterious, no injury.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-794a863c-b48f-48e7-a1f0-bb36acd13205.png",
+    "original": "art-originals/th06-002.png",
+    "image": "/cards/th06-002.jpg"
+  },
+  {
+    "id": "th06-003",
+    "prompt": "EDIT this existing Thai TCG artwork into a CHARACTER-DRIVEN illustration. Preserve the established person's identity, folk clothing and polished painterly rendering, muted jade/purple-gray night palette, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Landscape 4:3. Radically reduce scenic panorama: main character face/body/action occupy 75–85% of frame; background subdued simple atmosphere, no repeated full moon village skyline, no huge temples. Face, expression, hands and unique gesture sharply readable at card thumbnail size. Keep anatomy natural and magical gestures coherent. Not a photographic fashion model pose. No text, lettering, watermarks, borders, blood, wounds or exposed organs. Keep key face/hands comfortably inside edges. Nang Tani: same beautiful Thai woman in green sabai, close thigh-up portrait framed by two huge banana leaves, knowing enigmatic half-smile, looking directly toward viewer as she draws a leaf across one shoulder like a concealing curtain; her opposite silhouette dissolves into green mist. Unique shy yet elusive personality, face strongly readable.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-51ff39af-091b-486d-af2c-979025d86e67.png",
+    "original": "art-originals/th06-003.png",
+    "image": "/cards/th06-003.jpg",
+    "previousVersions": [
+      {
+        "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Nang Tani: serene young adult Thai woman in green traditional sabai and long skirt standing within a banana grove, leaves part around her, cool moon rim light and floating green wisps, full figure left-of-center diagonal composition.",
+        "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-e05b0c74-175d-476b-9ce6-08b486385d8e.png",
+        "original": "art-originals/TH06-v1/th06-003.png",
+        "image": "art-originals/TH06-v1/th06-003.jpg"
+      }
+    ],
+    "editReference": "art-originals/TH06-v1/th06-003.jpg",
+    "revision": "character-focus-v2"
+  },
+  {
+    "id": "th06-004",
+    "prompt": "EDIT this existing Thai TCG artwork into a CHARACTER-DRIVEN illustration. Preserve the established person's identity, folk clothing and polished painterly rendering, muted jade/purple-gray night palette, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Landscape 4:3. Radically reduce scenic panorama: main character face/body/action occupy 75–85% of frame; background subdued simple atmosphere, no repeated full moon village skyline, no huge temples. Face, expression, hands and unique gesture sharply readable at card thumbnail size. Keep anatomy natural and magical gestures coherent. Not a photographic fashion model pose. No text, lettering, watermarks, borders, blood, wounds or exposed organs. Keep key face/hands comfortably inside edges. Kong Koi: same one-legged wiry forest ghost, compact whole body filling frame, crooked mischievous grin, one leg jumping forward and long grasping fingers pulling three small pale ghost lights from old memorial stones toward his chest. Lower camera dynamic diagonal silhouette; no extra leg; no gore. Hungry supernatural energy, not generic warrior.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-0eadc20d-df2d-423b-b76f-b4fb4c632492.png",
+    "original": "art-originals/th06-004.png",
+    "image": "/cards/th06-004.jpg",
+    "previousVersions": [
+      {
+        "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Phi Kong Koi: small one-legged forest goblin spirit, lean wiry body, tousled hair, brown cloth wrap, one single leg clearly visible, hopping across mossy roots in dense night jungle. Dynamic side view, jade trail and distant lantern, eerie not cute cartoon.",
+        "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-965707cb-128d-4a18-abd5-1082a598f7d0.png",
+        "original": "art-originals/TH06-v1/th06-004.png",
+        "image": "art-originals/TH06-v1/th06-004.jpg"
+      }
+    ],
+    "editReference": "art-originals/TH06-v1/th06-004.jpg",
+    "revision": "character-focus-v2"
+  },
+  {
+    "id": "th06-005",
+    "prompt": "EDIT this existing Thai TCG artwork into a CHARACTER-DRIVEN illustration. Preserve the established person's identity, folk clothing and polished painterly rendering, muted jade/purple-gray night palette, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Landscape 4:3. Radically reduce scenic panorama: main character face/body/action occupy 75–85% of frame; background subdued simple atmosphere, no repeated full moon village skyline, no huge temples. Face, expression, hands and unique gesture sharply readable at card thumbnail size. Keep anatomy natural and magical gestures coherent. Not a photographic fashion model pose. No text, lettering, watermarks, borders, blood, wounds or exposed organs. Keep key face/hands comfortably inside edges. Nang Takhian: same cream-and-green tree guardian, medium close waist-up frontal three-quarter angle, stern commanding expression, fingers curled like roots as massive spectral roots reach forward and bind an empty shadow silhouette at bottom corner. Ancient bark directly behind her, no sprawling village. Face and root-casting hands dominate.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-69b3b87e-7c14-4a44-b9f9-870516cfdd4d.png",
+    "original": "art-originals/th06-005.png",
+    "image": "/cards/th06-005.jpg",
+    "previousVersions": [
+      {
+        "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Nang Takhian: dignified adult female tree spirit in muted cream Thai dress and dark green sash emerging in translucent moon mist beside an enormous ancient takhian tree, colorful cloth tied around trunk subtly, low wide camera, roots and riverbank, guardian presence.",
+        "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-bc287746-eae0-42e7-bdcf-2fce38d23f58.png",
+        "original": "art-originals/TH06-v1/th06-005.png",
+        "image": "art-originals/TH06-v1/th06-005.jpg"
+      }
+    ],
+    "editReference": "art-originals/TH06-v1/th06-005.jpg",
+    "revision": "character-focus-v2"
+  },
+  {
+    "id": "th06-006",
+    "prompt": "EDIT this existing Thai TCG artwork into a CHARACTER-DRIVEN illustration. Preserve the established person's identity, folk clothing and polished painterly rendering, muted jade/purple-gray night palette, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Landscape 4:3. Radically reduce scenic panorama: main character face/body/action occupy 75–85% of frame; background subdued simple atmosphere, no repeated full moon village skyline, no huge temples. Face, expression, hands and unique gesture sharply readable at card thumbnail size. Keep anatomy natural and magical gestures coherent. Not a photographic fashion model pose. No text, lettering, watermarks, borders, blood, wounds or exposed organs. Keep key face/hands comfortably inside edges. Mae Nak: same beautiful long-haired mother with wrapped infant, intimate waist-up composition, fiercely protective gaze over shoulder toward viewer, one translucent hand emerging from swirling grave mist while holding baby safely with other arm. Her lower silhouette reforms from violet mist, visibly returning from death, tender and unsettling, no wounds, baby safe. Tiny canal doorway behind, no skyline.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-daed825f-cbd7-421c-bdee-ab84691f7aae.png",
+    "original": "art-originals/th06-006.png",
+    "image": "/cards/th06-006.jpg",
+    "previousVersions": [
+      {
+        "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Mae Nak: adult Thai female ghost with long dark hair and simple gray traditional dress, cradling a fully wrapped sleeping infant safely, standing on an old canal-house veranda; her other arm extends unnaturally far gently toward a fallen lime, atmospheric distant temple and water, tragic tenderness, lavender moon aura, no violence.",
+        "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-d0b0a139-eb39-4093-b857-152c325a52e9.png",
+        "original": "art-originals/TH06-v1/th06-006.png",
+        "image": "art-originals/TH06-v1/th06-006.jpg"
+      }
+    ],
+    "editReference": "art-originals/TH06-v1/th06-006.jpg",
+    "revision": "character-focus-v2"
+  },
+  {
+    "id": "th06-007",
+    "prompt": "EDIT this existing Thai TCG artwork into a CHARACTER-DRIVEN illustration. Preserve the established person's identity, folk clothing and polished painterly rendering, muted jade/purple-gray night palette, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Landscape 4:3. Radically reduce scenic panorama: main character face/body/action occupy 75–85% of frame; background subdued simple atmosphere, no repeated full moon village skyline, no huge temples. Face, expression, hands and unique gesture sharply readable at card thumbnail size. Keep anatomy natural and magical gestures coherent. Not a photographic fashion model pose. No text, lettering, watermarks, borders, blood, wounds or exposed organs. Keep key face/hands comfortably inside edges. Pop: same adult male herbalist, tight waist-up portrait, conflicted human expression with one eye glowing jade, ghost face partially overlapping his own cheek rather than separate beautiful background woman, one hand drawing a thin green energy stream from a shadow at edge into his chest. Tense hunched shoulders, visible internal struggle, no wounds, no horror organs.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-d17c5fa4-cc80-4151-a1f1-a739a8096a99.png",
+    "original": "art-originals/th06-007.png",
+    "image": "/cards/th06-007.jpg",
+    "previousVersions": [
+      {
+        "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Phi Pop possessed human: adult rural Thai herbalist in faded brown traditional clothing, tense face with an overlapping translucent shadow spirit behind shoulders, green smoke around herb mortar, candlelit wooden hut. Waist-up three-quarter scene, compassionate eerie portrayal not monstrous or diseased.",
+        "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-bbd67e64-6631-4379-9bda-a295d85f9d20.png",
+        "original": "art-originals/TH06-v1/th06-007.png",
+        "image": "art-originals/TH06-v1/th06-007.jpg"
+      }
+    ],
+    "editReference": "art-originals/TH06-v1/th06-007.jpg",
+    "revision": "character-focus-v2"
+  },
+  {
+    "id": "th06-008",
+    "prompt": "EDIT this existing Thai TCG artwork into a CHARACTER-DRIVEN illustration. Preserve the established person's identity, folk clothing and polished painterly rendering, muted jade/purple-gray night palette, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Landscape 4:3. Radically reduce scenic panorama: main character face/body/action occupy 75–85% of frame; background subdued simple atmosphere, no repeated full moon village skyline, no huge temples. Face, expression, hands and unique gesture sharply readable at card thumbnail size. Keep anatomy natural and magical gestures coherent. Not a photographic fashion model pose. No text, lettering, watermarks, borders, blood, wounds or exposed organs. Keep key face/hands comfortably inside edges. Krasue: preserve the beautiful woman's facial identity and graceful Thai dress, close three-quarter waist-up view; her luminous spectral face floats forward beside her intact human face, both dominate frame, sly calm gaze as jade mist streams past dark faceless silhouettes low in background. The ghost apparition is clearly made of light, not a severed head; no organs no blood. Suggest gliding unseen through darkness. Minimal rice-field background.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-e1ca4958-c8e5-412d-9ec6-49acba32d903.png",
+    "original": "art-originals/th06-008.png",
+    "image": "/cards/th06-008.jpg",
+    "previousVersions": [
+      {
+        "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Krasue reinterpreted without gore: adult Thai woman in modest pale traditional dress standing fully intact beside night rice paddies, a luminous translucent duplicate of her face appears within a drifting green orb above her shoulder, no severing no organs. Side profile, purple-gray sky, water reflection and fireflies.",
+        "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-c22eb5b4-a655-4158-a481-87970aea63c6.png",
+        "original": "art-originals/TH06-v1/th06-008.png",
+        "image": "art-originals/TH06-v1/th06-008.jpg"
+      }
+    ],
+    "editReference": "art-originals/TH06-v1/th06-008.jpg",
+    "revision": "character-focus-v2"
+  },
+  {
+    "id": "th06-009",
+    "prompt": "EDIT this existing Thai TCG artwork into a CHARACTER-DRIVEN illustration. Preserve the established person's identity, folk clothing and polished painterly rendering, muted jade/purple-gray night palette, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Landscape 4:3. Radically reduce scenic panorama: main character face/body/action occupy 75–85% of frame; background subdued simple atmosphere, no repeated full moon village skyline, no huge temples. Face, expression, hands and unique gesture sharply readable at card thumbnail size. Keep anatomy natural and magical gestures coherent. Not a photographic fashion model pose. No text, lettering, watermarks, borders, blood, wounds or exposed organs. Keep key face/hands comfortably inside edges. Hexbound hunter: same Thai archer in indigo, tight dynamic waist-up, intense narrowed eyes and distinctive weathered scar-free face, one hand on bow while other draws a captured small spectral wisp into a hanging charm pouch; antler-shaped violet aura close behind his shoulders, not huge scenery. Read collector of wandering spirits, strong asymmetrical pose.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-b53eb43b-d827-4422-aed5-1493dbebb551.png",
+    "original": "art-originals/th06-009.png",
+    "image": "/cards/th06-009.jpg",
+    "previousVersions": [
+      {
+        "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Dark spell hunter: adult Thai male forest hunter with bow and cloth talismans without writing, simple dark indigo vest and trousers, ghostly violet deer-shaped mist curls behind him, drawing an enchanted jade arrow, dynamic low three-quarter angle in moonlit forest, no armor crown.",
+        "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-08a99083-93b5-4ef7-9c8c-a3071845926f.png",
+        "original": "art-originals/TH06-v1/th06-009.png",
+        "image": "art-originals/TH06-v1/th06-009.jpg"
+      }
+    ],
+    "editReference": "art-originals/TH06-v1/th06-009.jpg",
+    "revision": "character-focus-v2"
+  },
+  {
+    "id": "th06-010",
+    "prompt": "EDIT this existing Thai TCG artwork into a CHARACTER-DRIVEN illustration. Preserve the established person's identity, folk clothing and polished painterly rendering, muted jade/purple-gray night palette, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Landscape 4:3. Radically reduce scenic panorama: main character face/body/action occupy 75–85% of frame; background subdued simple atmosphere, no repeated full moon village skyline, no huge temples. Face, expression, hands and unique gesture sharply readable at card thumbnail size. Keep anatomy natural and magical gestures coherent. Not a photographic fashion model pose. No text, lettering, watermarks, borders, blood, wounds or exposed organs. Keep key face/hands comfortably inside edges. Dark occult teacher: same fictional lay Thai man in charcoal clothing, close waist-up leaning toward viewer with cool calculating expression, index and middle fingers pinching a black thread binding a small translucent shadow effigy; violet curse knot glows between hands and face. Plain dark ruined pillar behind, one candle below, no crowd of decorative women. Not monk, no text.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-4de02c09-7ef5-4a13-8d33-9d46bef140cc.png",
+    "original": "art-originals/th06-010.png",
+    "image": "/cards/th06-010.jpg",
+    "previousVersions": [
+      {
+        "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Fictional dark occult teacher, a lay adult Thai man NOT a monk, black hair, plain charcoal Thai clothes and dark sash, sitting beside a candle basin in ruined rural pavilion, one hand casting purple spirit threads, jade shadows, medium wide overhead angle, no religious portrait or readable marks.",
+        "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-804a0b71-dcec-4b7f-b8d8-bd99a4b2b77c.png",
+        "original": "art-originals/TH06-v1/th06-010.png",
+        "image": "art-originals/TH06-v1/th06-010.jpg"
+      }
+    ],
+    "editReference": "art-originals/TH06-v1/th06-010.jpg",
+    "revision": "character-focus-v2"
+  },
+  {
+    "id": "th06-011",
+    "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Abandoned temple cemetery field spell landscape: empty rural Thai ruined temple at night, crooked boundary stones and ancient tree roots, no bodies, violet moonlit fog weaving between low memorial stupas, tiny green spirit lights and two candles, wide establishing composition, no main human.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-31d7a1bb-830c-4b10-a00d-00ffa47d7179.png",
+    "original": "art-originals/th06-011.png",
+    "image": "/cards/th06-011.jpg"
+  },
+  {
+    "id": "th06-012",
+    "prompt": "Create one complete standalone landscape 4:3 Thai fantasy TCG illustration, no card frame, no text, letters, symbols resembling writing, watermark, collage. Reference is STYLE ONLY: match painterly detail, layered cinematic composition, natural anatomy, rich deep contrast and shadows of TH04. New TH06 Thai folk ghost set: eerie but dignified, absolutely no gore, blood or exposed organs. Night, muted jade green and purple-gray, candle/lantern/moon lighting, selective tiny gold highlights. dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Ordinary historical rural Thai clothing, not yaksha armor or crowns. Strong readable character silhouette and richly painted scenery, entire important subject fits with breathing room. Curse of the shadow pact spell: close view of an old unmarked cloth charm tied with black thread on a wooden altar, a spectral green hand and a living human hand nearly touch above it, purple smoke twists into two branching paths fading into forest, candles and moon, magical cinematic still-life, absolutely no text or writing.",
+    "tool": "built-in imagegen",
+    "styleReference": "public/cards/th04-003.jpg",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-d28d2468-7b31-4fc2-8f5c-c151421e6f53.png",
+    "original": "art-originals/th06-012.png",
+    "image": "/cards/th06-012.jpg"
+  }
+]
