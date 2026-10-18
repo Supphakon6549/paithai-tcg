@@ -15,6 +15,10 @@ import { TRIBES } from '../data/tribes'
  *   ambush                 เมื่อโจมตี ฝ่ายรับไม่ได้โบนัสธาตุ/เผ่า
  *   piercing               ตีมอนสเตอร์ตั้งรับที่ DEF ต่ำกว่า → ความเสียหายทะลุ (สัดส่วนของส่วนต่าง)
  *   extraAttack            โจมตีเพิ่มได้อีก 1 ครั้งเมื่อเงื่อนไขเป็นจริง (เช็กตอนประกาศโจมตี)
+ *   noDirectAttack         โจมตีตรงไม่ได้
+ *   attackingBoost         ATK เพิ่มเฉพาะตอนเป็นฝ่ายโจมตี (รวมโจมตีตรง)
+ *   battleDamageReduction  ลดความเสียหายจากการต่อสู้ที่ใบนี้ปะทะ (หักหลังตัวคูณอื่น ต่ำสุด 0)
+ *   buffSpell              เวทบัฟ ATK มอนสเตอร์หงายของเรา 1 ตัวจนจบเทิร์น
  *   noBattleDamageVsTribe  เจ้าของไม่รับความเสียหายจากการต่อสู้ที่ใบนี้ปะทะเผ่านี้
  *   halveBattleDamage      เจ้าของรับความเสียหายจากการต่อสู้ครึ่งเดียว (ปัดลง)
  *   destroysTribeAfterBattle  หลังคำนวณความเสียหาย ทำลายคู่ต่อสู้เผ่านี้
@@ -37,6 +41,7 @@ import { TRIBES } from '../data/tribes'
  *                          แล้วเทิร์นถัดไปของเรากดเลื่อนยศเป็น into (จากมือหรือกองการ์ด)
  *   activated              ความสามารถที่ผู้เล่นกดใช้เองในเฟสหลัก (มอนสเตอร์หงายบนสนาม)
  *                          kind: 'heal' | 'debuff' | 'destroySpellsTraps' | 'destroyWeaker'
+ *                                (debuff + discardCost: false = ไม่ต้องทิ้งการ์ด)
  *                                | 'lockAttack' | 'searchTrap'
  *                          oncePer: 'card' (ใบละครั้ง) | 'name' (ชื่อละครั้ง) ต่อเทิร์น
  *   fieldSpell.aura        เวทสนาม: ปรับ ATK มอนสเตอร์หงายฝ่ายเจ้าของที่เข้าเงื่อนไข
@@ -217,6 +222,62 @@ export const CARD_EFFECTS = {
       reason: 'ม่านอาสนีพิทักษ์: ยกเลิกการโจมตีมอนสเตอร์เผ่าเทวดา',
     },
   },
+  // ---------- TH04 อสูรสงคราม (docs/TH04-DESIGN.md) ----------
+  // พลโล่ลงกา
+  'th04-001': {
+    battleDamageReduction: { amount: 300, reason: 'พลโล่ลงกา: ลดความเสียหายจากการต่อสู้ 300' },
+  },
+  // ยักษ์คบเพลิง
+  'th04-002': {
+    attackingBoost: { amount: 300, reason: 'ยักษ์คบเพลิง: เป็นฝ่ายโจมตี' },
+  },
+  // อสูรมนตราควัน
+  'th04-003': {
+    activated: {
+      kind: 'debuff',
+      amount: -200,
+      discardCost: false,
+      label: 'ลด ATK ศัตรู 200',
+      oncePer: 'card',
+      reason: 'อสูรมนตราควัน: ATK −200 จนจบเทิร์น',
+    },
+  },
+  // ขุนยักษ์ดาบอัคนี
+  'th04-004': {
+    atkBoosts: [
+      { amount: 200, reason: 'มีเผ่าอสูรตัวอื่นบนสนามเรา', isActive: ({ allies }) => allies.some(isDemon) },
+    ],
+  },
+  // กุมภกรรณ ผู้ค้ำแนวรบ
+  'th04-005': {
+    piercing: { ratio: 0.5, reason: 'ตีทะลุครึ่งหนึ่งของส่วนต่าง' },
+  },
+  // อินทรชิต ศรเพลิงลงกา
+  'th04-006': {
+    noDirectAttack: { reason: 'อินทรชิต: โจมตีตรงไม่ได้' },
+    extraAttack: {
+      reason: 'มีเผ่าอสูรตัวอื่นบนสนามเรา',
+      isActive: ({ allies }) => allies.some(isDemon),
+    },
+  },
+  // กรุงลงกา (เวทสนามฝ่ายอสูร)
+  'th04-007': {
+    fieldSpell: { faction: 'demon', aura: { amount: 200, appliesTo: isDemon, reason: 'กรุงลงกา: เผ่าอสูรฝ่ายเรา' } },
+  },
+  // มนต์ปลุกเพลิงอสูร
+  'th04-008': {
+    buffSpell: { amount: 400, appliesTo: isDemon, reason: 'มนต์ปลุกเพลิงอสูร: ATK +400 จนจบเทิร์น' },
+  },
+  // ม่านควันลงกา (กับดัก)
+  'th04-009': {
+    trap: {
+      trigger: 'enemyAttacksFaceUp',
+      effect: 'weaken',
+      amount: -500,
+      appliesTo: isDemon,
+      reason: 'ม่านควันลงกา: ผู้โจมตี ATK −500 จนจบเทิร์น',
+    },
+  },
   // ช้างศึกไอยรา
   'th01-020': {
     noTributeIf: { reason: 'มีมอนสเตอร์เผ่าทหารหาญบนสนาม', isActive: ({ allies }) => allies.some(isWarrior) },
@@ -381,9 +442,23 @@ export function getContinuousTrap(card) {
   return effectOf(card).continuousTrap ?? null
 }
 
+export function getBuffSpell(card) {
+  return effectOf(card).buffSpell ?? null
+}
+
+export function getAttackingBoost(card) {
+  return effectOf(card).attackingBoost ?? null
+}
+
+export function hasNoDirectAttack(card) {
+  return Boolean(effectOf(card).noDirectAttack)
+}
+
 export function isPlayableNonMonster(card) {
   if (card?.type === 'spell') {
-    return isFieldSpell(card) || Boolean(getFusionSpell(card) || getReviveSpell(card) || getEquip(card))
+    return (
+      isFieldSpell(card) || Boolean(getFusionSpell(card) || getReviveSpell(card) || getEquip(card) || getBuffSpell(card))
+    )
   }
   if (card?.type === 'trap') return Boolean(getTrapEffect(card) || getContinuousTrap(card))
   if (card?.type === 'ritual') return Boolean(getRitualInfo(card))
@@ -452,11 +527,18 @@ export function reduceBattleDamage(amount, { ownFieldCards = [], ownMonster = nu
     steps.push(`${negate.reason} → 0`)
     return { amount: 0, steps }
   }
+  const fmt = (n) => n.toLocaleString('en-US')
   const halver = ownFieldCards.map((c) => effectOf(c).halveBattleDamage).find(Boolean)
   if (halver && amount > 0) {
     const halved = Math.floor(amount / 2)
-    steps.push(`${halver.reason}: ${amount.toLocaleString('en-US')} ÷ 2 = ${halved.toLocaleString('en-US')}`)
-    return { amount: halved, steps }
+    steps.push(`${halver.reason}: ${fmt(amount)} ÷ 2 = ${fmt(halved)}`)
+    amount = halved
+  }
+  const flat = ownMonster && effectOf(ownMonster).battleDamageReduction
+  if (flat && amount > 0) {
+    const reduced = Math.max(0, amount - flat.amount)
+    steps.push(`${flat.reason}: ${fmt(amount)} − ${fmt(flat.amount)} = ${fmt(reduced)}`)
+    amount = reduced
   }
   return { amount, steps }
 }

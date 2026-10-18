@@ -24,6 +24,7 @@ import {
   getActivated,
   getActivationTargets,
   getAiAction,
+  getBuffSpell,
   getContinuousTrap,
   getEquip,
   getEquipTargets,
@@ -139,7 +140,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
     Boolean(tributePick?.selected.includes(uid) || ritualPick?.selected.includes(uid) || fusionPick?.selected.includes(uid))
   const materialBadge = { tone: 'lose', text: fusionPick ? 'วัตถุดิบ' : 'สังเวย' }
   // ความสามารถที่ต้องเลือกเป้า: ขั้นทิ้งการ์ด (debuff) / ขั้นเลือกเป้า
-  const pickingDiscard = effectPick?.kind === 'debuff' && !effectPick.discardUid
+  const pickingDiscard = effectPick?.kind === 'debuff' && effectPick.needsDiscard && !effectPick.discardUid
   const pickingTarget = Boolean(effectPick) && !pickingDiscard
   const activationTargets = new Set(
     pickingTarget ? getActivationTargets(game, PLAYER, effectPick.uid).map((m) => m.uid) : []
@@ -220,7 +221,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   function onMyMonsterTap(monster) {
     if (equipPick) {
       if (equipTargets.has(monster.uid)) play({ type: 'playSpell', uid: equipPick, targetUid: monster.uid })
-      else setError('สวมใส่ได้เฉพาะมอนสเตอร์หงายหน้าที่ตรงเงื่อนไข (ขอบเรืองแสง)')
+      else setError('เลือกได้เฉพาะมอนสเตอร์หงายหน้าที่ตรงเงื่อนไข (ขอบเรืองแสง)')
       return
     }
     if (revivePick) return
@@ -292,7 +293,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
       setSelectedHandUid(null)
       setRevivePick(inst.uid)
       setError(null)
-    } else if (getEquip(card)) {
+    } else if (getEquip(card) || getBuffSpell(card)) {
       setSelectedHandUid(null)
       setEquipPick(inst.uid)
       setError(null)
@@ -304,10 +305,16 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   }
 
   function activateEffectOf(monster) {
-    const kind = getActivated(cardOf(monster)).kind
+    const activated = getActivated(cardOf(monster))
+    const kind = activated.kind
     if (kind === 'debuff' || kind === 'destroyWeaker' || kind === 'lockAttack') {
       setSelectedFieldUid(null)
-      setEffectPick({ uid: monster.uid, kind, discardUid: null })
+      setEffectPick({
+        uid: monster.uid,
+        kind,
+        discardUid: null,
+        needsDiscard: kind === 'debuff' && activated.discardCost !== false,
+      })
       setError(null)
     } else {
       play({ type: 'activate', uid: monster.uid })
@@ -368,7 +375,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   } else if (revivePick) {
     hint = reviveTargets.length ? 'เลือกมอนสเตอร์ในสุสานที่จะคืนชีพ (ท่าโจมตี)' : 'ไม่มีมอนสเตอร์ในสุสานที่คืนชีพได้'
   } else if (equipPick) {
-    hint = `แตะมอนสเตอร์ของคุณที่จะสวม ${cardOf(equipInst).name}`
+    hint = `แตะมอนสเตอร์ของคุณที่จะ${getBuffSpell(cardOf(equipInst)) ? 'ใช้' : 'สวม'} ${cardOf(equipInst).name}`
   } else if (effectPick) {
     hint = pickingDiscard
       ? 'แตะการ์ดในมือที่จะทิ้ง 1 ใบ'

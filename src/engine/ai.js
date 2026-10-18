@@ -1,5 +1,6 @@
 import {
   getActivated,
+  getBuffSpell,
   getContinuousTrap,
   getEquip,
   getFusionSpell,
@@ -86,6 +87,7 @@ export function getAiAction(state, playerId = AI) {
       if (summon) return summon
       const effect =
         chooseEquip(state, playerId) ??
+        chooseBuffSpell(state, playerId) ??
         chooseActivation(state, playerId) ??
         chooseTrapSet(state, playerId) ??
         chooseContinuousTrap(state, playerId)
@@ -184,6 +186,18 @@ function chooseReviveSpell(state, playerId) {
 function chooseEquip(state, playerId) {
   for (const spell of playable(state, playerId, (c) => Boolean(getEquip(c)))) {
     const target = [...getEquipTargets(state, playerId, cardOf(spell))].sort(byAtkDesc)[0]
+    if (target) return { type: 'playSpell', player: playerId, uid: spell.uid, targetUid: target.uid }
+  }
+  return null
+}
+
+// เวทบัฟจนจบเทิร์น: ใช้ก่อนเข้าเฟสต่อสู้กับตัวท่าโจมตีที่ ATK สูงสุด (เฉพาะเทิร์นที่โจมตีได้)
+function chooseBuffSpell(state, playerId) {
+  if (!canAttackThisTurn(state)) return null
+  for (const spell of playable(state, playerId, (c) => Boolean(getBuffSpell(c)))) {
+    const target = [...getEquipTargets(state, playerId, cardOf(spell))]
+      .filter((m) => m.position === 'attack' && !m.hasAttacked && m.cannotAttackTurn !== state.turn)
+      .sort(byAtkDesc)[0]
     if (target) return { type: 'playSpell', player: playerId, uid: spell.uid, targetUid: target.uid }
   }
   return null
@@ -292,9 +306,10 @@ function chooseActivation(state, playerId) {
           const atk = getFieldAtk(state, oppId, x.uid)
           return atk >= ourBest && atk + activated.amount < ourBest
         })
-      const discard = [...state.players[playerId].hand].sort(cheapestFirst)[0]
-      if (target && discard) {
-        return { type: 'activate', player: playerId, uid: m.uid, discardUid: discard.uid, targetUid: target.uid }
+      const needsDiscard = activated.discardCost !== false
+      const discard = needsDiscard ? [...state.players[playerId].hand].sort(cheapestFirst)[0] : null
+      if (target && (discard || !needsDiscard)) {
+        return { type: 'activate', player: playerId, uid: m.uid, discardUid: discard?.uid, targetUid: target.uid }
       }
     }
   }

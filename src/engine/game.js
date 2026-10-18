@@ -5,6 +5,8 @@ import {
   getAfterBattleDestroy,
   getAtkBoosts,
   getAttackDecay,
+  getAttackingBoost,
+  getBuffSpell,
   getContinuousTrap,
   getEffectProtection,
   getEndTurnHeal,
@@ -23,6 +25,7 @@ import {
   getPiercing,
   getRitualInfo,
   getTrapEffect,
+  hasNoDirectAttack,
   hasTrapLock,
   isBattleIndestructible,
   isFieldSpell,
@@ -267,11 +270,13 @@ function maxAttacks(state, playerId, m) {
   if (!extra) return 1
   const allyCount = state.players[playerId].field.filter(Boolean).length
   const enemyCount = state.players[opponentOf(playerId)].field.filter(Boolean).length
-  return extra.isActive({ allyCount, enemyCount }) ? 2 : 1
+  return extra.isActive({ allyCount, enemyCount, allies: getAllies(state, playerId, m.uid) }) ? 2 : 1
 }
 
 function canDeclareAttack(state, playerId, m) {
   if (m.cannotAttackTurn === state.turn) return false
+  // โจมตีตรงไม่ได้ + ศัตรูไม่มีมอนสเตอร์ = ไม่มีอะไรให้โจมตี
+  if (hasNoDirectAttack(cardOf(m)) && !state.players[opponentOf(playerId)].field.some(Boolean)) return false
   return m.position !== 'defense' && attacksMade(m) < maxAttacks(state, playerId, m)
 }
 
@@ -315,6 +320,13 @@ function atkExtras(state, playerId, m) {
     equips: equipsOf(state, m?.uid).map(cardOf),
     continuous: p.spellTrap.filter((t) => t && !t.faceDown && getContinuousTrap(cardOf(t))).map(cardOf),
   }
+}
+
+// ตัวปรับ ATK ตอนเป็นฝ่ายโจมตี = atkExtras + บัฟเฉพาะตอนโจมตี (attackingBoost)
+function attackExtras(state, playerId, m) {
+  const extras = atkExtras(state, playerId, m)
+  const boost = getAttackingBoost(cardOf(m))
+  return boost ? { ...extras, temp: [...extras.temp, boost] } : extras
 }
 
 // เวทสวมใส่ที่ติดกับมอนสเตอร์ uid (อยู่ในช่องเวท/กับดักของเจ้าของ)
@@ -383,7 +395,7 @@ export function previewBattle(state, playerId, attackerUid, defenderUid) {
   return resolveBattle(cardOf(attacker), cardOf(defender), {
     attackerAllies: getAllies(state, playerId, attackerUid),
     attackerEnemies: getAllies(state, oppId, null),
-    attackerExtras: atkExtras(state, playerId, attacker),
+    attackerExtras: attackExtras(state, playerId, attacker),
     defenderAllies: getAllies(state, oppId, defenderUid),
     defenderEnemies: getAllies(state, playerId, null),
     defenderExtras: atkExtras(state, oppId, defender),
@@ -417,7 +429,7 @@ export function activationBlocker(state, playerId, uid) {
     return activated.notReadyReason
   }
   if (activated.kind === 'debuff') {
-    if (p.hand.length === 0) return 'ต้องมีการ์ดในมือให้ทิ้ง 1 ใบ'
+    if (activated.discardCost !== false && p.hand.length === 0) return 'ต้องมีการ์ดในมือให้ทิ้ง 1 ใบ'
     if (getAllies(state, opponentOf(playerId), null).length === 0) return 'ฝ่ายตรงข้ามไม่มีมอนสเตอร์หงายหน้า'
   }
   if (activated.kind === 'destroySpellsTraps') {
@@ -547,9 +559,9 @@ export function getReviveTargets(state, playerId, spellCard) {
   })
 }
 
-// เวทสวมใส่: มอนสเตอร์หงายของเราที่สวมได้
+// เวทสวมใส่ / เวทบัฟ: มอนสเตอร์หงายของเราที่เลือกเป็นเป้าได้
 export function getEquipTargets(state, playerId, spellCard) {
-  const equip = getEquip(spellCard)
+  const equip = getEquip(spellCard) ?? getBuffSpell(spellCard)
   if (!equip) return []
   return state.players[playerId].field.filter((m) => m && !m.faceDown && equip.appliesTo(cardOf(m)))
 }
@@ -593,6 +605,9 @@ export function handCardBlocker(state, playerId, uid) {
   if (getReviveSpell(card)) {
     if (getReviveTargets(state, playerId, card).length === 0) return 'ไม่มีมอนสเตอร์ในสุสานที่คืนชีพได้'
     if (!p.field.includes(null)) return 'ไม่มีช่องมอนสเตอร์ว่าง'
+  }
+  if (getBuffSpell(card) && getEquipTargets(state, playerId, card).length === 0) {
+    return 'ไม่มีมอนสเตอร์เผ่าอสูรหงายหน้าบนสนามเรา'
   }
   if (getEquip(card)) {
     if (getEquipTargets(state, playerId, card).length === 0) return 'ไม่มีมอนสเตอร์ที่สวมใส่ได้ (ทหารหาญหงายหน้า)'
@@ -1075,6 +1090,9 @@ function attack(state, playerId, attackerUid, targetUid) {
   if (!attacker) throw new GameRuleError('ไม่พบมอนสเตอร์ที่จะโจมตี')
   if (attacker.position === 'defense') throw new GameRuleError('มอนสเตอร์ท่าตั้งรับโจมตีไม่ได้')
   if (attacker.cannotAttackTurn === state.turn) throw new GameRuleError('มอนสเตอร์ตัวนี้ถูกห้ามโจมตีในเทิร์นนี้')
+  if (targetUid === null && hasNoDirectAttack(cardOf(attacker))) {
+    throw new GameRuleError(`${cardOf(attacker).name} โจมตีตรงไม่ได้`)
+  }
   if (!canDeclareAttack(state, playerId, attacker)) {
     throw new GameRuleError('มอนสเตอร์ตัวนี้โจมตีไปแล้วในเทิร์นนี้')
   }
@@ -1120,13 +1138,11 @@ function attack(state, playerId, attackerUid, targetUid) {
 function resolveDirectAttack(state, playerId, attacker, details) {
   const oppId = opponentOf(playerId)
   const attackerCard = cardOf(attacker)
-  const boosts = getAtkBoosts(
-    attackerCard,
-    getAllies(state, playerId, attacker.uid),
-    getAllies(state, oppId, null),
-    atkExtras(state, playerId, attacker)
-  )
-  const power = getFieldAtk(state, playerId, attacker.uid)
+  const allies = getAllies(state, playerId, attacker.uid)
+  const enemies = getAllies(state, oppId, null)
+  const extras = attackExtras(state, playerId, attacker)
+  const boosts = getAtkBoosts(attackerCard, allies, enemies, extras)
+  const power = getEffectiveAtk(attackerCard, allies, enemies, extras)
   const boostText = boosts
     .map((b) => `${b.amount < 0 ? ' − ' : ' + '}${formatNumber(Math.abs(b.amount))} (${b.label}: ${b.reason})`)
     .join('')
@@ -1345,6 +1361,19 @@ function respond(state, playerId, optionId) {
     return
   }
 
+  if (option.kind === 'weaken') {
+    const trap = getTrapEffect(trapCard)
+    const before = getFieldAtk(state, attackerOwner, attacker.uid)
+    attacker.tempAtk = [...(attacker.tempAtk ?? []), { amount: trap.amount, reason: trap.reason }]
+    const after = getFieldAtk(state, attackerOwner, attacker.uid)
+    details.push(
+      `🪤 ${PLAYER_NAMES[playerId]}เปิดกับดัก ${trapCard.name}! · ${trapCard.name} ลงสุสาน`,
+      `${trap.reason}: ${attackerName} ATK ${formatNumber(before)} − ${formatNumber(Math.abs(trap.amount))} = ${formatNumber(after)} · การโจมตีดำเนินต่อ`
+    )
+    continueAttack()
+    return
+  }
+
   if (option.kind === 'thorns') {
     const trap = getTrapEffect(trapCard)
     attacker.position = 'defense'
@@ -1465,20 +1494,21 @@ function activate(state, playerId, uid, discardUid, targetUid) {
       `LP ${formatNumber(before)} + ${formatNumber(activated.amount)} = ${formatNumber(p.lp)}`,
     ])
   } else if (activated.kind === 'debuff') {
+    const needsDiscard = activated.discardCost !== false
     const handIndex = p.hand.findIndex((c) => c.uid === discardUid)
-    if (handIndex === -1) throw new GameRuleError('เลือกการ์ดในมือที่จะทิ้ง 1 ใบ')
+    if (needsDiscard && handIndex === -1) throw new GameRuleError('เลือกการ์ดในมือที่จะทิ้ง 1 ใบ')
     const oppId = opponentOf(playerId)
     const target = state.players[oppId].field.find((x) => x?.uid === targetUid)
     if (!target || target.faceDown) throw new GameRuleError('เลือกมอนสเตอร์ที่หงายหน้าของฝ่ายตรงข้าม 1 ตัว')
     const before = getFieldAtk(state, oppId, target.uid)
-    const [discarded] = p.hand.splice(handIndex, 1)
-    p.graveyard.push(discarded)
+    const discarded = needsDiscard ? p.hand.splice(handIndex, 1)[0] : null
+    if (discarded) p.graveyard.push(discarded)
     target.tempAtk = [...(target.tempAtk ?? []), { amount: activated.amount, reason: activated.reason }]
     const after = getFieldAtk(state, oppId, target.uid)
     const targetCard = cardOf(target)
     const size = formatNumber(Math.abs(activated.amount))
     addLog(state, playerId, 'effect', `✨ ${card.name}: ${targetCard.name} ATK −${size} จนจบเทิร์น`, [
-      `${name}ทิ้ง ${cardOf(discarded).name} ลงสุสาน`,
+      ...(discarded ? [`${name}ทิ้ง ${cardOf(discarded).name} ลงสุสาน`] : []),
       `${targetCard.name}: ATK ${formatNumber(before)} − ${size} = ${formatNumber(after)}${after === 0 ? ' (ต่ำสุด 0)' : ''}`,
     ])
   }
@@ -1569,6 +1599,20 @@ function playSpell(state, playerId, uid, tributeUids = [], fusionTarget = null, 
     }
     addLog(state, playerId, 'summon', `💧 ${name}ใช้ ${card.name} → คืนชีพ ${cardOf(target).name} ลงช่องที่ ${zone + 1}`, [
       `${cardOf(target).name} ไม่รับผลจากการ์ดธาตุตมะจนจบเทิร์น`,
+      `${card.name} ลงสุสาน`,
+    ])
+    return
+  }
+
+  const buff = getBuffSpell(card)
+  if (buff) {
+    const target = getEquipTargets(state, playerId, card).find((m) => m.uid === targetUid)
+    if (!target) throw new GameRuleError('เลือกมอนสเตอร์เผ่าอสูรหงายหน้าของเรา 1 ตัว')
+    const before = getFieldAtk(state, playerId, target.uid)
+    p.graveyard.push(p.hand.splice(handIndex, 1)[0])
+    target.tempAtk = [...(target.tempAtk ?? []), { amount: buff.amount, reason: buff.reason }]
+    addLog(state, playerId, 'spell', `🔥 ${name}ใช้ ${card.name} กับ ${cardOf(target).name}`, [
+      `ATK ${formatNumber(before)} + ${formatNumber(buff.amount)} = ${formatNumber(getFieldAtk(state, playerId, target.uid))} จนจบเทิร์น`,
       `${card.name} ลงสุสาน`,
     ])
     return

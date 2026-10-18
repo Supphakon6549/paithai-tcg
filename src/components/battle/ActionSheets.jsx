@@ -1,4 +1,4 @@
-import { formatNumber, getEquip, getFusionSpell, getReviveSpell } from '../../engine'
+import { formatNumber, getBuffSpell, getEquip, getFusionSpell, getReviveSpell } from '../../engine'
 
 const nonMonsterAction = (card) => {
   if (card.type === 'ritual') return '🙏 ทำพิธี'
@@ -7,6 +7,7 @@ const nonMonsterAction = (card) => {
   if (card.spellSubtype === 'field') return '🏞️ ใช้เวทสนาม'
   if (getReviveSpell(card)) return '💧 คืนชีพ'
   if (getEquip(card)) return '🗡️ สวมใส่'
+  if (getBuffSpell(card)) return '🔥 ใช้'
   return 'ใช้'
 }
 
