@@ -1,6 +1,11 @@
 /* ==========================================================================
-   ไพ่ไทย TCG — Physical Printed Card Frame Architecture
-   ออกแบบให้เหมือนการ์ดสะสมพิมพ์จริง (ขอบการ์ดดำด้าน + กรอบโลหะประจำชนิดการ์ด + กล่องข้อความกระดาษข่อย)
+   ไพ่ไทย TCG — Dark Obsidian & Gold Filigree Showcase Frame
+   แรงบันดาลใจจากกรอบ Showcase สีนิลเดินเส้นทอง (สไตล์ The One Ring):
+   - พื้นหลังภาพบรรยากาศเต็มใบ (Full-Bleed Ambient Art) + ขอบล่างดำด้าน
+   - ป้ายชื่อทรงมงกุฎทองด้านบน (Crowned Gold Filigree Title Bar)
+   - ป้ายแคปซูลรหัสการ์ด [TH01-001] + เพชรเจียระไนทรงหยดน้ำบอกระดับ
+   - แถบประเภทปลายมนขอบทอง เชื่อมต่อกับกล่องข้อความสีนิลโปร่งแสงเส้นทอง
+   - ตราสามเหลี่ยมโฮโลแกรมกึ่งกลางเส้นขอบล่าง + ป้ายค่าพลังมุมขวาล่าง
    ========================================================================== */
 
 .tc {
@@ -10,32 +15,26 @@
   --mx: 50%;
   --my: 50%;
 
-  /* โทนสีกรอบการ์ดตามชนิด (เริ่มต้น: มอนสเตอร์ = ทองเหลืองรมดำโบราณ) */
-  --frame-bg-1: #4a3419;
-  --frame-bg-2: #2b1d0d;
-  --frame-trim: #c59b38;
-  --frame-trim-light: #ebd183;
-  --namebar-bg: linear-gradient(180deg, #332211 0%, #1c1208 100%);
-  --parchment-1: #f4ecda;
-  --parchment-2: #e5d6b8;
-  --ink-main: #1d140b;
-  --ink-lore: #59432a;
+  --gold-1: #f5dc84;
+  --gold-2: #d4af37;
+  --gold-3: #8c6918;
+  --obsidian: rgba(10, 8, 12, 0.86);
+  --obsidian-deep: rgba(7, 5, 9, 0.92);
 
   position: relative;
   width: var(--card-w);
   max-width: 100%;
   aspect-ratio: 63 / 88;
-  padding: 9px;
   border-radius: 12px;
-  /* ขอบนอกสุดเป็นสีกระดาษการ์ดพิมพ์จริงสีดำด้าน + เส้นขอบตามระดับความหายาก */
-  background: #110d0a;
-  border: 1.5px solid var(--rarity-border, #4a453d);
+  overflow: hidden;
+  background: #080608;
+  border: 1px solid rgba(212, 175, 55, 0.38);
   box-shadow:
-    0 14px 32px rgba(0, 0, 0, 0.75),
-    0 2px 6px rgba(0, 0, 0, 0.6);
+    0 16px 36px rgba(0, 0, 0, 0.82),
+    0 2px 6px rgba(0, 0, 0, 0.65);
   transform: perspective(1100px) rotateX(var(--rx)) rotateY(var(--ry));
   transform-style: preserve-3d;
-  transition: transform 0.18s ease-out, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform 0.18s ease-out, box-shadow 0.24s ease, border-color 0.24s ease;
   user-select: none;
   isolation: isolate;
 }
@@ -46,131 +45,115 @@
 
 .tc:hover,
 .tc--selected {
+  border-color: var(--gold-1);
   box-shadow:
-    0 22px 44px rgba(0, 0, 0, 0.88),
-    0 0 0 1px var(--rarity-border, #c59b38);
+    0 22px 46px rgba(0, 0, 0, 0.9),
+    0 0 18px rgba(212, 175, 55, 0.25);
 }
 
 .tc--selected {
-  outline: 2px solid #ebd183;
-  outline-offset: 3px;
+  outline: 2px solid var(--gold-1);
+  outline-offset: 2px;
 }
 
-/* ----- โทนสีแผ่นหน้าการ์ดแยกตามประเภท (เหมือนการ์ดจริงที่ดูสีกรอบก็รู้ประเภททันที) ----- */
-.tc--type-spell {
-  --frame-bg-1: #163d42;
-  --frame-bg-2: #0b2226;
-  --frame-trim: #5eb8c2;
-  --frame-trim-light: #a6e9f0;
-  --namebar-bg: linear-gradient(180deg, #103238 0%, #081c20 100%);
-  --parchment-1: #e6f2f2;
-  --parchment-2: #cfe3e3;
-  --ink-main: #0d2124;
-  --ink-lore: #2e5257;
+/* ----- พื้นหลังภาพบรรยากาศเต็มใบ (Full-Bleed Ambient Art Backdrop) ----- */
+.tc__ambient-bg {
+  position: absolute;
+  inset: -8%;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(14px) saturate(1.35) brightness(0.62);
+  transform: scale(1.08);
+  pointer-events: none;
 }
 
-.tc--type-trap {
-  --frame-bg-1: #4a1932;
-  --frame-bg-2: #290c1b;
-  --frame-trim: #c96598;
-  --frame-trim-light: #f2b6d4;
-  --namebar-bg: linear-gradient(180deg, #3b1227 0%, #1f0814 100%);
-  --parchment-1: #f5e8ef;
-  --parchment-2: #e6cedb;
-  --ink-main: #260b19;
-  --ink-lore: #5e2a45;
+.tc__ambient-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 6, 10, 0.35) 0%,
+      rgba(8, 6, 10, 0.1) 42%,
+      rgba(8, 6, 10, 0.72) 72%,
+      #070508 93%
+    );
 }
 
-.tc--type-ritual {
-  --frame-bg-1: #1f365c;
-  --frame-bg-2: #101d36;
-  --frame-trim: #d9b44a;
-  --frame-trim-light: #fae39c;
-  --namebar-bg: linear-gradient(180deg, #192d4f 0%, #0d182b 100%);
-  --parchment-1: #f5efe0;
-  --parchment-2: #e6dbc1;
-}
-
-.tc--fusion {
-  --frame-bg-1: #3b2054;
-  --frame-bg-2: #1e0f2e;
-  --frame-trim: #e0b44c;
-  --frame-trim-light: #fff0b8;
-  --namebar-bg: linear-gradient(180deg, #2d1642 0%, #170a24 100%);
-}
-
-/* ----- เส้นขอบตามระดับความหายาก (Rarity Rim) ----- */
-.tc--common  { --rarity-border: #57534a; }
-.tc--copper  { --rarity-border: #a86434; }
-.tc--silver  { --rarity-border: #b8c0cc; }
-.tc--gold    { --rarity-border: #d9ad38; }
-.tc--emerald { --rarity-border: #28a878; }
-.tc--divine  { --rarity-border: #f0c446; }
-
-/* ----- แสงสะท้อนฟอยล์แบบการ์ดพิมพ์จริง (เฉพาะระดับ ทอง / มรกต / เทพ) ----- */
+/* ----- แสงสะท้อนฟอยล์ (เฉพาะระดับ ทอง / มรกต / เทพ) ----- */
 .tc__foil-glare {
   position: absolute;
-  inset: 9px;
-  border-radius: 7px;
+  inset: 0;
   z-index: 6;
   pointer-events: none;
   opacity: 0;
-  mix-blend-mode: soft-light;
+  mix-blend-mode: screen;
   background: radial-gradient(
     circle at var(--mx) var(--my),
-    rgba(255, 250, 220, 0.7),
-    rgba(255, 215, 100, 0.25) 35%,
-    transparent 65%
+    rgba(255, 240, 185, 0.36),
+    rgba(212, 175, 55, 0.12) 38%,
+    transparent 68%
   );
   transition: opacity 0.2s ease;
 }
 
 .tc--foil:hover .tc__foil-glare {
-  opacity: 0.75;
+  opacity: 0.85;
 }
 
-/* ----- โครงสร้างแผ่นการ์ดด้านใน ----- */
+/* ----- โครงสร้างภายในตัวการ์ด ----- */
 .tc__inner {
   position: relative;
+  z-index: 2;
   height: 100%;
-  border-radius: 6px;
-  padding: 7px 8px 7px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
-    linear-gradient(180deg, var(--frame-bg-1) 0%, var(--frame-bg-2) 100%);
-  border: 1.5px solid var(--frame-trim);
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  padding: 10px 11px 7px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
 }
 
-/* ----- 1. ป้ายชื่อหัวการ์ด (Beveled Namebar) ----- */
+/* ----- 1. ป้ายชื่อทรงมงกุฎทองด้านบน (Crowned Gold Filigree Title Bar) ----- */
 .tc__namebar {
+  position: relative;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding: 4px 7px 4px 10px;
-  background: var(--namebar-bg);
-  border: 1.5px solid var(--frame-trim);
-  border-radius: 4px;
+  height: 32px;
+  padding: 0 6px 0 12px;
+  background: linear-gradient(180deg, rgba(22, 18, 24, 0.92) 0%, rgba(10, 8, 12, 0.95) 100%);
+  border: 1.5px solid var(--gold-2);
+  border-radius: 6px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 2px 4px rgba(0, 0, 0, 0.55);
+    0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 1px rgba(245, 220, 132, 0.22),
+    0 4px 10px rgba(0, 0, 0, 0.65);
+}
+
+/* ซุ้มมงกุฎทองด้านบนกึ่งกลางป้ายชื่อ (เหมือนการ์ดในภาพแนบ) */
+.tc__namebar::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold-2) 15%, var(--gold-1) 50%, var(--gold-2) 85%, transparent);
+  clip-path: polygon(8% 100%, 14% 0%, 86% 0%, 92% 100%);
 }
 
 .tc__title {
   margin: 0;
-  font-family: 'Chonburi', 'Noto Serif Thai', serif;
-  font-weight: 400;
-  font-size: 16.5px;
-  line-height: 1.2;
-  letter-spacing: 0.3px;
-  color: #f7ead0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  font-family: 'Noto Serif Thai', 'Sarabun', serif;
+  font-weight: 700;
+  font-size: 14.5px;
+  line-height: 1.15;
+  letter-spacing: 0.2px;
+  color: #f7e6b5;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -179,7 +162,8 @@
 .tc--gold .tc__title,
 .tc--emerald .tc__title,
 .tc--divine .tc__title {
-  color: #ffe999;
+  color: #fff0b3;
+  text-shadow: 0 0 8px rgba(245, 220, 132, 0.35), 0 1px 2px #000;
 }
 
 .tc__seals {
@@ -191,59 +175,22 @@
 
 .thai-seal {
   display: block;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
 }
 
-/* ----- 2. แถบดาวระดับและรหัสชุด (Sub-header) ----- */
-.tc__subbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 3px;
-  min-height: 16px;
-}
-
-.tc__level-wrap {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.tc-levels {
-  display: flex;
-  align-items: center;
-  gap: 1.5px;
-}
-
-.tc__level-text,
-.tc__kind-tag {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: #e6d5b3;
-}
-
-.tc__code {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: rgba(235, 215, 175, 0.75);
-}
-
-/* ----- 3. กรอบภาพประกอบ (Art Window) ----- */
+/* ----- 2. หน้าต่างภาพประกอบ 4:3 (1200x896) ----- */
 .tc__art-frame {
   position: relative;
-  /* ล็อกสัดส่วนกรอบภาพ 4:3 (1200x896) ทุกใบสูงเท่ากันและเห็นตัวละครหัวจรดเท้าครบ */
+  z-index: 2;
   flex: none;
+  width: 100%;
   aspect-ratio: 4 / 3;
-  border-radius: 3px;
+  margin-top: -3px;
+  border-radius: 4px;
   overflow: hidden;
-  background: #0d0907;
-  border: 2px solid var(--frame-trim);
-  box-shadow:
-    inset 0 0 10px rgba(0, 0, 0, 0.75),
-    0 1px 3px rgba(0, 0, 0, 0.65);
+  background: #0b080a;
+  border-left: 1px solid rgba(212, 175, 55, 0.45);
+  border-right: 1px solid rgba(212, 175, 55, 0.45);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
 }
 
 .tc__art-img {
@@ -255,13 +202,12 @@
   transition: transform 0.35s ease;
 }
 
-/* รูปแนวตั้ง: แสดงเต็มรูป + พื้นหลังเบลอจากภาพเดียวกัน */
+/* รูปแนวตั้งที่เหลือ 1 ใบ: แสดงเต็มตัวไม่ตัดหัว-เท้า */
 .tc__art-frame--portrait .tc__art-img {
   position: relative;
   z-index: 1;
   object-fit: contain;
   object-position: center;
-  /* ไล่ขอบซ้าย-ขวาของภาพให้จางกลืนไปกับพื้นหลังเบลอ */
   -webkit-mask-image: linear-gradient(90deg, transparent 23%, #000 31%, #000 69%, transparent 77%);
   mask-image: linear-gradient(90deg, transparent 23%, #000 31%, #000 69%, transparent 77%);
 }
@@ -275,8 +221,19 @@
   transform: scale(1.1);
 }
 
+.tc__art-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: rgba(245, 220, 132, 0.65);
+  font-family: 'Noto Serif Thai', serif;
+  font-size: 12px;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, rgba(0, 0, 0, 0.8) 100%);
+}
+
 .tc:hover .tc__art-img {
-  transform: scale(1.035);
+  transform: scale(1.03);
 }
 
 .tc__art-vignette {
@@ -284,53 +241,127 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.55);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.28) 0%,
+    transparent 18%,
+    transparent 74%,
+    rgba(8, 6, 10, 0.68) 100%
+  );
 }
 
-/* ----- 4. แถบเผ่าและสายการเล่น (Typeline Bar) ----- */
-.tc__typeline {
+/* ----- ป้ายแคปซูลรหัสการ์ด [001/001] + เพชรทรงหยดน้ำบอกระดับ บนขอบล่างของภาพ ----- */
+.tc__capsule-row {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 5px;
+  z-index: 3;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 2.5px 6px;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.45));
-  border-top: 1px solid var(--frame-trim);
-  border-bottom: 1px solid var(--frame-trim);
-  font-family: 'Noto Serif Thai', serif;
-  font-size: 10.5px;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.tc__code-pill {
+  padding: 1.5px 7px;
+  border-radius: 999px;
+  background: rgba(8, 6, 10, 0.9);
+  border: 1px solid var(--gold-2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+  font-family: 'Sarabun', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: #f5dc84;
+  font-variant-numeric: tabular-nums;
+}
+
+.tc__level-pill {
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(8, 6, 10, 0.82);
+  border: 1px solid rgba(212, 175, 55, 0.65);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+.tc-levels {
+  display: flex;
+  align-items: center;
+  gap: 1.5px;
+}
+
+.tc-level-icon {
+  display: block;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8));
+}
+
+/* ----- 3. แถบประเภทปลายมนขอบทอง (Rounded Gold-Rimmed Typeline Bar) ----- */
+.tc__typeline {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 23px;
+  margin-top: -3px;
+  padding: 0 8px 0 11px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(24, 20, 28, 0.95) 0%, rgba(10, 8, 12, 0.98) 100%);
+  border: 1.2px solid var(--gold-2);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 238, 170, 0.22);
+}
+
+.tc__typeline-text {
+  font-family: 'Noto Serif Thai', 'Sarabun', serif;
+  font-size: 10.2px;
   font-weight: 600;
-  color: #f2e3c2;
+  color: #f3e2b8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.tc__diamond {
-  color: var(--frame-trim-light);
-  font-size: 8px;
+.tc__typeline-gem {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
-.tc__typeline-evo {
-  color: #a7f3d0;
-}
-
-/* ----- 5. กล่องข้อความสมุดข่อย (Samut Khoi Parchment Text Box) ----- */
+/* ----- 4. กล่องข้อความสีนิลโปร่งแสงเส้นทอง (Dark Translucent Gold-Framed Text Box) ----- */
 .tc__textbox {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  min-height: 0;
+  margin: -2px 3px 0;
+  padding: 8px 10px 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(12, 10, 15, 0.8) 0%,
+    rgba(8, 6, 10, 0.88) 100%
+  );
+  backdrop-filter: blur(4px);
+  border-left: 1.2px solid var(--gold-2);
+  border-right: 1.2px solid var(--gold-2);
+  border-bottom: 1.2px solid var(--gold-2);
+  box-shadow:
+    inset 0 0 14px rgba(0, 0, 0, 0.65),
+    0 2px 6px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 3px;
-  min-height: 76px;
-  max-height: 82px;
-  padding: 6px 8px;
-  border-radius: 3px;
-  background:
-    radial-gradient(circle at 50% 50%, var(--parchment-1) 0%, var(--parchment-2) 100%);
-  border: 1.5px solid #6e5227;
-  box-shadow:
-    inset 0 1px 3px rgba(60, 40, 10, 0.28),
-    0 1px 2px rgba(0, 0, 0, 0.5);
+  justify-content: center;
+}
+
+.tc__text-scroll {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -338,32 +369,14 @@
   margin: 0;
   font-family: 'Sarabun', sans-serif;
   font-weight: 500;
-  font-size: 10.4px;
+  font-size: 10px;
   line-height: 1.36;
-  color: var(--ink-main);
+  color: #f2e6c9;
+  text-align: center;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.tc__divider {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  opacity: 0.55;
-}
-
-.tc__divider-line {
-  flex: 1;
-  height: 1px;
-  background: #7a5c32;
-}
-
-.tc__divider-gem {
-  font-size: 7px;
-  line-height: 1;
-  color: #6e5227;
 }
 
 .tc__flavor {
@@ -371,64 +384,103 @@
   font-family: 'Noto Serif Thai', serif;
   font-style: italic;
   font-weight: 500;
-  font-size: 9.2px;
+  font-size: 8.8px;
   line-height: 1.3;
-  color: var(--ink-lore);
+  color: #d4b572;
+  text-align: center;
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* ----- 6. แถบค่าพลังด้านล่าง (Stat Plates & Rarity Gem) ----- */
-.tc__footer {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 6px;
-  margin-top: auto;
+.tc__flavor--main {
+  font-size: 10px;
+  line-height: 1.42;
+  color: #ebd296;
+  -webkit-line-clamp: 3;
 }
 
-.tc__stat-plate {
+/* ตราสามเหลี่ยมโฮโลแกรมกึ่งกลางเส้นขอบล่าง (แบบ The One Ring) */
+.tc__holo-slot {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  z-index: 5;
+  line-height: 0;
+  pointer-events: none;
+}
+
+.tc__holo-stamp {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+}
+
+/* ----- 5. แถบฐานการ์ดสีดำด้านล่างสุด + ป้ายค่าพลัง ATK / DEF ----- */
+.tc__footer {
+  position: relative;
+  z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 3px 6px;
-  border-radius: 3px;
-  background: #17100a;
-  border: 1px solid var(--frame-trim);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+  justify-content: space-between;
+  min-height: 22px;
+  padding: 5px 3px 0;
 }
 
-.tc__stat-lbl {
+.tc__collector-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   font-family: 'Sarabun', sans-serif;
+  font-size: 7.8px;
+  line-height: 1.1;
+  color: rgba(235, 218, 178, 0.72);
+  letter-spacing: 0.2px;
+}
+
+.tc__collector-sub {
+  color: rgba(212, 175, 55, 0.62);
+}
+
+.tc__pt-box {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #1b161e 0%, #0b080d 100%);
+  border: 1.2px solid var(--gold-2);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 238, 170, 0.25);
+  font-family: 'Noto Serif Thai', 'Sarabun', serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #f7e6b5;
+}
+
+.tc__pt-atk {
+  color: #ffe89e;
+}
+
+.tc__pt-slash {
+  color: var(--gold-2);
   font-size: 10px;
-  font-weight: 600;
-  color: #cbb58b;
 }
 
-.tc__stat-num {
-  font-family: 'Chonburi', serif;
-  font-size: 13.5px;
-  color: #fff6db;
-  letter-spacing: 0.3px;
+.tc__pt-def {
+  color: #e6d7b8;
 }
 
-.tc__rarity-slot {
-  display: grid;
-  place-items: center;
-  padding: 0 2px;
-}
-
-.thai-gem {
-  display: block;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.75));
+.tc__pt-box--spell {
+  font-size: 9.5px;
+  color: #e8d5a5;
 }
 
 /* =========================================================
-   จอสัมผัส (มือถือ/แท็บเล็ต): ไม่มีเมาส์ให้ส่องแสง
-   จึงให้แสงฟอยล์กวาดผ่านการ์ดเองเป็นจังหวะ
+   จอสัมผัส (มือถือ/แท็บเล็ต)
    ========================================================= */
 @property --mx {
   syntax: '<percentage>';
@@ -458,6 +510,6 @@
 @media (hover: none) and (prefers-reduced-motion: reduce) {
   .tc--foil .tc__foil-glare {
     animation: none;
-    opacity: 0.35;
+    opacity: 0.3;
   }
 }

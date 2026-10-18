@@ -1,0 +1,564 @@
+/* ==========================================================================
+   ไพ่ไทย TCG — BattleTheme.css (ของทีมภาพ โหลดหลัง BattleScreen.css)
+   - พื้นสนามและกรอบช่องสไตล์กระดานลงรักปิดทองลายประจำยามไทย
+   - หลังการ์ด (.card-back / .pile--back) ลายไทยพุ่มข้าวบิณฑ์และธรรมจักรทองคำ
+   - แอนิเมชันอัญเชิญ, สังเวย, โจมตี, เปิดการ์ดคว่ำ, การ์ดสลาย และตัวเลข LP ลด
+   - ออกแบบให้ดูดีบนจอมือถือก่อน และเคารพ prefers-reduced-motion
+   ========================================================================== */
+
+.battle {
+  --gold: #d9b24c;
+  --gold-light: #fae094;
+  --panel: rgba(18, 13, 10, 0.92);
+  --panel-line: rgba(217, 178, 76, 0.34);
+  --text: #f5ebd4;
+  --text-dim: rgba(245, 235, 212, 0.68);
+  --win: #5fc782;
+  --lose: #e65b4c;
+  --tie: #e3be52;
+
+  position: relative;
+}
+
+/* ----- 1. พื้นสนามแข่งขันแบบกระดานไม้สักลงรักปิดทอง (Board Side Playmats) ----- */
+.board-side {
+  position: relative;
+  padding: 8px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(217, 178, 76, 0.28);
+  box-shadow:
+    inset 0 0 28px rgba(0, 0, 0, 0.72),
+    0 6px 18px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+/* ฝั่งผู้เล่น: โทนนิล-เขียวมรกตลงรักปิดทอง */
+.board-side--me {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(217, 178, 76, 0.1) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(22, 28, 23, 0.86) 0%, rgba(12, 10, 9, 0.94) 100%);
+}
+
+/* ฝั่งคู่ต่อสู้: โทนนิล-ชาดแดงศึกอยุธยา */
+.board-side--opp {
+  background:
+    radial-gradient(circle at 50% 62%, rgba(230, 91, 76, 0.1) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(28, 15, 15, 0.92) 0%, rgba(15, 11, 10, 0.86) 100%);
+}
+
+/* ----- 2. ช่องมอนสเตอร์และช่องเวท/กับดัก ลายแท่นยันต์ประจำยาม ----- */
+.field-row__slot {
+  position: relative;
+  border: 1px solid rgba(217, 178, 76, 0.42);
+  border-radius: 6px;
+  background-color: rgba(10, 8, 7, 0.65);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 84'%3E%3Cg fill='none' stroke='%23d9b24c' stroke-opacity='0.28' stroke-width='1.1'%3E%3Cpolygon points='30,14 46,42 30,70 14,42'/%3E%3Ccircle cx='30' cy='42' r='9'/%3E%3Cpath d='M5,11 L5,5 L11,5 M49,5 L55,5 L55,11 M5,73 L5,79 L11,79 M49,79 L55,79 L55,73' stroke-opacity='0.55' stroke-width='1.5'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.78);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.zone-slot--st {
+  border: 1px solid rgba(94, 184, 194, 0.42);
+  border-radius: 5px;
+  background-color: rgba(8, 18, 22, 0.58);
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(94, 184, 194, 0.14) 0%, transparent 70%);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.75);
+  opacity: 0.72;
+}
+
+/* ----- 3. หลังการ์ดลายไทยลงรักปิดทอง (.card-back & .pile--back) ----- */
+.card-back {
+  border-radius: 12px;
+  border: 9px solid #0e0a08;
+  outline: 2px solid #d9b24c;
+  outline-offset: -12px;
+  background-color: #260908;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280'%3E%3Cdefs%3E%3CradialGradient id='g' cx='50%25' cy='50%25' r='55%25'%3E%3Cstop offset='0%25' stop-color='%23591712'/%3E%3Cstop offset='100%25' stop-color='%231a0605'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='200' height='280' fill='url(%23g)'/%3E%3Cg fill='none' stroke='%23e5c158' stroke-width='1.8' stroke-opacity='0.82'%3E%3Crect x='14' y='14' width='172' height='252' rx='6'/%3E%3Crect x='20' y='20' width='160' height='240' rx='3' stroke-opacity='0.45' stroke-width='1'/%3E%3Cpolygon points='100,32 162,140 100,248 38,140' stroke-width='2'/%3E%3Cpolygon points='100,52 146,140 100,228 54,140' stroke-opacity='0.6'/%3E%3Ccircle cx='100' cy='140' r='34' fill='%23210806' stroke-width='2.2'/%3E%3Cpolygon points='100,108 108,132 132,140 108,148 100,172 92,148 68,140 92,132' fill='%23f5dc84'/%3E%3Ccircle cx='100' cy='140' r='7' fill='%23591712' stroke='%23fff2b2' stroke-width='1.5'/%3E%3Cpath d='M26,38 L42,26 M174,38 L158,26 M26,242 L42,254 M174,242 L158,254' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: cover;
+  background-position: center;
+  box-shadow:
+    inset 0 0 18px rgba(0, 0, 0, 0.8),
+    0 6px 14px rgba(0, 0, 0, 0.65);
+}
+
+@media (min-width: 720px) {
+  .pile--back {
+    border: 1.5px solid var(--gold);
+    background-color: #260908;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 280'%3E%3Crect width='200' height='280' fill='%23240807'/%3E%3Cg fill='none' stroke='%23e5c158' stroke-width='2.2' stroke-opacity='0.75'%3E%3Crect x='14' y='14' width='172' height='252' rx='6'/%3E%3Cpolygon points='100,36 158,140 100,244 42,140'/%3E%3Ccircle cx='100' cy='140' r='32' fill='%231c0605'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* ----- 4. แถบผู้เล่นและแถบสถานะกลางกระดาน ----- */
+.player-bar {
+  background: linear-gradient(180deg, rgba(28, 21, 15, 0.95) 0%, rgba(15, 11, 8, 0.98) 100%);
+  border: 1px solid rgba(217, 178, 76, 0.35);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 238, 175, 0.14);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.player-bar--active {
+  border-color: var(--gold-light);
+  box-shadow:
+    0 0 0 1px var(--gold),
+    0 0 18px rgba(217, 178, 76, 0.32),
+    inset 0 1px 0 rgba(255, 240, 190, 0.28);
+}
+
+.player-bar__lp-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(217, 178, 76, 0.32);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+.battle__status {
+  border-radius: 10px;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(217, 178, 76, 0.16) 0%, transparent 72%),
+    linear-gradient(180deg, rgba(26, 19, 14, 0.95) 0%, rgba(14, 10, 8, 0.98) 100%);
+  border: 1px solid rgba(217, 178, 76, 0.36);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 236, 175, 0.15);
+}
+
+.battle__phase {
+  background: rgba(217, 178, 76, 0.12);
+  border-color: rgba(217, 178, 76, 0.45);
+  color: var(--gold-light);
+  font-weight: 600;
+}
+
+/* ----- 5. แอนิเมชันบนตัวการ์ดจริง (DOM Classes ที่ BattleFx สั่งทำงาน) ----- */
+@keyframes fx-card-summon-drop {
+  0% {
+    transform: translateY(-28px) scale(1.22);
+    filter: brightness(1.85) drop-shadow(0 0 18px #fae094);
+  }
+  65% {
+    transform: translateY(3px) scale(0.97);
+    filter: brightness(1.2) drop-shadow(0 0 10px #d9b24c);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+}
+
+@keyframes fx-card-summon-grand-drop {
+  0% {
+    transform: translateY(-42px) scale(1.34);
+    filter: brightness(2.1) drop-shadow(0 0 26px #ffe680);
+  }
+  55% {
+    transform: translateY(4px) scale(0.95);
+    filter: brightness(1.35) drop-shadow(0 0 16px #ff9233);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+}
+
+@keyframes fx-card-flip-reveal {
+  0% {
+    transform: perspective(600px) rotateY(90deg) scale(1.1);
+    filter: brightness(1.85) drop-shadow(0 0 14px #fae094);
+  }
+  100% {
+    transform: perspective(600px) rotateY(0deg) scale(1);
+    filter: none;
+  }
+}
+
+@keyframes fx-card-lunge-up {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-26px) scale(1.14); filter: drop-shadow(0 0 14px #ff7b3d); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes fx-card-lunge-down {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(26px) scale(1.14); filter: drop-shadow(0 0 14px #ff7b3d); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes fx-lp-bar-shake {
+  0%, 100% { transform: translateX(0); }
+  18%      { transform: translateX(-7px); border-color: #ff6b5e; box-shadow: 0 0 18px rgba(230, 91, 76, 0.65); }
+  36%      { transform: translateX(7px); }
+  54%      { transform: translateX(-5px); }
+  72%      { transform: translateX(4px); }
+}
+
+@keyframes fx-card-activate-pulse {
+  0%   { transform: scale(1); filter: brightness(1); }
+  30%  { transform: translateY(-4px) scale(1.09); filter: brightness(1.45) drop-shadow(0 0 14px rgba(255, 224, 130, 0.95)); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes fx-card-debuff-jolt {
+  0%, 100% { transform: translateX(0); filter: brightness(1); }
+  20%      { transform: translateX(-5px) scale(0.95); filter: brightness(1.5) hue-rotate(-25deg) drop-shadow(0 0 12px #d98eff); }
+  45%      { transform: translateX(5px) scale(0.97); }
+  70%      { transform: translateX(-3px); }
+}
+
+@keyframes fx-lp-bar-heal {
+  0%, 100% { filter: brightness(1); }
+  35%      { border-color: #6fe3a1; box-shadow: 0 0 18px rgba(76, 175, 119, 0.65); }
+}
+
+.fx-dom-summon {
+  animation: fx-card-summon-drop 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 15;
+}
+
+.fx-dom-summon-grand {
+  animation: fx-card-summon-grand-drop 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 16;
+}
+
+.fx-dom-flip {
+  animation: fx-card-flip-reveal 0.58s ease-out;
+  z-index: 15;
+}
+
+.fx-dom-lunge-up {
+  animation: fx-card-lunge-up 0.55s ease-out;
+  z-index: 18;
+}
+
+.fx-dom-lunge-down {
+  animation: fx-card-lunge-down 0.55s ease-out;
+  z-index: 18;
+}
+
+.fx-dom-activate {
+  animation: fx-card-activate-pulse 0.68s ease-out;
+  z-index: 17;
+}
+
+.fx-dom-debuff {
+  animation: fx-card-debuff-jolt 0.65s ease-out;
+  z-index: 17;
+}
+
+.fx-dom-lp-shake {
+  animation: fx-lp-bar-shake 0.62s ease-out;
+}
+
+.fx-dom-lp-heal {
+  animation: fx-lp-bar-heal 0.72s ease-out;
+}
+
+/* ----- 6. ชั้นเอฟเฟกต์ซ้อนทับ (BattleFx Overlay Layer) ----- */
+.battle-fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.fx-item {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+
+/* 6.1 วงแหวนยันต์อัญเชิญ / คาถา / พิธีกรรม */
+.fx-yantra-ring {
+  width: 86px;
+  height: 86px;
+  color: var(--fx-color, #fae094);
+  filter: drop-shadow(0 0 8px var(--fx-color, #d9b24c));
+  animation: fx-yantra-burst 0.95s ease-out forwards;
+}
+
+.fx-item--summon-grand .fx-yantra-ring,
+.fx-item--ritual-summon .fx-yantra-ring {
+  width: 118px;
+  height: 118px;
+  color: #ffe680;
+  filter: drop-shadow(0 0 14px #ff9233);
+}
+
+.fx-item--field-spell .fx-yantra-ring {
+  width: 96px;
+  height: 96px;
+  color: #6fe3a1;
+  filter: drop-shadow(0 0 12px #2da866);
+}
+
+.fx-item--set-card .fx-yantra-ring,
+.fx-item--set-trap .fx-yantra-ring {
+  width: 72px;
+  height: 72px;
+  color: #c28ef2;
+}
+
+.fx-item--activate .fx-yantra-ring,
+.fx-item--trap-trigger .fx-yantra-ring {
+  width: 92px;
+  height: 92px;
+}
+
+@keyframes fx-yantra-burst {
+  0% {
+    transform: scale(0.35) rotate(-45deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.38) rotate(35deg);
+    opacity: 0;
+  }
+}
+
+/* 6.2 ดวงไฟสังเวย */
+.fx-wisp {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3b8 0%, #ff7b3d 55%, transparent 72%);
+  animation: fx-wisp-rise 0.85s ease-out forwards;
+}
+
+@keyframes fx-wisp-rise {
+  0%   { transform: translateY(6px) scale(0.6); opacity: 0.95; }
+  100% { transform: translateY(-34px) scale(1.4); opacity: 0; }
+}
+
+/* 6.3 แสงเปิดการ์ดคว่ำ */
+.fx-reveal-burst {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 2px solid #fae094;
+  box-shadow: 0 0 18px #fae094, inset 0 0 12px #fae094;
+  animation: fx-reveal-ring 0.8s ease-out forwards;
+}
+
+@keyframes fx-reveal-ring {
+  0%   { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+/* 6.4 คมดาบฟาดโจมตี / สายฟ้าคำสาปลดพลัง / โล่ปัดป้องกับดัก */
+.fx-slash-svg {
+  width: 92px;
+  height: 92px;
+  filter: drop-shadow(0 0 10px #ff5722);
+  animation: fx-slash-strike 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.fx-bolt-svg {
+  width: 84px;
+  height: 84px;
+  filter: drop-shadow(0 0 10px #c97bff);
+  animation: fx-slash-strike 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.fx-shield-svg {
+  width: 88px;
+  height: 88px;
+  filter: drop-shadow(0 0 12px #fae094);
+  animation: fx-shield-guard 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fx-slash-strike {
+  0%   { transform: scale(0.3) rotate(-18deg); opacity: 0; }
+  30%  { transform: scale(1.12) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.28) rotate(6deg); opacity: 0; }
+}
+
+@keyframes fx-shield-guard {
+  0%   { transform: scale(0.4); opacity: 0; }
+  28%  { transform: scale(1.14); opacity: 1; }
+  75%  { transform: scale(1.02); opacity: 0.95; }
+  100% { transform: scale(1.22); opacity: 0; }
+}
+
+/* 6.5 การ์ดแตกสลายเมื่อถูกทำลาย */
+.fx-shatter-ring {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 210, 120, 0.85) 0%, rgba(230, 91, 76, 0.65) 45%, transparent 72%);
+  animation: fx-shatter-boom 0.85s ease-out forwards;
+}
+
+.fx-shard {
+  position: absolute;
+  width: 10px;
+  height: 14px;
+  background: linear-gradient(135deg, #fae094, #c8493d);
+  clip-path: polygon(50% 0%, 100% 60%, 35% 100%, 0% 40%);
+}
+
+.fx-shard--1 { animation: fx-shard-1 0.8s ease-out forwards; }
+.fx-shard--2 { animation: fx-shard-2 0.8s ease-out forwards; }
+.fx-shard--3 { animation: fx-shard-3 0.8s ease-out forwards; }
+.fx-shard--4 { animation: fx-shard-4 0.8s ease-out forwards; }
+
+@keyframes fx-shatter-boom {
+  0%   { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes fx-shard-1 {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-32px, -28px) rotate(-110deg); opacity: 0; }
+}
+@keyframes fx-shard-2 {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(34px, -24px) rotate(95deg); opacity: 0; }
+}
+@keyframes fx-shard-3 {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-28px, 30px) rotate(-80deg); opacity: 0; }
+}
+@keyframes fx-shard-4 {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(30px, 28px) rotate(120deg); opacity: 0; }
+}
+
+/* 6.6 ป้ายข้อความกำกับเอฟเฟกต์ขนาดกะทัดรัด (อ่านง่ายบนจอมือถือ) */
+.fx-tag {
+  position: absolute;
+  top: 100%;
+  margin-top: 2px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(12, 9, 7, 0.92);
+  border: 1px solid var(--gold);
+  color: var(--gold-light);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+  animation: fx-tag-float 1.05s ease-out forwards;
+}
+
+.fx-tag--destroy,
+.fx-tag--direct {
+  border-color: #ff8a7a;
+  color: #ffd4ce;
+  background: rgba(48, 12, 10, 0.94);
+}
+
+.fx-tag--debuff {
+  border-color: #d98eff;
+  color: #f3dbff;
+  background: rgba(38, 12, 54, 0.94);
+}
+
+.fx-tag--shield {
+  border-color: #7ee8fa;
+  color: #e6fbff;
+  background: rgba(10, 36, 48, 0.94);
+}
+
+@keyframes fx-tag-float {
+  0%   { transform: translateY(4px) scale(0.85); opacity: 0; }
+  18%  { transform: translateY(0) scale(1); opacity: 1; }
+  80%  { transform: translateY(-6px) scale(1); opacity: 1; }
+  100% { transform: translateY(-12px) scale(0.95); opacity: 0; }
+}
+
+/* 6.7 ตัวเลขความเสียหาย LP และตัวเลขฟื้นฟู LP ลอยเด่น */
+.fx-damage-num,
+.fx-heal-num {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: 'Chonburi', 'Noto Serif Thai', serif;
+  font-size: 16px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #000;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  animation: fx-damage-pop 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.fx-damage-num {
+  background: linear-gradient(180deg, rgba(168, 28, 20, 0.96) 0%, rgba(92, 12, 8, 0.98) 100%);
+  border: 1.5px solid #ffd27d;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.85),
+    0 0 14px rgba(230, 91, 76, 0.75);
+  color: #fff6db;
+}
+
+.fx-heal-num {
+  background: linear-gradient(180deg, rgba(22, 118, 66, 0.96) 0%, rgba(10, 64, 34, 0.98) 100%);
+  border: 1.5px solid #a8f5c8;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.85),
+    0 0 14px rgba(76, 175, 119, 0.75);
+  color: #ebfff3;
+}
+
+@keyframes fx-damage-pop {
+  0%   { transform: translateY(8px) scale(0.55); opacity: 0; }
+  22%  { transform: translateY(-6px) scale(1.18); opacity: 1; }
+  40%  { transform: translateY(-10px) scale(1); opacity: 1; }
+  82%  { transform: translateY(-20px) scale(1); opacity: 1; }
+  100% { transform: translateY(-28px) scale(0.92); opacity: 0; }
+}
+
+/* =========================================================
+   เคารพ prefers-reduced-motion: ปิดการเคลื่อนไหว/สั่นสะเทือนทั้งหมด
+   เหลือเพียงป้ายสถานะที่แสดงขึ้นและจางหายอย่างนุ่มนวล
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .fx-dom-summon,
+  .fx-dom-summon-grand,
+  .fx-dom-flip,
+  .fx-dom-lunge-up,
+  .fx-dom-lunge-down,
+  .fx-dom-activate,
+  .fx-dom-debuff,
+  .fx-dom-lp-shake,
+  .fx-dom-lp-heal,
+  .player-bar__lp-num,
+  .mini-card--target {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .fx-yantra-ring,
+  .fx-wisp,
+  .fx-reveal-burst,
+  .fx-slash-svg,
+  .fx-bolt-svg,
+  .fx-shield-svg,
+  .fx-shatter-ring,
+  .fx-shard {
+    display: none !important;
+  }
+
+  .fx-tag,
+  .fx-damage-num,
+  .fx-heal-num {
+    animation: none !important;
+    transform: none !important;
+  }
+}
