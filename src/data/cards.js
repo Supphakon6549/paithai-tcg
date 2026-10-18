@@ -1,9 +1,10 @@
 import cardsData from './cards.json'
 import celestialCards from './celestial-cards.json'
+import asuraCards from './asura-cards.json'
 import { ELEMENTS, ELEMENT_ADVANTAGE_BONUS } from './elements'
 import { TRIBES, TRIBE_ADVANTAGE_BONUS } from './tribes'
 
-export const CARDS = [...cardsData, ...celestialCards]
+export const CARDS = [...cardsData, ...celestialCards, ...asuraCards]
 
 export const CARD_TYPES = {
   monster: { id: 'monster', symbol: '⚔️', name: 'มอนสเตอร์', nameEn: 'Monster' },
@@ -21,6 +22,7 @@ export const SUMMON_TYPES = {
 }
 
 export const CARD_GROUPS = {
+  'asura-war': { id: 'asura-war', name: 'อสูรสงคราม', icon: '👹' },
   'celestial-court': { id: 'celestial-court', name: 'เทวาแห่งฟ้า', icon: '⚡' },
   all: { id: 'all', name: 'ทั้งหมด', icon: '🃏' },
   'warrior-beast': { id: 'warrior-beast', name: 'สายทหารหาญ & สัตว์ศึก', icon: '⚔️' },
