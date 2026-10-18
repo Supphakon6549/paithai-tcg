@@ -159,9 +159,10 @@ describe('พญาครุฑเวนไตย: ทำลายเผ่า�
     expect(after.players.player.field[0]).toBeNull()
     expect(after.players.ai.field[0]).toBeNull()
     expect(after.players.player.lp).toBe(8000 - 100)
-    expect(lastLog(after).details.at(-1)).toBe(
-      'พญาครุฑเวนไตยทำลายเผ่าสัตว์เลื้อยคลานหลังการต่อสู้: พญานาคานอนบาดาล ถูกทำลาย'
-    )
+    const battle = after.log.findLast((e) => e.kind === 'battle')
+    expect(battle.details.at(-1)).toBe('พญาครุฑเวนไตยทำลายเผ่าสัตว์เลื้อยคลานหลังการต่อสู้: พญานาคานอนบาดาล ถูกทำลาย')
+    // พญานาคตกสุสาน → AI (เจ้าของ) ถูกถามว่าจะคืนชีพไหม
+    expect(after.pendingChoice).toMatchObject({ player: AI, kind: 'revive' })
   })
 
   it('ทำงานตอนครุฑเป็นฝ่ายถูกโจมตีด้วย', () => {

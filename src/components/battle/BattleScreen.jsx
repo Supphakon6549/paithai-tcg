@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import MonsterCard from '../cards/MonsterCard'
-import { FieldActionSheet, HandActionSheet } from './ActionSheets'
+import { FieldActionSheet, HandActionSheet, TrapActionSheet } from './ActionSheets'
 import BattleLog from './BattleLog'
 import BoardSide, { PileViewer } from './BoardSide'
 import MiniCard from './MiniCard'
@@ -19,14 +19,26 @@ import {
   currentActor,
   evolveBlocker,
   formatNumber,
+  fusionMaterialPool,
+  fusionProblem,
   getActivated,
+  getActivationTargets,
   getAiAction,
+  getContinuousTrap,
+  getEquip,
+  getEquipTargets,
   getEvolve,
   getEvolveSources,
   getFieldAtk,
+  getFusionMaterials,
+  getFusionSpell,
+  getFusionTargets,
   getHandOverflow,
   getReadyAttackers,
+  getReviveSpell,
+  getReviveTargets,
   getRitualInfo,
+  getSpecialSummon,
   getSummonableHand,
   getTributeCost,
   handCardBlocker,
@@ -35,6 +47,8 @@ import {
   previewBattle,
   ritualTributePool,
   ritualTributeProblem,
+  specialSummonBlocker,
+  trapActivationBlocker,
   tributesRequired,
 } from '../../engine'
 import './BattleScreen.css'
@@ -68,8 +82,6 @@ const OUTCOME_BADGE = {
   tie: { tone: 'tie', label: 'เสมอ' },
 }
 
-const TRIBUTE_BADGE = { tone: 'lose', text: 'สังเวย' }
-
 const toggle = (list, uid, max = Infinity) =>
   list.includes(uid) ? list.filter((u) => u !== uid) : list.length < max ? [...list, uid] : list
 
@@ -84,7 +96,11 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   const [attackerUid, setAttackerUid] = useState(null)
   const [tributePick, setTributePick] = useState(null) // อัญเชิญสังเวย { handUid, selected, position }
   const [ritualPick, setRitualPick] = useState(null) // พิธีกรรม { ritualUid, selected }
-  const [effectPick, setEffectPick] = useState(null) // ความสามารถที่ต้องเลือก { uid, discardUid }
+  const [effectPick, setEffectPick] = useState(null) // ความสามารถที่ต้องเลือก { uid, kind, discardUid }
+  const [fusionPick, setFusionPick] = useState(null) // ผสานร่าง { spellUid, targetUid, selected }
+  const [revivePick, setRevivePick] = useState(null) // เวทคืนชีพ: uid ของเวท
+  const [equipPick, setEquipPick] = useState(null) // เวทสวมใส่: uid ของเวท
+  const [selectedTrapUid, setSelectedTrapUid] = useState(null) // กับดักคว่ำของเราที่เปิดเมนู
   const [inspectCard, setInspectCard] = useState(null)
   const [openPile, setOpenPile] = useState(null) // { playerId, kind }
   const [error, setError] = useState(initial.deckError)
@@ -92,8 +108,10 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   const me = game.players[PLAYER]
   const opp = game.players[AI]
   const pending = game.pendingResponse
-  const mustRespond = pending?.responder === PLAYER && !game.winner
-  const isMyTurn = game.activePlayer === PLAYER && !game.winner && !pending
+  const choice = game.pendingChoice
+  const mustChoose = choice?.player === PLAYER && !game.winner
+  const mustRespond = !choice && pending?.responder === PLAYER && !game.winner
+  const isMyTurn = game.activePlayer === PLAYER && !game.winner && !pending && !choice
 
   const summonable = new Set(getSummonableHand(game, PLAYER).map((c) => c.uid))
   const readyAttackers = new Set(getReadyAttackers(game, PLAYER).map((m) => m.uid))
@@ -110,7 +128,27 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   const ritual = ritualInst ? getRitualInfo(cardOf(ritualInst)) : null
   const ritualPool = new Set(ritual ? ritualTributePool(game, PLAYER, ritualInst.uid).map((c) => c.uid) : [])
   const ritualProblem = ritual ? ritualTributeProblem(game, PLAYER, ritualInst.uid, ritualPick.selected) : null
-  const isTributeSelected = (uid) => Boolean(tributePick?.selected.includes(uid) || ritualPick?.selected.includes(uid))
+  const fusionTargets = fusionPick ? getFusionTargets(game, PLAYER, fusionPick.spellUid) : []
+  const fusionTargetInst = fusionPick?.targetUid ? me.extraDeck.find((c) => c.uid === fusionPick.targetUid) : null
+  const fusionPool = new Set(
+    fusionPick ? fusionMaterialPool(game, PLAYER).map((c) => c.uid).filter((uid) => uid !== fusionPick.spellUid) : []
+  )
+  const fusionIssue =
+    fusionTargetInst && fusionProblem(game, PLAYER, fusionPick.spellUid, fusionPick.targetUid, fusionPick.selected)
+  const isTributeSelected = (uid) =>
+    Boolean(tributePick?.selected.includes(uid) || ritualPick?.selected.includes(uid) || fusionPick?.selected.includes(uid))
+  const materialBadge = { tone: 'lose', text: fusionPick ? 'วัตถุดิบ' : 'สังเวย' }
+  // ความสามารถที่ต้องเลือกเป้า: ขั้นทิ้งการ์ด (debuff) / ขั้นเลือกเป้า
+  const pickingDiscard = effectPick?.kind === 'debuff' && !effectPick.discardUid
+  const pickingTarget = Boolean(effectPick) && !pickingDiscard
+  const activationTargets = new Set(
+    pickingTarget ? getActivationTargets(game, PLAYER, effectPick.uid).map((m) => m.uid) : []
+  )
+  const reviveInst = revivePick ? me.hand.find((c) => c.uid === revivePick) : null
+  const reviveTargets = reviveInst ? getReviveTargets(game, PLAYER, cardOf(reviveInst)) : []
+  const equipInst = equipPick ? me.hand.find((c) => c.uid === equipPick) : null
+  const equipTargets = new Set(equipInst ? getEquipTargets(game, PLAYER, cardOf(equipInst)).map((m) => m.uid) : [])
+  const selectedTrap = me.spellTrap.find((t) => t?.uid === selectedTrapUid) ?? null
 
   function clearSelections() {
     setSelectedHandUid(null)
@@ -119,6 +157,10 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
     setTributePick(null)
     setRitualPick(null)
     setEffectPick(null)
+    setFusionPick(null)
+    setRevivePick(null)
+    setEquipPick(null)
+    setSelectedTrapUid(null)
   }
 
   // ทำแอ็กชันของผู้เล่น — ผิดกติกาจะแสดงข้อความแทน
@@ -151,23 +193,37 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
 
   // ---------- การแตะการ์ด ----------
   function onHandCardTap(inst) {
+    if (revivePick || equipPick) return
     if (ritualPick) {
       if (ritualPool.has(inst.uid)) {
         setRitualPick((r) => ({ ...r, selected: toggle(r.selected, inst.uid) }))
       }
       return
     }
-    if (effectPick && !effectPick.discardUid) {
+    if (fusionPick) {
+      if (fusionPick.targetUid && fusionPool.has(inst.uid)) {
+        setFusionPick((f) => ({ ...f, selected: toggle(f.selected, inst.uid, 2) }))
+      }
+      return
+    }
+    if (pickingDiscard) {
       setEffectPick((e) => ({ ...e, discardUid: inst.uid }))
       return
     }
     setAttackerUid(null)
     setTributePick(null)
     setSelectedFieldUid(null)
+    setSelectedTrapUid(null)
     setSelectedHandUid((uid) => (uid === inst.uid ? null : inst.uid))
   }
 
   function onMyMonsterTap(monster) {
+    if (equipPick) {
+      if (equipTargets.has(monster.uid)) play({ type: 'playSpell', uid: equipPick, targetUid: monster.uid })
+      else setError('สวมใส่ได้เฉพาะมอนสเตอร์หงายหน้าที่ตรงเงื่อนไข (ขอบเรืองแสง)')
+      return
+    }
+    if (revivePick) return
     if (ritualPick) {
       setRitualPick((r) => ({ ...r, selected: toggle(r.selected, monster.uid) }))
       return
@@ -176,8 +232,13 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
       setTributePick((t) => ({ ...t, selected: toggle(t.selected, monster.uid, tributeNeeded) }))
       return
     }
+    if (fusionPick) {
+      if (fusionPick.targetUid) setFusionPick((f) => ({ ...f, selected: toggle(f.selected, monster.uid, 2) }))
+      return
+    }
     if (effectPick) return
     setSelectedHandUid(null)
+    setSelectedTrapUid(null)
     if (game.phase === 'battle') {
       if (readyAttackers.has(monster.uid)) {
         setAttackerUid((uid) => (uid === monster.uid ? null : monster.uid))
@@ -191,12 +252,12 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   }
 
   function onOpponentMonsterTap(monster) {
-    if (effectPick?.discardUid) {
-      if (monster.faceDown) {
-        setError('เลือกได้เฉพาะมอนสเตอร์ที่หงายหน้า')
+    if (pickingTarget) {
+      if (!activationTargets.has(monster.uid)) {
+        setError('เลือกได้เฉพาะมอนสเตอร์ที่มีขอบเรืองแสง')
         return
       }
-      play({ type: 'activate', uid: effectPick.uid, discardUid: effectPick.discardUid, targetUid: monster.uid })
+      play({ type: 'activate', uid: effectPick.uid, discardUid: effectPick.discardUid ?? undefined, targetUid: monster.uid })
     } else if (attacker) {
       play({ type: 'attack', attackerUid: attacker.uid, targetUid: monster.uid })
     } else if (monster.faceDown) {
@@ -222,6 +283,19 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
       setSelectedHandUid(null)
       setRitualPick({ ritualUid: inst.uid, selected: [] })
       setError(null)
+    } else if (getFusionSpell(card)) {
+      const targets = getFusionTargets(game, PLAYER, inst.uid)
+      setSelectedHandUid(null)
+      setFusionPick({ spellUid: inst.uid, targetUid: targets.length === 1 ? targets[0].uid : null, selected: [] })
+      setError(null)
+    } else if (getReviveSpell(card)) {
+      setSelectedHandUid(null)
+      setRevivePick(inst.uid)
+      setError(null)
+    } else if (getEquip(card)) {
+      setSelectedHandUid(null)
+      setEquipPick(inst.uid)
+      setError(null)
     } else if (card.type === 'trap') {
       play({ type: 'setTrap', uid: inst.uid })
     } else {
@@ -230,9 +304,10 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   }
 
   function activateEffectOf(monster) {
-    if (getActivated(cardOf(monster)).kind === 'debuff') {
+    const kind = getActivated(cardOf(monster)).kind
+    if (kind === 'debuff' || kind === 'destroyWeaker' || kind === 'lockAttack') {
       setSelectedFieldUid(null)
-      setEffectPick({ uid: monster.uid, discardUid: null })
+      setEffectPick({ uid: monster.uid, kind, discardUid: null })
       setError(null)
     } else {
       play({ type: 'activate', uid: monster.uid })
@@ -243,7 +318,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   function summonReason(card, inst) {
     if (summonable.has(inst.uid)) return null
     if (tributesRequired(card) === 0 && !isNormalSummonable(card)) {
-      return card.summonType === 'ritual' ? 'ต้องอัญเชิญด้วยการ์ดพิธีกรรม' : 'ต้องอัญเชิญผสานร่าง (ยังไม่เปิดในขั้นนี้)'
+      return card.summonType === 'ritual' ? 'ต้องอัญเชิญด้วยการ์ดพิธีกรรม' : 'ต้องอัญเชิญด้วยคาถาผสานร่าง'
     }
     if (!isMyTurn) return 'ยังไม่ถึงตาของคุณ'
     if (game.phase !== 'main1' && game.phase !== 'main2') return 'อัญเชิญได้ในเฟสหลักเท่านั้น'
@@ -272,9 +347,11 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   if (game.winner) hint = 'เกมจบแล้ว'
   else if (mustRespond) {
     const atk = cardOf(opp.field.find((m) => m?.uid === pending.attackerUid))
-    const target = cardOf(me.field.find((m) => m?.uid === pending.targetUid))
-    hint = `${atk.name} ของคู่ต่อสู้ประกาศโจมตี ${target.name} — จะเปิดกับดักไหม?`
-  } else if (!isMyTurn) hint = `${PLAYER_NAMES[AI]}กำลังเล่น…`
+    const target = pending.targetUid ? cardOf(me.field.find((m) => m?.uid === pending.targetUid)).name : 'คุณโดยตรง'
+    hint = `${atk.name} ของคู่ต่อสู้ประกาศโจมตี ${target} — จะตอบโต้ไหม?`
+  } else if (mustChoose) hint = choice.prompt
+  else if (choice) hint = `${PLAYER_NAMES[choice.player]}กำลังตัดสินใจ…`
+  else if (!isMyTurn) hint = `${PLAYER_NAMES[AI]}กำลังเล่น…`
   else if (ritual) {
     const target = cardOf({ cardId: ritual.target })
     const total = ritualPick.selected.reduce((sum, uid) => {
@@ -282,8 +359,24 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
       return sum + cardOf(inst).level
     }, 0)
     hint = `เลือกเครื่องสังเวยจากมือ/สนามให้ ${target.name}: ระดับรวม ${total}/${ritual.requiredLevel}`
+  } else if (fusionPick) {
+    if (!fusionTargetInst) hint = 'เลือกมอนสเตอร์ผสานร่างจากกองพิเศษ'
+    else {
+      const recipe = getFusionMaterials(cardOf(fusionTargetInst)).map((m) => m.label).join(' + ')
+      hint = `เลือกวัตถุดิบจากมือ/สนาม (${fusionPick.selected.length}/2): ${recipe}`
+    }
+  } else if (revivePick) {
+    hint = reviveTargets.length ? 'เลือกมอนสเตอร์ในสุสานที่จะคืนชีพ (ท่าโจมตี)' : 'ไม่มีมอนสเตอร์ในสุสานที่คืนชีพได้'
+  } else if (equipPick) {
+    hint = `แตะมอนสเตอร์ของคุณที่จะสวม ${cardOf(equipInst).name}`
   } else if (effectPick) {
-    hint = effectPick.discardUid ? 'แตะมอนสเตอร์หงายหน้าของคู่ต่อสู้ที่จะลด ATK' : 'แตะการ์ดในมือที่จะทิ้ง 1 ใบ'
+    hint = pickingDiscard
+      ? 'แตะการ์ดในมือที่จะทิ้ง 1 ใบ'
+      : effectPick.kind === 'destroyWeaker'
+      ? 'แตะมอนสเตอร์ศัตรูหงายหน้าที่ ATK ต่ำกว่า เพื่อทำลาย'
+      : effectPick.kind === 'lockAttack'
+      ? 'แตะมอนสเตอร์ศัตรูเผ่าอสูร/วิญญาณ ที่จะห้ามโจมตีเทิร์นหน้า'
+      : 'แตะมอนสเตอร์หงายหน้าของคู่ต่อสู้ที่จะลด ATK'
   } else if (tributeCard) {
     hint = `แตะมอนสเตอร์ของคุณที่จะสังเวยให้ ${tributeCard.name} (${tributePick.selected.length}/${tributeNeeded})`
   } else if (game.phase === 'discard') {
@@ -304,17 +397,25 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
 
   // ---------- ปุ่มกลางกระดาน ----------
   let actions = null
-  if (mustRespond) {
+  if (mustChoose) {
+    actions = choice.options.map((o) => (
+      <button
+        key={o.id}
+        type="button"
+        className={o.id === 'skip' ? 'btn' : 'btn btn--primary'}
+        onClick={() => play({ type: 'choose', optionId: o.id })}
+      >
+        {o.label}
+      </button>
+    ))
+  } else if (mustRespond) {
     actions = (
       <>
-        {pending.trapUids.map((trapUid) => {
-          const trap = me.spellTrap.find((t) => t?.uid === trapUid)
-          return (
-            <button key={trapUid} type="button" className="btn btn--danger" onClick={() => play({ type: 'respond', trapUid })}>
-              🪤 เปิด {cardOf(trap).name}
-            </button>
-          )
-        })}
+        {pending.options.map((o) => (
+          <button key={o.id} type="button" className="btn btn--danger" onClick={() => play({ type: 'respond', trapUid: o.id })}>
+            {o.label}
+          </button>
+        ))}
         <button type="button" className="btn" onClick={() => play({ type: 'respond', trapUid: null })}>
           ไม่เปิด
         </button>
@@ -336,6 +437,72 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
           ยกเลิก
         </button>
       </>
+    )
+  } else if (isMyTurn && fusionPick) {
+    actions = (
+      <>
+        {!fusionTargetInst &&
+          fusionTargets.map((t) => (
+            <button
+              key={t.uid}
+              type="button"
+              className="btn btn--primary"
+              onClick={() => setFusionPick((f) => ({ ...f, targetUid: t.uid, selected: [] }))}
+            >
+              🌀 {cardOf(t).name} · ATK {formatNumber(cardOf(t).atk)}
+            </button>
+          ))}
+        {fusionTargetInst && (
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={Boolean(fusionIssue)}
+            title={fusionIssue || undefined}
+            onClick={() =>
+              play({
+                type: 'playSpell',
+                uid: fusionPick.spellUid,
+                fusionTarget: fusionPick.targetUid,
+                tributes: fusionPick.selected,
+              })
+            }
+          >
+            🌀 ผสานเป็น {cardOf(fusionTargetInst).name}
+          </button>
+        )}
+        {fusionTargetInst && fusionTargets.length > 1 && (
+          <button type="button" className="btn" onClick={() => setFusionPick((f) => ({ ...f, targetUid: null, selected: [] }))}>
+            เปลี่ยนร่างผสาน
+          </button>
+        )}
+        <button type="button" className="btn" onClick={() => setFusionPick(null)}>
+          ยกเลิก
+        </button>
+      </>
+    )
+  } else if (isMyTurn && revivePick) {
+    actions = (
+      <>
+        {reviveTargets.map((t) => (
+          <button
+            key={t.uid}
+            type="button"
+            className="btn btn--primary"
+            onClick={() => play({ type: 'playSpell', uid: revivePick, targetUid: t.uid })}
+          >
+            💧 {cardOf(t).name} · ATK {formatNumber(cardOf(t).atk)}
+          </button>
+        ))}
+        <button type="button" className="btn" onClick={() => setRevivePick(null)}>
+          ยกเลิก
+        </button>
+      </>
+    )
+  } else if (isMyTurn && equipPick) {
+    actions = (
+      <button type="button" className="btn" onClick={() => setEquipPick(null)}>
+        ยกเลิก
+      </button>
     )
   } else if (isMyTurn && effectPick) {
     actions = (
@@ -425,8 +592,15 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
             atkOf={(m) => getFieldAtk(game, AI, m.uid)}
             xpOf={xpOf(AI)}
             hideFaceDown
-            renderBadge={targetBadge}
-            classFor={(m) => (attacker || (effectPick?.discardUid && !m.faceDown) ? 'mini-card--target' : '')}
+            renderBadge={(m) =>
+              targetBadge(m) ?? (m.cannotAttackTurn >= game.turn ? { tone: 'lose', text: 'ห้ามโจมตี' } : null)
+            }
+            classFor={(m) =>
+              attacker ||
+              (pickingTarget && activationTargets.has(m.uid))
+                ? 'mini-card--target'
+                : ''
+            }
             onTap={onOpponentMonsterTap}
           />
         }
@@ -451,6 +625,13 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
 
       <BoardSide
         player={me}
+        onSpellTrapTap={(t) => {
+          if (t.faceDown && getContinuousTrap(cardOf(t)) && isMyTurn) {
+            setSelectedHandUid(null)
+            setSelectedFieldUid(null)
+            setSelectedTrapUid((uid) => (uid === t.uid ? null : t.uid))
+          } else setInspectCard(cardOf(t))
+        }}
         onOpenPile={(playerId, kind) => setOpenPile({ playerId, kind })}
         onInspect={setInspectCard}
         monsterRow={
@@ -459,12 +640,23 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
             field={me.field}
             atkOf={(m) => getFieldAtk(game, PLAYER, m.uid)}
             xpOf={xpOf(PLAYER)}
-            renderBadge={(m) => (isTributeSelected(m.uid) ? TRIBUTE_BADGE : null)}
+            renderBadge={(m) =>
+              isTributeSelected(m.uid)
+                ? materialBadge
+                : m.cannotAttackTurn >= game.turn
+                ? { tone: 'lose', text: 'ห้ามโจมตี' }
+                : null
+            }
             classFor={(m) =>
               [
                 (m.uid === attackerUid || m.uid === selectedFieldUid) && 'mini-card--selected',
                 isTributeSelected(m.uid) && 'mini-card--tribute',
-                (tributePick || ritualPick || readyAttackers.has(m.uid)) && 'mini-card--ready',
+                (tributePick ||
+                  ritualPick ||
+                  (fusionTargetInst && fusionPool.has(m.uid)) ||
+                  equipTargets.has(m.uid) ||
+                  readyAttackers.has(m.uid)) &&
+                  'mini-card--ready',
                 m.hasAttacked && !readyAttackers.has(m.uid) && 'mini-card--spent',
               ]
                 .filter(Boolean)
@@ -505,6 +697,15 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
             onClose={() => setSelectedFieldUid(null)}
           />
         )}
+        {selectedTrap && (
+          <TrapActionSheet
+            card={cardOf(selectedTrap)}
+            blocker={trapActivationBlocker(game, PLAYER, selectedTrap.uid)}
+            onActivate={() => play({ type: 'activateTrap', uid: selectedTrap.uid })}
+            onInspect={() => setInspectCard(cardOf(selectedTrap))}
+            onClose={() => setSelectedTrapUid(null)}
+          />
+        )}
         {selectedHand && (
           <HandActionSheet
             card={cardOf(selectedHand)}
@@ -515,6 +716,13 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
             blocker={cardOf(selectedHand).type === 'monster' ? null : handCardBlocker(game, PLAYER, selectedHand.uid)}
             onSummon={(position) => startSummon(selectedHand, position)}
             onPlay={() => playNonMonster(selectedHand)}
+            special={
+              getSpecialSummon(cardOf(selectedHand)) && {
+                label: getSpecialSummon(cardOf(selectedHand)).label,
+                blocker: specialSummonBlocker(game, PLAYER, selectedHand.uid),
+                onUse: () => play({ type: 'specialSummon', uid: selectedHand.uid }),
+              }
+            }
             onDiscard={() => play({ type: 'discard', uid: selectedHand.uid })}
             onInspect={() => setInspectCard(cardOf(selectedHand))}
             onClose={() => setSelectedHandUid(null)}
@@ -523,14 +731,18 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
         <div className="hand__row">
           {me.hand.map((inst) => {
             const card = cardOf(inst)
-            const picking = ritualPick || effectPick
+            const picking = ritualPick || effectPick || fusionPick || revivePick || equipPick
             const cls = [
               'mini-card--hand',
-              [selectedHandUid, tributePick?.handUid, ritualPick?.ritualUid].includes(inst.uid) && 'mini-card--selected',
+              [selectedHandUid, tributePick?.handUid, ritualPick?.ritualUid, fusionPick?.spellUid, revivePick, equipPick].includes(
+                inst.uid
+              ) &&
+                'mini-card--selected',
               isTributeSelected(inst.uid) && 'mini-card--tribute',
               !picking && summonable.has(inst.uid) && 'mini-card--ready',
               ritualPick && ritualPool.has(inst.uid) && 'mini-card--ready',
-              ((game.phase === 'discard' && isMyTurn) || (effectPick && !effectPick.discardUid)) && 'mini-card--discardable',
+              fusionTargetInst && fusionPool.has(inst.uid) && 'mini-card--ready',
+              ((game.phase === 'discard' && isMyTurn) || pickingDiscard) && 'mini-card--discardable',
             ]
               .filter(Boolean)
               .join(' ')
@@ -540,7 +752,13 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
                 uid={inst.uid}
                 card={card}
                 className={cls}
-                badge={isTributeSelected(inst.uid) ? TRIBUTE_BADGE : effectPick?.discardUid === inst.uid ? { tone: 'lose', text: 'ทิ้ง' } : null}
+                badge={
+                  isTributeSelected(inst.uid)
+                    ? materialBadge
+                    : effectPick?.discardUid === inst.uid
+                    ? { tone: 'lose', text: 'ทิ้ง' }
+                    : null
+                }
                 onClick={() => onHandCardTap(inst)}
               />
             )

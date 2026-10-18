@@ -10,6 +10,7 @@ import {
   handCardBlocker,
   ritualTributeProblem,
 } from './game'
+import { CARD_EFFECTS } from './effects'
 import { AI, PLAYER } from './rules'
 import { handUid, lastLog, makeState, uidAt } from './testUtils'
 
@@ -269,8 +270,15 @@ describe('TH05-008 ม่านอาสนีพิทักษ์ (กับ�
   })
 
   it('การ์ดเวท/กับดักที่ยังไม่รองรับ ใช้ไม่ได้', () => {
-    const s = makeState({ player: { hand: ['th01-013'] } })
-    expect(handCardBlocker(s, PLAYER, handUid(s, PLAYER, 0))).toBe('การ์ดใบนี้ยังใช้ไม่ได้ในเกมขั้นนี้')
+    // จำลองการ์ดที่ยังไม่มีเอฟเฟกต์ในเกม ด้วยการถอดเอฟเฟกต์ออกชั่วคราว
+    const saved = CARD_EFFECTS['th01-014']
+    delete CARD_EFFECTS['th01-014']
+    try {
+      const s = makeState({ player: { hand: ['th01-014'] } })
+      expect(handCardBlocker(s, PLAYER, handUid(s, PLAYER, 0))).toBe('การ์ดใบนี้ยังใช้ไม่ได้ในเกมขั้นนี้')
+    } finally {
+      CARD_EFFECTS['th01-014'] = saved
+    }
   })
 })
 

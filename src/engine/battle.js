@@ -1,6 +1,6 @@
 import { getCardMatchupInfo } from '../data/cards'
 import { ELEMENTS } from '../data/elements'
-import { getAtkBoosts, hasAmbush } from './effects'
+import { getAtkBoosts, getDefBoosts, getEquipElements, hasAmbush } from './effects'
 import { formatNumber } from './rules'
 
 /**
@@ -38,8 +38,13 @@ export function getAdvantageBonuses(card, opponent) {
 // stat: 'atk' (ท่าโจมตี) หรือ 'def' (ท่าตั้งรับ) — บัฟ ATK จากเอฟเฟกต์ไม่บวกเข้า DEF
 // แต่โบนัสธาตุ/เผ่าบวกได้ทั้งสองค่า
 function computeSide(card, opponent, { allies = [], enemies = [], extras = {}, ambushed = false, stat = 'atk' } = {}) {
-  const advantage = getAdvantageBonuses(card, opponent)
-  const effects = stat === 'atk' ? getAtkBoosts(card, allies, enemies, extras) : []
+  // ธาตุที่ได้เพิ่มจากเวทสวมใส่นับเป็นธาตุรองเพื่อหาความได้เปรียบ
+  const extraElements = getEquipElements(extras)
+  const self = extraElements.length
+    ? { ...card, secondaryElements: [...(card.secondaryElements ?? []), ...extraElements] }
+    : card
+  const advantage = getAdvantageBonuses(self, opponent)
+  const effects = stat === 'atk' ? getAtkBoosts(card, allies, enemies, extras) : getDefBoosts(card, extras)
   const bonuses = [...effects, ...(ambushed ? [] : advantage)]
   const total = bonuses.reduce((sum, b) => sum + b.amount, 0)
   const base = stat === 'def' ? card.def : card.atk

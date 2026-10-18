@@ -1,9 +1,13 @@
-import { formatNumber } from '../../engine'
+import { formatNumber, getEquip, getFusionSpell, getReviveSpell } from '../../engine'
 
-const NON_MONSTER_ACTION = {
-  spell: '🏞️ ใช้เวทสนาม',
-  ritual: '🙏 ทำพิธี',
-  trap: '🪤 วางคว่ำ',
+const nonMonsterAction = (card) => {
+  if (card.type === 'ritual') return '🙏 ทำพิธี'
+  if (card.type === 'trap') return '🪤 วางคว่ำ'
+  if (getFusionSpell(card)) return '🌀 ผสานร่าง'
+  if (card.spellSubtype === 'field') return '🏞️ ใช้เวทสนาม'
+  if (getReviveSpell(card)) return '💧 คืนชีพ'
+  if (getEquip(card)) return '🗡️ สวมใส่'
+  return 'ใช้'
 }
 
 function SheetButtons({ children, onInspect, onClose }) {
@@ -24,6 +28,7 @@ function SheetButtons({ children, onInspect, onClose }) {
  * เมนูการ์ดในมือ
  * - ช่วงทิ้งการ์ดเกินมือ: ปุ่มทิ้ง
  * - มอนสเตอร์: อัญเชิญท่าโจมตี / วางคว่ำ (summonReason = เหตุผลที่ทำไม่ได้)
+ *   special = { label, blocker, onUse } อัญเชิญพิเศษ (หรือ null)
  * - เวท/พิธีกรรม/กับดัก: ปุ่มใช้ตามชนิด (blocker = เหตุผลที่ใช้ไม่ได้)
  */
 export function HandActionSheet({
@@ -35,6 +40,7 @@ export function HandActionSheet({
   blocker,
   onSummon,
   onPlay,
+  special,
   onDiscard,
   onInspect,
   onClose,
@@ -50,6 +56,11 @@ export function HandActionSheet({
         <strong>{card.name}</strong>
         {stats && <span>{stats}</span>}
         {reason && <span className="hand-sheet__reason">{reason}</span>}
+        {special && !canDiscard && (
+          <span className={special.blocker ? 'hand-sheet__reason' : 'hand-sheet__ok'}>
+            อัญเชิญพิเศษ: {special.blocker ?? special.label}
+          </span>
+        )}
       </div>
       <SheetButtons onInspect={onInspect} onClose={onClose}>
         {canDiscard ? (
@@ -58,6 +69,11 @@ export function HandActionSheet({
           </button>
         ) : isMonster ? (
           <>
+            {special && !special.blocker && (
+              <button type="button" className="btn btn--primary" onClick={special.onUse}>
+                ✨ อัญเชิญพิเศษ
+              </button>
+            )}
             <button type="button" className="btn btn--primary" disabled={!canSummon} onClick={() => onSummon('attack')}>
               {tributeCost > 0 ? `✨ สังเวย ${tributeCost} ตัว` : '⚔️ โจมตี'}
             </button>
@@ -67,7 +83,7 @@ export function HandActionSheet({
           </>
         ) : (
           <button type="button" className="btn btn--primary" disabled={Boolean(blocker)} onClick={onPlay}>
-            {NON_MONSTER_ACTION[card.type] ?? 'ใช้'}
+            {nonMonsterAction(card)}
           </button>
         )}
       </SheetButtons>
@@ -123,6 +139,24 @@ export function FieldActionSheet({ card, monster, blocker, onChange, effect, evo
           onClick={onChange}
         >
           {action}
+        </button>
+      </SheetButtons>
+    </div>
+  )
+}
+
+// เมนูกับดักต่อเนื่องที่วางคว่ำของเรา: เปิดหงายในเฟสหลัก
+export function TrapActionSheet({ card, blocker, onActivate, onInspect, onClose }) {
+  return (
+    <div className="hand-sheet">
+      <div className="hand-sheet__info">
+        <strong>{card.name}</strong>
+        <span>{card.trapSubtypeName ?? 'กับดัก'} · วางคว่ำอยู่</span>
+        {blocker && <span className="hand-sheet__reason">{blocker}</span>}
+      </div>
+      <SheetButtons onInspect={onInspect} onClose={onClose}>
+        <button type="button" className="btn btn--primary" disabled={Boolean(blocker)} onClick={onActivate}>
+          🥁 เปิดหงาย
         </button>
       </SheetButtons>
     </div>

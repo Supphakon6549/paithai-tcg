@@ -1,4 +1,12 @@
-import { getActivated, getRitualInfo, isPlayableNonMonster } from './effects'
+import {
+  getActivated,
+  getContinuousTrap,
+  getEquip,
+  getFusionSpell,
+  getReviveSpell,
+  getRitualInfo,
+  isPlayableNonMonster,
+} from './effects'
 import {
   activationBlocker,
   applyAction,
@@ -6,10 +14,18 @@ import {
   cardOf,
   currentActor,
   evolveBlocker,
+  getActivationTargets,
+  getDestroyWeakerTargets,
+  getEquipTargets,
+  getReviveTargets,
   getEvolveSources,
+  getFusionPairs,
+  getFusionTargets,
   handCardBlocker,
   ritualTributePool,
   ritualTributeProblem,
+  specialSummonBlocker,
+  trapActivationBlocker,
   getOpponentMonsters,
   getReadyAttackers,
   getFieldAtk,
@@ -35,7 +51,7 @@ const cardValue = (inst) => {
 const cheapestFirst = (a, b) => cardValue(a) - cardValue(b)
 
 /**
- * AI แบบง่าย: เลื่อนยศ → เวทสนาม → พิธีกรรม → อัญเชิญตัว ATK สูงสุด (สังเวยเมื่อคุ้ม · วางคว่ำเมื่อสู้ไม่ได้)
+ * AI แบบง่าย: เลื่อนยศ → เวทสนาม → ผสานร่าง → พิธีกรรม → อัญเชิญตัว ATK สูงสุด (สังเวยเมื่อคุ้ม · วางคว่ำเมื่อสู้ไม่ได้)
  * → ใช้ความสามารถ → วางกับดัก → หงายตัวคว่ำที่สู้ได้แล้ว → โจมตีเฉพาะเมื่อชนะ → จบเทิร์น
  * ถูกโจมตีขณะมีกับดักที่เปิดได้ → เปิดเสมอ
  * AI ไม่แอบดูการ์ดคว่ำของผู้เล่น
@@ -43,8 +59,12 @@ const cheapestFirst = (a, b) => cardValue(a) - cardValue(b)
  */
 export function getAiAction(state, playerId = AI) {
   if (state.winner || currentActor(state) !== playerId) return null
+  if (state.pendingChoice) return { type: 'choose', player: playerId, optionId: chooseOption(state, playerId) }
   if (state.pendingResponse) {
-    return { type: 'respond', player: playerId, trapUid: state.pendingResponse.trapUids[0] }
+    // เปิดกับดักเสมอ (กับดักยกเลิกการโจมตีก่อน ถ้าไม่มีค่อยใช้กลองศึกผสานร่าง)
+    const options = state.pendingResponse.options ?? state.pendingResponse.trapUids.map((id) => ({ id }))
+    const best = options.find((o) => o.kind !== 'drum') ?? options[0]
+    return { type: 'respond', player: playerId, trapUid: best.id }
   }
   const me = state.players[playerId]
 
@@ -54,11 +74,21 @@ export function getAiAction(state, playerId = AI) {
       return { type: 'discard', player: playerId, uid: weakest.uid }
     }
     case 'main1': {
-      const spell = chooseEvolve(state, playerId) ?? chooseFieldSpell(state, playerId) ?? chooseRitual(state, playerId)
+      const spell =
+        chooseEvolve(state, playerId) ??
+        chooseFieldSpell(state, playerId) ??
+        chooseFusion(state, playerId) ??
+        chooseRitual(state, playerId)
       if (spell) return spell
+      const special = chooseSpecialSummon(state, playerId) ?? chooseReviveSpell(state, playerId)
+      if (special) return special
       const summon = chooseSummon(state, playerId)
       if (summon) return summon
-      const effect = chooseActivation(state, playerId) ?? chooseTrapSet(state, playerId)
+      const effect =
+        chooseEquip(state, playerId) ??
+        chooseActivation(state, playerId) ??
+        chooseTrapSet(state, playerId) ??
+        chooseContinuousTrap(state, playerId)
       if (effect) return effect
       const flip = chooseFlip(state, playerId)
       if (flip) return flip
@@ -123,14 +153,79 @@ function chooseEvolve(state, playerId) {
   return { type: 'evolve', player: playerId, uid: ready.uid, from }
 }
 
+// ตัวเลือกที่รอ: ค้นการ์ด → เอาใบที่มีค่ามากสุด · คืนชีพ → จ่าย LP ถ้ายังเหลือเยอะ ไม่งั้นใช้น้ำมนต์
+function chooseOption(state, playerId) {
+  const choice = state.pendingChoice
+  if (choice.kind === 'search') {
+    return [...choice.options].sort((a, b) => cardValue({ cardId: b.id }) - cardValue({ cardId: a.id }))[0].id
+  }
+  const has = (id) => choice.options.some((o) => o.id === id)
+  if (has('pay') && state.players[playerId].lp > 2000) return 'pay'
+  if (has('water')) return 'water'
+  return has('pay') ? 'pay' : 'skip'
+}
+
+// อัญเชิญพิเศษ (สามเณรสังเวยเด็กวัด) ทำทันทีเมื่อทำได้ — ได้ตัวแรงขึ้นและจั่วเพิ่ม
+function chooseSpecialSummon(state, playerId) {
+  const inst = state.players[playerId].hand.find((c) => !specialSummonBlocker(state, playerId, c.uid))
+  return inst ? { type: 'specialSummon', player: playerId, uid: inst.uid } : null
+}
+
+// เวทคืนชีพ: คืนชีพตัวที่ ATK สูงสุด
+function chooseReviveSpell(state, playerId) {
+  for (const spell of playable(state, playerId, (c) => Boolean(getReviveSpell(c)))) {
+    const target = [...getReviveTargets(state, playerId, cardOf(spell))].sort(byAtkDesc)[0]
+    if (target) return { type: 'playSpell', player: playerId, uid: spell.uid, targetUid: target.uid }
+  }
+  return null
+}
+
+// เวทสวมใส่: ให้ตัวที่ ATK สูงสุดที่สวมได้
+function chooseEquip(state, playerId) {
+  for (const spell of playable(state, playerId, (c) => Boolean(getEquip(c)))) {
+    const target = [...getEquipTargets(state, playerId, cardOf(spell))].sort(byAtkDesc)[0]
+    if (target) return { type: 'playSpell', player: playerId, uid: spell.uid, targetUid: target.uid }
+  }
+  return null
+}
+
+// กับดักต่อเนื่องที่วางไว้: เปิดหงายเมื่อเปิดได้
+function chooseContinuousTrap(state, playerId) {
+  const trap = state.players[playerId].spellTrap.find(
+    (t) => t && getContinuousTrap(cardOf(t)) && !trapActivationBlocker(state, playerId, t.uid)
+  )
+  return trap ? { type: 'activateTrap', player: playerId, uid: trap.uid } : null
+}
+
 const playable = (state, playerId, predicate) =>
   state.players[playerId].hand.filter((c) => predicate(cardOf(c)) && !handCardBlocker(state, playerId, c.uid))
 
 // เวทสนาม: ลงเมื่อยังไม่มีเวทสนาม
 function chooseFieldSpell(state, playerId) {
   if (state.players[playerId].fieldSpell) return null
-  const spell = playable(state, playerId, (c) => c.type === 'spell')[0]
+  const spell = playable(state, playerId, (c) => c.type === 'spell' && c.spellSubtype === 'field')[0]
   return spell ? { type: 'playSpell', player: playerId, uid: spell.uid } : null
+}
+
+// ผสานร่าง: เลือกร่างผสานที่ ATK สูงสุด ใช้วัตถุดิบคู่ที่มีค่ารวมน้อยที่สุด
+// และผสานเฉพาะเมื่อร่างใหม่แรงกว่าวัตถุดิบทุกตัว
+function chooseFusion(state, playerId) {
+  const p = state.players[playerId]
+  const all = [...p.hand, ...p.field.filter(Boolean)]
+  const instOf = (uid) => all.find((c) => c.uid === uid)
+  for (const spell of playable(state, playerId, (c) => Boolean(getFusionSpell(c)))) {
+    const targets = [...getFusionTargets(state, playerId, spell.uid)].sort(byAtkDesc)
+    for (const target of targets) {
+      const pairs = getFusionPairs(state, playerId, spell.uid, target.uid)
+        .map((uids) => ({ uids, cost: uids.reduce((sum, uid) => sum + cardValue(instOf(uid)), 0) }))
+        .filter(({ uids }) => uids.every((uid) => cardOf(instOf(uid)).atk < cardOf(target).atk))
+        .sort((a, b) => a.cost - b.cost)
+      if (pairs.length > 0) {
+        return { type: 'playSpell', player: playerId, uid: spell.uid, fusionTarget: target.uid, tributes: pairs[0].uids }
+      }
+    }
+  }
+  return null
 }
 
 // พิธีกรรม: ใช้ตัวแทน (เช่น เอราวัณ) ถ้ามี ไม่งั้นสังเวยตัวถูกที่สุดจากมือก่อน แล้วค่อยจากสนาม
@@ -165,7 +260,23 @@ function chooseActivation(state, playerId) {
   for (const m of state.players[playerId].field) {
     if (!m || activationBlocker(state, playerId, m.uid)) continue
     const activated = getActivated(cardOf(m))
-    if (activated.kind === 'heal') return { type: 'activate', player: playerId, uid: m.uid }
+    if (activated.kind === 'heal' || activated.kind === 'destroySpellsTraps' || activated.kind === 'searchTrap') {
+      return { type: 'activate', player: playerId, uid: m.uid }
+    }
+    if (activated.kind === 'lockAttack') {
+      const oppId = opponentOf(playerId)
+      const target = [...getActivationTargets(state, playerId, m.uid)].sort(
+        (a, b) => getFieldAtk(state, oppId, b.uid) - getFieldAtk(state, oppId, a.uid)
+      )[0]
+      return { type: 'activate', player: playerId, uid: m.uid, targetUid: target.uid }
+    }
+    if (activated.kind === 'destroyWeaker') {
+      const oppId = opponentOf(playerId)
+      const target = [...getDestroyWeakerTargets(state, playerId, m.uid)].sort(
+        (a, b) => getFieldAtk(state, oppId, b.uid) - getFieldAtk(state, oppId, a.uid)
+      )[0]
+      return { type: 'activate', player: playerId, uid: m.uid, targetUid: target.uid }
+    }
     if (activated.kind === 'debuff' && canAttackThisTurn(state)) {
       const oppId = opponentOf(playerId)
       const ourBest = Math.max(

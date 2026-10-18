@@ -22,10 +22,23 @@ import { TRIBES } from '../data/tribes'
  *   trapLock               เมื่อใบนี้ประกาศโจมตี ศัตรูเปิดกับดักไม่ได้
  *   attackDecay            หลังประกาศโจมตีแต่ละครั้ง ATK ลดลงสะสมตาม penalties (ค้างจนออกจากสนาม)
  *                          ไม่ลดเมื่อ protectedBy คืนเหตุผล · เวทสนามระบุฝ่ายด้วย fieldSpell.faction
+ *   fusionSpell            การ์ดเวทผสานร่าง (bonusDraw: จั่วเพิ่มเมื่อผสานเป็นการ์ดที่ระบุ)
+ *   fusionMaterials        มอนสเตอร์ผสานร่าง: วัตถุดิบ 2 ตัว [{ label, matches(card) }]
+ *   battleIndestructible   ไม่ถูกทำลายจากการต่อสู้ (เจ้าของยังเสีย LP ตามปกติ)
+ *   onSummonSearch         อัญเชิญปกติหงายหน้าสำเร็จ: ค้นการ์ดที่ matches จากกองขึ้นมือ (เลือกได้)
+ *   ritualLevel            นับระดับเป็นค่าอื่นเมื่อสังเวยให้พิธีกรรมกลุ่มที่ระบุ
+ *   specialSummon          อัญเชิญพิเศษจากมือโดยสังเวยการ์ดที่ระบุบนสนาม (+จั่ว)
+ *   protectsFromEffects    มอนสเตอร์ฝ่ายเราไม่ถูกทำลายจากเอฟเฟกต์ · endTurnHeal ฟื้น LP เมื่อจบเทิร์นของเรา
+ *   reviveOnGrave          ตกสุสานจากสนาม: เจ้าของเลือกจ่าย LP หรือทิ้งการ์ดที่ระบุ เพื่อคืนชีพ (ใบละครั้ง/เกม)
+ *   reviveSpell            เวทคืนชีพมอนสเตอร์จากสุสานเรา
+ *   equip                  เวทสวมใส่: บัฟ ATK, เพิ่มธาตุ, แต้มประสบการณ์เพิ่ม
+ *   continuousTrap         กับดักต่อเนื่อง: เปิดหงายค้างไว้ ให้ออร่า ATK/DEF (+ drumFusion)
  *   evolve                 สายประสบการณ์: ทำลายศัตรูจากการต่อสู้ได้แต้มละ 1 · ครบ xpNeeded
  *                          แล้วเทิร์นถัดไปของเรากดเลื่อนยศเป็น into (จากมือหรือกองการ์ด)
  *   activated              ความสามารถที่ผู้เล่นกดใช้เองในเฟสหลัก (มอนสเตอร์หงายบนสนาม)
- *                          kind: 'heal' | 'debuff' · oncePer: 'card' (ใบละครั้ง) | 'name' (ชื่อละครั้ง) ต่อเทิร์น
+ *                          kind: 'heal' | 'debuff' | 'destroySpellsTraps' | 'destroyWeaker'
+ *                                | 'lockAttack' | 'searchTrap'
+ *                          oncePer: 'card' (ใบละครั้ง) | 'name' (ชื่อละครั้ง) ต่อเทิร์น
  *   fieldSpell.aura        เวทสนาม: ปรับ ATK มอนสเตอร์หงายฝ่ายเจ้าของที่เข้าเงื่อนไข
  *   ritual.substitutes     การ์ดพิธีกรรม: มอนสเตอร์ที่สังเวยใบเดียวแทนระดับรวมทั้งหมดได้
  *                          (มอนสเตอร์เป้าหมายและระดับที่ต้องใช้อ่านจาก targetMonsterId / requiredLevel)
@@ -40,6 +53,9 @@ const isAnimal = inTribeGroup('animal')
 const isWarrior = hasTribe('warrior')
 const isDeva = hasTribe('deva')
 const isDemon = hasTribe('demon')
+const isHunter = hasTribe('hunter')
+const isLargeBeast = hasTribe('largeBeast')
+const isHolyWater = (c) => c.id === 'th01-014' || (c.spellSubtypeName ?? '').includes('น้ำมนต์')
 
 export const CARD_EFFECTS = {
   // ลูกพราน
@@ -61,10 +77,69 @@ export const CARD_EFFECTS = {
   // เจ้าพรานแห่งไพร
   'th01-003': {
     enemyAura: { amount: -300, appliesTo: isAnimal, reason: 'เจ้าพรานแห่งไพร ลด ATK เผ่าสัตว์ของศัตรู' },
+    activated: { kind: 'searchTrap', label: 'ค้นหากับดัก 1 ใบจากกอง', oncePer: 'card' },
+  },
+  // เด็กวัด
+  'th01-004': {
+    onSummonSearch: {
+      label: 'การ์ดพิธีกรรมหรือน้ำมนต์',
+      matches: (c) => c.type === 'ritual' || isHolyWater(c),
+    },
+    ritualLevel: { forGroup: 'ritual-faith', level: 2 },
+  },
+  // พระอาจารย์
+  'th01-006': {
+    activated: {
+      kind: 'lockAttack',
+      label: 'ห้ามศัตรูเผ่าอสูร/วิญญาณโจมตีเทิร์นหน้า',
+      oncePer: 'card',
+      targets: (c) => hasTribe('demon')(c) || hasTribe('ghost')(c),
+    },
+  },
+  // ครูบาศรีวิชัย
+  'th01-007': {
+    protectsFromEffects: { reason: 'ครูบาศรีวิชัย: มอนสเตอร์ฝ่ายเราไม่ถูกทำลายจากเอฟเฟกต์' },
+    endTurnHeal: { amount: 500, reason: 'ครูบาศรีวิชัย: ฟื้น LP เมื่อจบเทิร์น' },
+  },
+  // พญานาคานอนบาดาล
+  'th01-010': {
+    reviveOnGrave: { lpCost: 500, altCostCardId: 'th01-014', position: 'defense' },
+  },
+  // ม้าศึกอาชาไนย
+  'th01-019': {
+    onSummonSearch: {
+      label: 'มอนสเตอร์เผ่าทหารหาญระดับ 4 หรือต่ำกว่า',
+      matches: (c) => c.type === 'monster' && isWarrior(c) && c.level <= 4,
+    },
+  },
+  // น้ำมนต์ธรณีสาร (เวทคืนชีพ)
+  'th01-014': {
+    reviveSpell: { position: 'attack', excludeSummonTypes: ['fusion', 'ritual'], darkImmune: true },
+  },
+  // ขวากหนามอาคมพราน (กับดัก)
+  'th01-015': {
+    trap: {
+      trigger: 'enemyAttacks',
+      effect: 'thorns',
+      destroyIfAlly: isHunter,
+      reason: 'ขวากหนามอาคมพราน: ตัวที่โจมตีถูกเปลี่ยนเป็นท่าตั้งรับ การโจมตีถูกยกเลิก',
+    },
+  },
+  // ดาบฟ้าฟื้นเหล็กน้ำพี้ (เวทสวมใส่)
+  'th01-023': {
+    equip: { appliesTo: isWarrior, atk: 500, addElement: 'lightning', xpBonus: 1, reason: 'ดาบฟ้าฟื้นเหล็กน้ำพี้' },
+  },
+  // กลองศึกสะท้านแผ่นดิน (กับดักต่อเนื่อง)
+  'th01-024': {
+    continuousTrap: {
+      aura: { amount: 300, appliesTo: (c) => isWarrior(c) || isLargeBeast(c), reason: 'กลองศึกสะท้านแผ่นดิน' },
+      drumFusion: { pair: [isWarrior, isLargeBeast] },
+    },
   },
   // สามเณร
   'th01-005': {
     noBattleDamageVsTribe: { tribe: 'ghost', reason: 'สามเณร: ไม่รับความเสียหายจากการต่อสู้กับเผ่าวิญญาณ' },
+    specialSummon: { tributeId: 'th01-004', draw: 1, label: 'สังเวยเด็กวัดบนสนาม · จั่ว 1 ใบ' },
   },
   // พญาครุฑเวนไตย
   'th01-009': {
@@ -137,6 +212,7 @@ export const CARD_EFFECTS = {
   'th05-008': {
     trap: {
       trigger: 'enemyAttacksFaceUp',
+      effect: 'negate',
       appliesTo: isDeva,
       reason: 'ม่านอาสนีพิทักษ์: ยกเลิกการโจมตีมอนสเตอร์เผ่าเทวดา',
     },
@@ -146,9 +222,42 @@ export const CARD_EFFECTS = {
     noTributeIf: { reason: 'มีมอนสเตอร์เผ่าทหารหาญบนสนาม', isActive: ({ allies }) => allies.some(isWarrior) },
     halveBattleDamage: { reason: 'ช้างศึกไอยรา: ลดความเสียหายจากการต่อสู้ครึ่งหนึ่ง' },
   },
-  // แม่ทัพขี่ม้าศึก (ผสานร่าง — พร้อมใช้เมื่อเปิดระบบผสานร่าง)
+  // คาถาผสานธาตุจักรวาล (เวทผสานร่าง)
+  'th01-013': {
+    fusionSpell: { bonusDraw: { forFusion: 'th01-012', count: 1, reason: 'ผสานพญาครุฑ + พญานาค จั่วเพิ่ม 1 ใบ' } },
+  },
+  // ครุฑนาคา มหาเทพประสาน (ธาตุรองอัคนี/วารีอยู่ในข้อมูลการ์ดแล้ว)
+  'th01-012': {
+    fusionMaterials: [
+      { label: 'พญาครุฑเวนไตย', matches: (c) => c.id === 'th01-009' },
+      { label: 'พญานาคานอนบาดาล', matches: (c) => c.id === 'th01-010' },
+    ],
+    activated: {
+      kind: 'destroySpellsTraps',
+      label: 'ทำลายเวท/กับดักศัตรูทั้งหมด',
+      oncePer: 'card',
+    },
+  },
+  // แม่ทัพขี่ม้าศึก
   'th01-021': {
+    fusionMaterials: [
+      { label: 'มอนสเตอร์เผ่าทหารหาญ', matches: (c) => isWarrior(c) },
+      { label: 'ม้าศึกอาชาไนย', matches: (c) => c.id === 'th01-019' },
+    ],
     piercing: { ratio: 1, reason: 'ตีทะลุเต็มจำนวน' },
+  },
+  // จอมทัพยุทธหัตถี คชสารศึก (นับเป็นเผ่าทหารหาญและสัตว์ใหญ่ — อยู่ในข้อมูลการ์ดแล้ว)
+  'th01-022': {
+    fusionMaterials: [
+      { label: 'ขุนศึกอาทมาฏ หรือทหารหาญระดับ 4 ขึ้นไป', matches: (c) => isWarrior(c) && c.level >= 4 },
+      { label: 'ช้างศึกไอยรา', matches: (c) => c.id === 'th01-020' },
+    ],
+    battleIndestructible: true,
+    activated: {
+      kind: 'destroyWeaker',
+      label: 'ทำลายศัตรูที่ ATK ต่ำกว่า 1 ตัว',
+      oncePer: 'card',
+    },
   },
 }
 
@@ -158,15 +267,48 @@ const effectOf = (card) => CARD_EFFECTS[card?.id] ?? {}
  * ตัวปรับ ATK ทั้งหมดที่ทำงานอยู่กับ card: บัฟตัวเอง + ออร่าจากเพื่อน + ออร่าจากศัตรู
  * (ใช้ทั้งตอนโจมตี ตั้งรับด้วย ATK และโจมตีตรง — ไม่บวกเข้า DEF)
  */
-// extras = { fieldSpell: การ์ดเวทสนามของเจ้าของ (หรือ null), temp: [{ amount, reason }] ตัวปรับชั่วคราวบนตัวมอนสเตอร์ }
+/*
+ * extras = {
+ *   fieldSpell: การ์ดเวทสนามของเจ้าของ (หรือ null),
+ *   temp: [{ amount, reason }] ตัวปรับบนตัวมอนสเตอร์ (ชั่วคราว/อ่อนแรง),
+ *   equips: [การ์ดเวทสวมใส่ที่ติดอยู่], continuous: [กับดักต่อเนื่องหงายของเจ้าของ],
+ * }
+ */
+const toModifier = ({ amount, reason }) => ({ kind: 'effect', label: 'เอฟเฟกต์', amount, reason })
+
+// ออร่าที่บวกได้ทั้ง ATK และ DEF (กับดักต่อเนื่อง)
+const continuousAuras = (card, extras) =>
+  (extras.continuous ?? []).map((t) => effectOf(t).continuousTrap?.aura).filter((aura) => aura?.appliesTo(card))
+
 export function getAtkBoosts(card, allies = [], enemies = [], extras = {}) {
-  const toModifier = ({ amount, reason }) => ({ kind: 'effect', label: 'เอฟเฟกต์', amount, reason })
   const own = (effectOf(card).atkBoosts ?? []).filter((b) => b.isActive({ allies, enemies }))
   const fromAllies = allies.map((a) => effectOf(a).allyAura).filter((aura) => aura?.appliesTo(card))
   const fromEnemies = enemies.map((e) => effectOf(e).enemyAura).filter((aura) => aura?.appliesTo(card))
   const fieldAura = effectOf(extras.fieldSpell).fieldSpell?.aura
   const fromField = fieldAura?.appliesTo(card) ? [fieldAura] : []
-  return [...own, ...fromAllies, ...fromEnemies, ...fromField, ...(extras.temp ?? [])].map(toModifier)
+  const fromEquips = (extras.equips ?? [])
+    .map((e) => effectOf(e).equip)
+    .filter((eq) => eq?.appliesTo(card))
+    .map((eq) => ({ amount: eq.atk, reason: eq.reason }))
+  return [
+    ...own,
+    ...fromAllies,
+    ...fromEnemies,
+    ...fromField,
+    ...fromEquips,
+    ...continuousAuras(card, extras),
+    ...(extras.temp ?? []),
+  ].map(toModifier)
+}
+
+// ตัวปรับ DEF จากเอฟเฟกต์ (ตอนนี้มีแค่กับดักต่อเนื่อง)
+export function getDefBoosts(card, extras = {}) {
+  return continuousAuras(card, extras).map(toModifier)
+}
+
+// ธาตุที่ได้เพิ่มจากเวทสวมใส่
+export function getEquipElements(extras = {}) {
+  return (extras.equips ?? []).map((e) => effectOf(e).equip?.addElement).filter(Boolean)
 }
 
 export function getEffectiveAtk(card, allies = [], enemies = [], extras = {}) {
@@ -201,9 +343,49 @@ export function getRitualInfo(card) {
 }
 
 // การ์ดเวท/กับดัก/พิธีกรรมที่ระบบเกมรองรับแล้ว (ใบอื่นยังกดใช้ไม่ได้)
+export function getOnSummonSearch(card) {
+  return effectOf(card).onSummonSearch ?? null
+}
+
+// ระดับที่นับเมื่อใช้ card เป็นเครื่องสังเวยให้การ์ดพิธีกรรม ritualCard
+export function getRitualLevel(card, ritualCard) {
+  const override = effectOf(card).ritualLevel
+  return override && ritualCard?.groupTag === override.forGroup ? override.level : card.level
+}
+
+export function getSpecialSummon(card) {
+  return effectOf(card).specialSummon ?? null
+}
+
+export function getEffectProtection(card) {
+  return effectOf(card).protectsFromEffects ?? null
+}
+
+export function getEndTurnHeal(card) {
+  return effectOf(card).endTurnHeal ?? null
+}
+
+export function getReviveOnGrave(card) {
+  return effectOf(card).reviveOnGrave ?? null
+}
+
+export function getReviveSpell(card) {
+  return effectOf(card).reviveSpell ?? null
+}
+
+export function getEquip(card) {
+  return effectOf(card).equip ?? null
+}
+
+export function getContinuousTrap(card) {
+  return effectOf(card).continuousTrap ?? null
+}
+
 export function isPlayableNonMonster(card) {
-  if (card?.type === 'spell') return isFieldSpell(card)
-  if (card?.type === 'trap') return Boolean(getTrapEffect(card))
+  if (card?.type === 'spell') {
+    return isFieldSpell(card) || Boolean(getFusionSpell(card) || getReviveSpell(card) || getEquip(card))
+  }
+  if (card?.type === 'trap') return Boolean(getTrapEffect(card) || getContinuousTrap(card))
   if (card?.type === 'ritual') return Boolean(getRitualInfo(card))
   return false
 }
@@ -214,6 +396,26 @@ export function hasAmbush(card) {
 
 export function getPiercing(card) {
   return effectOf(card).piercing ?? null
+}
+
+export function getFusionSpell(card) {
+  return effectOf(card).fusionSpell ?? null
+}
+
+export function getFusionMaterials(card) {
+  return effectOf(card).fusionMaterials ?? null
+}
+
+// วัตถุดิบ 2 ใบ (การ์ดข้อมูล) ตรงกับสูตรของมอนสเตอร์ผสานร่างไหม (สลับลำดับได้)
+export function matchesFusion(fusionCard, materialCards) {
+  const recipe = getFusionMaterials(fusionCard)
+  if (!recipe || materialCards.length !== 2) return false
+  const [a, b] = materialCards
+  return (recipe[0].matches(a) && recipe[1].matches(b)) || (recipe[0].matches(b) && recipe[1].matches(a))
+}
+
+export function isBattleIndestructible(card) {
+  return effectOf(card).battleIndestructible === true
 }
 
 export function getAttackDecay(card) {

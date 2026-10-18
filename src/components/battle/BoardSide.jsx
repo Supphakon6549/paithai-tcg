@@ -6,7 +6,8 @@ import { cardOf } from '../../engine'
  * มือถือ: กองต่าง ๆ เป็นแถบปุ่มเล็ก · จอกว้าง ≥ 720px: วางเป็นช่องข้างสนามแบบกระดานจริง
  * ฝ่ายตรงข้ามกลับด้าน (หมุน 180° แบบนั่งตรงข้ามกัน)
  */
-export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, onInspect }) {
+// onSpellTrapTap(inst): แตะการ์ดในช่องเวท/กับดักของเรา (ไม่ระบุ = ดูการ์ด)
+export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, onInspect, onSpellTrapTap }) {
   const owner = isOpponent ? 'คู่ต่อสู้' : 'คุณ'
   return (
     <section
@@ -27,7 +28,11 @@ export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, 
               faceDown={inst.faceDown}
               hidden={isOpponent && inst.faceDown}
               className="mini-card--st"
-              onClick={isOpponent && inst.faceDown ? undefined : () => onInspect(cardOf(inst))}
+              onClick={
+                isOpponent && inst.faceDown
+                  ? undefined
+                  : () => (onSpellTrapTap ? onSpellTrapTap(inst) : onInspect(cardOf(inst)))
+              }
             />
           ) : (
             <div key={`st-${i}`} className="zone-slot zone-slot--st" data-zone={i} aria-label={`ช่องเวท/กับดัก ${i + 1} ว่าง`}>
@@ -109,7 +114,7 @@ export function PileViewer({ player, kind, isOpponent, onInspect, onClose }) {
           </div>
         )}
         {kind === 'extraDeck' && !hidden && (
-          <p className="pile-viewer__note">มอนสเตอร์ผสานร่างรออยู่ที่นี่ — ระบบอัญเชิญผสานร่างจะมาในขั้นถัดไป</p>
+          <p className="pile-viewer__note">มอนสเตอร์ผสานร่างรออยู่ที่นี่ — ใช้คาถาผสานธาตุจักรวาลจากมือ พร้อมวัตถุดิบ 2 ตัว</p>
         )}
       </div>
     </div>
