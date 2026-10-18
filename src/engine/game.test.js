@@ -83,7 +83,7 @@ describe('การจั่วและเทิร์น', () => {
   })
 
   it('ไม่แก้สถานะเดิม (immutable)', () => {
-    const s = createGame({ seed: 1 })
+    const s = makeState({ player: { hand: ['th01-001'] } })
     const snapshot = structuredClone(s)
     applyAction(s, { type: 'summon', player: PLAYER, uid: handUid(s, PLAYER, 0) })
     expect(s).toEqual(snapshot)
