@@ -196,5 +196,32 @@
     "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-d28d2468-7b31-4fc2-8f5c-c151421e6f53.png",
     "original": "art-originals/th06-012.png",
     "image": "/cards/th06-012.jpg"
+  },
+  {
+    "id": "th06-013",
+    "prompt": "Use case: stylized-concept. Create ONE premium Thai fantasy TCG digital painting, landscape 4:3, no frame no text no letters no watermark. Match TH06 Thai Spirits visual identity: rich detailed painterly realism, muted jade green and smoky purple-gray nocturnal palette, selective tiny amber lantern light, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Main ghost character occupies 75–85 percent of composition, readable face and hands and silhouette at 640px card size; background quiet, atmospheric, secondary. Eerie and dignified Thai folk fantasy, no gore, blood, wounds, organs, corpses, dismemberment, skull closeups, no modern clothes, no ornate deity crowns, no real people. Anatomy coherent, two hands with five fingers each; expressions convey personality and haunting unresolved grief rather than monstrous violence. A fictional adult Thai male roadside spirit of a sudden untimely death, wearing weathered indigo rural wrap clothing and a loose plain ivory sash. Three-quarter waist-up low-angle composition. His intense grieving face dissolves slightly at the edge into purple mist while one translucent hand pinches a dark spectral thread, the other open palm releases a jade curse ribbon that drains the glow from an empty spectral warrior silhouette at the extreme background edge. A broken unlit lantern held by a belt, tiny roadside spirit shrine very blurred. His own body intact, neither visibly injured nor depicting how he died. Strong face focus, glowing emerald eyes, nearly extinguished lantern metaphor for halved power.",
+    "tool": "built-in imagegen",
+    "styleReference": "TH06-007 and TH06-009 inspected; textual style match",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-e630335a-fefa-4412-8933-30a2407d4168.png",
+    "original": "art-originals/th06-013.png",
+    "image": "/cards/th06-013.jpg"
+  },
+  {
+    "id": "th06-014",
+    "prompt": "Use case: stylized-concept. Create ONE premium Thai fantasy TCG digital painting, landscape 4:3, no frame no text no letters no watermark. Match TH06 Thai Spirits visual identity: rich detailed painterly realism, muted jade green and smoky purple-gray nocturnal palette, selective tiny amber lantern light, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Main ghost character occupies 75–85 percent of composition, readable face and hands and silhouette at 640px card size; background quiet, atmospheric, secondary. Eerie and dignified Thai folk fantasy, no gore, blood, wounds, organs, corpses, dismemberment, skull closeups, no modern clothes, no ornate deity crowns, no real people. Anatomy coherent, two hands with five fingers each; expressions convey personality and haunting unresolved grief rather than monstrous violence. A fictional adult Thai female water spirit, Phrai, rising gracefully in jade moonlit river mist, wearing a simple muted blue-green Thai shoulder cloth, long wet dark hair swept to one side revealing a resolute sorrowful face. Chest-up three-quarter composition, both hands extended in a compelling beckoning gesture; spectral water ribbons curl toward a distant EMPTY antique shield at the lower edge and dissolve it into purple firefly-like motes. No drowning victim, no injured body. Soft water reflections across face, solitary amber floating lamp, no giant scenery or moon disk. A deadly vow rendered symbolically through dissolving shield, full intact character.",
+    "tool": "built-in imagegen",
+    "styleReference": "TH06-007 and TH06-009 inspected; textual style match",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-ae641187-ffc2-49c1-9353-9b15162fdd47.png",
+    "original": "art-originals/th06-014.png",
+    "image": "/cards/th06-014.jpg"
+  },
+  {
+    "id": "th06-015",
+    "prompt": "Use case: stylized-concept. Create ONE premium Thai fantasy TCG digital painting, landscape 4:3, no frame no text no letters no watermark. Match TH06 Thai Spirits visual identity: rich detailed painterly realism, muted jade green and smoky purple-gray nocturnal palette, selective tiny amber lantern light, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Main ghost character occupies 75–85 percent of composition, readable face and hands and silhouette at 640px card size; background quiet, atmospheric, secondary. Eerie and dignified Thai folk fantasy, no gore, blood, wounds, organs, corpses, dismemberment, skull closeups, no modern clothes, no ornate deity crowns, no real people. Anatomy coherent, two hands with five fingers each; expressions convey personality and haunting unresolved grief rather than monstrous violence. A fictional elderly Thai female revenant guarding an abandoned forest path, stern sorrowful weathered face and silver-streaked dark hair tied low, faded plum-brown rural shawl, holding a small old clay oil lamp near her chest with one hand. Other hand raised palm outward close to camera, translucent jade-violet smoke forming a restraining ring that dims a single distant weapon-shaped spectral light. Three-quarter portrait with clear face, protective yet implacable, body edges fading into shadow, a single blurred banyan root behind her. Distinct earthbound ghost of lingering resentment, no corpse or violent death, elemental earth motes, small amber flame overwhelmed by cool spectral glow.",
+    "tool": "built-in imagegen",
+    "styleReference": "TH06-007 and TH06-009 inspected; textual style match",
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-a4715f2d-3583-4ae8-b074-abde71ae230f.png",
+    "original": "art-originals/th06-015.png",
+    "image": "/cards/th06-015.jpg"
   }
 ]
