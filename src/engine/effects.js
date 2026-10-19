@@ -29,6 +29,7 @@ import { TRIBES } from '../data/tribes'
  *   onSummonCall           อัญเชิญหงาย: เรียกมอนสเตอร์ที่ matches จากมือ (ชื่อละครั้ง/เทิร์น)
  *   onSummonLook           อัญเชิญหงาย: ดูบนกอง count ใบ เลือกที่ matches ขึ้นมือ ที่เหลือไว้ใต้กอง
  *   sting                  ถูกทำลายจากการต่อสู้ตอนเป็นฝ่ายรับ → ผู้โจมตี ATK amount จนจบเทิร์น
+ *   deathCurse             ถูกทำลายจากการต่อสู้ → คำสาปใส่ตัวที่ทำลาย: mode 'destroy' (ทำลายตาม) | 'halve' (ATK เหลือครึ่งถาวร)
  *   ambushFlip             ถูกโจมตีจนพลิกหงาย → เปลี่ยนเป็นท่าโจมตีได้ (+bonus เมื่อมีสัตว์ต่างเผ่า)
  *   huntBonus              โจมตีมอนสเตอร์หงายที่ ATK สูงสุดฝ่ายศัตรู → ATK +amount เฉพาะการต่อสู้นั้น
  *   mount / dismount       ร่างขี่: ขึ้นขี่จากคน+สัตว์บนสนาม (ไม่ต้องใช้เวท) · ถูกทำลาย → คืนวัตถุดิบ 1 ตัว
@@ -749,6 +750,7 @@ export const hasRootShield = (card) => effectOf(card).rootShield ?? null
 export const getOnSummonCall = (card) => effectOf(card).onSummonCall ?? null
 export const getOnSummonLook = (card) => effectOf(card).onSummonLook ?? null
 export const getSting = (card) => effectOf(card).sting ?? null
+export const getDeathCurse = (card) => effectOf(card).deathCurse ?? null
 export const getAmbushFlip = (card) => effectOf(card).ambushFlip ?? null
 export const getHuntBonus = (card) => effectOf(card).huntBonus ?? null
 export const canMount = (card) => effectOf(card).mount === true

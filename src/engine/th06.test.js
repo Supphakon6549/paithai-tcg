@@ -266,3 +266,13 @@ describe('ป่าช้าวัดร้าง: เวทสนามฝ่�
     expect(getFieldAtk(after, PLAYER, uidAt(s, PLAYER, 1))).toBe(1600)
   })
 })
+
+describe('AI ไม่เลือกเป้าที่กันเลือกเป้า', () => {
+  it('อสูรมนตราควันของ AI ไม่เลือกนางตานีที่มีผีตัวอื่น', () => {
+    const s = makeState({ activePlayer: AI, ai: { field: ['th04-003', 'th04-004'] }, player: { field: ['th06-003', 'th06-001'] } })
+    s.players.player.field[0].tempAtk = [{ amount: 1000, reason: 'ทดสอบ' }]
+    const action = getAiAction(s)
+    if (action?.type === 'activate') expect(action.targetUid).not.toBe(uidAt(s, PLAYER, 0))
+    expect(() => applyAction(s, action)).not.toThrow()
+  })
+})

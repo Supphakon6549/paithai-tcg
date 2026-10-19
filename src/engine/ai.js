@@ -6,6 +6,9 @@ import {
   getEquip,
   getFusionSpell,
   getGrowthSpell,
+  getOnSummonCall,
+  getOnSummonLook,
+  getOnSummonSearch,
   getReviveSpell,
   getRitualInfo,
   isPlayableNonMonster,
@@ -121,8 +124,29 @@ export function getAiAction(state, playerId = AI) {
  * สังเวยตัว ATK ต่ำสุดบนสนาม และจะสังเวยก็ต่อเมื่อ "คุ้ม" คือ
  * ตัวใหม่ ATK สูงกว่าตัวอัญเชิญปกติที่ดีที่สุด และสูงกว่าตัวที่ต้องเสียไปทุกตัว
  */
+// คะแนนการลงสนาม: ATK จริงหลังลง (รวมออร่าเพื่อน/สุสาน/เวทสนาม) + ค่าเอฟเฟกต์เมื่ออัญเชิญ
+// ทำให้ AI เห็นค่าของการ์ดที่แรงขึ้นเมื่ออยู่เป็นกลุ่ม (เช่น สายผี) ไม่ใช่ดูแค่ ATK บนการ์ด
+function summonScore(state, playerId, inst) {
+  const card = cardOf(inst)
+  const p = state.players[playerId]
+  const zone = p.field.indexOf(null)
+  let atk = card.atk
+  if (zone !== -1 && isNormalSummonable(card)) {
+    const probe = structuredClone(state)
+    probe.players[playerId].field[zone] = { uid: inst.uid, cardId: inst.cardId, position: 'attack', faceDown: false }
+    atk = getFieldAtk(probe, playerId, inst.uid)
+  }
+  let bonus = 0
+  if (getOnSummonSearch(card) || getOnSummonCall(card) || getOnSummonLook(card)) bonus += 400
+  // ต้นสายของสายมืด: มีคำสาปพันธะเงา + ร่างสายมืดคู่กันในมือ
+  const branch = p.hand.map((h) => getBranchSpell(cardOf(h))).find(Boolean)
+  if (branch?.pairs.some((pair) => pair.from === card.id && p.hand.some((h) => h.cardId === pair.to))) bonus += 900
+  return { atk, value: atk + bonus }
+}
+
 function chooseSummon(state, playerId) {
-  const options = [...getSummonableHand(state, playerId)].sort(byAtkDesc)
+  const score = new Map(getSummonableHand(state, playerId).map((inst) => [inst.uid, summonScore(state, playerId, inst)]))
+  const options = [...getSummonableHand(state, playerId)].sort((a, b) => score.get(b.uid).value - score.get(a.uid).value)
   // cost = จำนวนตัวสังเวยจริง (0 = ลงได้เลย รวมการ์ดสังเวยที่เอฟเฟกต์ยกเว้นการสังเวย)
   const costOf = (inst) => (isNormalSummonable(cardOf(inst)) ? 0 : getTributeCost(state, playerId, cardOf(inst)))
   const bestNormal = options.find((inst) => costOf(inst) === 0)
@@ -134,7 +158,7 @@ function chooseSummon(state, playerId) {
       .filter(Boolean)
       .sort((a, b) => getFieldAtk(state, playerId, a.uid) - getFieldAtk(state, playerId, b.uid))
       .slice(0, costOf(bestTribute))
-    const beatsNormal = !bestNormal || card.atk > cardOf(bestNormal).atk
+    const beatsNormal = !bestNormal || card.atk > score.get(bestNormal.uid).value
     const beatsFodder = fodder.every((m) => card.atk > getFieldAtk(state, playerId, m.uid))
     if (beatsNormal && beatsFodder) {
       return {
@@ -151,7 +175,7 @@ function chooseSummon(state, playerId) {
     type: 'summon',
     player: playerId,
     uid: bestNormal.uid,
-    position: positionFor(state, playerId, cardOf(bestNormal).atk),
+    position: positionFor(state, playerId, score.get(bestNormal.uid).atk),
   }
 }
 
@@ -354,8 +378,8 @@ function chooseActivation(state, playerId) {
           .filter((x) => x && x.position === 'attack')
           .map((x) => getFieldAtk(state, playerId, x.uid))
       )
-      const target = state.players[oppId].field
-        .filter((x) => x && !x.faceDown)
+      // เลือกจากเป้าที่ถูกกติกาเท่านั้น (ข้ามตัวที่กันเลือกเป้า เช่น นางตานี / แม่นาค)
+      const target = [...getActivationTargets(state, playerId, m.uid)]
         .sort((a, b) => getFieldAtk(state, oppId, b.uid) - getFieldAtk(state, oppId, a.uid))
         .find((x) => {
           const atk = getFieldAtk(state, oppId, x.uid)

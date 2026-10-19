@@ -19,6 +19,7 @@ import {
   getOnSummonCall,
   getOnSummonLook,
   getSting,
+  getDeathCurse,
   hasRootShield,
   isPlantCard,
   getAttackingBoost,
@@ -1775,6 +1776,21 @@ function applySting(state, attackerOwner, attacker, victimCard, details) {
   details.push(`🐝 ${sting.reason}: ${cardOf(attacker).name} ATK ${formatNumber(sting.amount)} จนจบเทิร์น`)
 }
 
+// คำสาปตอนตาย: การ์ดที่ถูกทำลายจากการต่อสู้สาปตัวที่ทำลายมัน (ทำลายตาม หรือ ATK เหลือครึ่งถาวร)
+function applyDeathCurse(state, killerOwner, killer, victimCard, details) {
+  const curse = getDeathCurse(victimCard)
+  if (!curse || !state.players[killerOwner].field.some((m) => m?.uid === killer.uid)) return
+  const name = cardOf(killer).name
+  if (curse.mode === 'destroy') {
+    if (effectDestroy(state, killerOwner, killer.uid, details)) details.push(`👻 ${curse.reason}: ${name} ถูกทำลายตาม`)
+    return
+  }
+  const before = getFieldAtk(state, killerOwner, killer.uid)
+  const cut = Math.floor(before / 2)
+  killer.statMods = [...(killer.statMods ?? []), { atk: -cut, until: Number.MAX_SAFE_INTEGER, reason: curse.reason }]
+  details.push(`👻 ${curse.reason}: ${name} ATK ${formatNumber(before)} → ${formatNumber(before - cut)} (ถาวร)`)
+}
+
 // ชนะการต่อสู้ (ทำลายศัตรูได้): แต้มประสบการณ์ + สายฟ้าฟาดซ้ำ + พรานไสยเวทส่งผีจากกองลงสุสาน
 function onBattleWin(state, ownerId, monster, details) {
   awardXp(state, monster, details)
@@ -1845,6 +1861,7 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
       if (battleDestroy(state, oppId, defender, details)) {
         onBattleWin(state, playerId, attacker, details)
         applySting(state, playerId, attacker, defenderCard, details)
+        applyDeathCurse(state, playerId, attacker, defenderCard, details)
       }
     } else if (result.outcome === 'defender') {
       details.push(`ATK ${a} < DEF ${d} → ตีไม่ผ่าน ไม่มีใครถูกทำลาย (ส่วนต่าง ${d} − ${a} = ${diff})`)
@@ -1858,11 +1875,15 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
     if (battleDestroy(state, oppId, defender, details)) {
         onBattleWin(state, playerId, attacker, details)
         applySting(state, playerId, attacker, defenderCard, details)
+        applyDeathCurse(state, playerId, attacker, defenderCard, details)
       }
   } else if (result.outcome === 'defender') {
     details.push(`${a} < ${d} → ${fallText(attackerCard, attacker)} (ส่วนต่าง ${d} − ${a} = ${diff})`)
     hitAttackerOwner(result.damage)
-    if (battleDestroy(state, playerId, attacker, details)) onBattleWin(state, oppId, defender, details)
+    if (battleDestroy(state, playerId, attacker, details)) {
+      onBattleWin(state, oppId, defender, details)
+      applyDeathCurse(state, oppId, defender, attackerCard, details)
+    }
   } else {
     const anySurvives = survivesBattle(attacker) || survivesBattle(defender)
     details.push(
