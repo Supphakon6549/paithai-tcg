@@ -44,6 +44,8 @@ function buildTrapShow(root, trap, reduced, key) {
   const end = grave || slot
   const clamp = (v) => Math.max(0.12, Math.min(1, v))
   return {
+    stage: 'trap',
+    duration: reduced ? TRAP_REDUCED_MS : TRAP_MS,
     key,
     reduced,
     effect: TRAP_EFFECT_LABEL[trap.effect] ? trap.effect : 'negate',
@@ -58,6 +60,50 @@ function buildTrapShow(root, trap, reduced, key) {
     ey: end.y - slot.y,
     s0: clamp(slot.w / cardW),
     s1: clamp((end.w || slot.w) / cardW) * 0.8,
+  }
+}
+
+// โชว์กลางจอ: ผสานร่าง / ขึ้นขี่ / ลงจากหลัง / พิธีอัญเชิญ (ใช้คิวเดียวกับกับดัก)
+const SHOWCASE_MS = { fusion: 1600, mount: 1650, dismount: 1250, ritual: 1600 }
+const SHOWCASE_REDUCED_MS = 1100
+const SHOWCASE_LABEL = {
+  fusion: '🌀 ผสานร่าง!',
+  mount: '🐎 ขึ้นขี่!',
+  dismount: '🐎 ลงจากหลัง!',
+  ritual: '🙏 พิธีอัญเชิญ!',
+}
+
+function buildShowcaseShow(root, ev, sc, reduced, key) {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const cardW = Math.round(Math.min(vw * 0.36, 170))
+  const center = { x: vw / 2, y: Math.min(vh * 0.44, vh / 2 - 40) }
+  const resultId = sc.resultCardId ?? null
+  const mine = (ev.placed || []).filter((p) => p.player === sc.player)
+  const placed = mine.find((p) => p.cardId === resultId) || mine[0] || null
+  const endRect = placed
+    ? findCardOrZoneRect(root, placed.player, placed.uid, placed.zone, 'monster')
+    : null
+  const clamp = (v) => Math.max(0.12, Math.min(1, v))
+  const materials = (sc.materialCardIds || []).slice(0, 4)
+  return {
+    stage: 'showcase',
+    duration: reduced ? SHOWCASE_REDUCED_MS : SHOWCASE_MS[sc.kind],
+    key,
+    reduced,
+    kind: sc.kind,
+    cardId: sc.cardId,
+    resultCardId: resultId || sc.cardId,
+    resultUid: placed?.uid ?? null,
+    materials,
+    label: SHOWCASE_LABEL[sc.kind],
+    name: getCardById(resultId || sc.cardId)?.name ?? '',
+    x: center.x,
+    y: center.y,
+    cardW,
+    ex: endRect ? endRect.x - center.x : 0,
+    ey: endRect ? endRect.y - center.y : sc.player === 'player' ? vh * 0.3 : -vh * 0.3,
+    s1: clamp(endRect ? endRect.w / cardW : 0.3),
   }
 }
 
@@ -169,7 +215,8 @@ export default function BattleFx({ game }) {
       return `fx-${Date.now()}-${fxKeyRef.current}`
     }
 
-    // เล่นกับดักถัดไปในคิว — ตัวตั้งเวลาเก็บใน removeTimersRef (ไม่ผูกกับ cleanup ของ [game])
+    // เล่นโชว์กลางจอถัดไปในคิว (กับดัก + ผสาน/ขึ้นขี่/ลงหลัง/พิธี) — ครั้งละชิ้น
+    // ตัวตั้งเวลาเก็บใน removeTimersRef (ไม่ผูกกับ cleanup ของ [game])
     const playNextTrap = () => {
       const next = trapQueueRef.current.shift()
       if (!next) {
@@ -179,20 +226,31 @@ export default function BattleFx({ game }) {
       }
       trapBusyRef.current = true
       setTrapShow(next)
+      // ซ่อนการ์ดจริงบนสนามไว้ก่อน แล้วค่อยโผล่ตอนการ์ดในโชว์ลงถึงช่อง (opacity อย่างเดียว)
+      if (next.stage === 'showcase' && next.resultUid && !next.reduced) {
+        const el = document.querySelector(`[data-battle-root] [data-uid="${next.resultUid}"]`)
+        if (el) {
+          el.style.setProperty('--fx-arrive', `${next.duration}ms`)
+          triggerDomClass(el, 'fx-dom-arrive', next.duration + 50)
+        }
+      }
       const t = setTimeout(() => {
         removeTimersRef.current.delete(t)
         playNextTrap()
-      }, next.reduced ? TRAP_REDUCED_MS : TRAP_MS)
+      }, next.duration)
       removeTimersRef.current.add(t)
+    }
+    const enqueueStage = (item) => {
+      trapQueueRef.current.push(item)
+      trapQueueRef.current = trapQueueRef.current.slice(-2)
+      trapQueued = true
     }
     let trapQueued = false
 
     for (const entry of newEntries) {
       // 0. กับดักถูกเปิด (trapActivated) — แสดงการ์ดพลิกกลางจอ
       for (const trap of entry.event?.trapActivated || []) {
-        trapQueueRef.current.push(buildTrapShow(root, trap, prefersReducedMotion, nextKey()))
-        trapQueueRef.current = trapQueueRef.current.slice(-1)
-        trapQueued = true
+        enqueueStage(buildTrapShow(root, trap, prefersReducedMotion, nextKey()))
         if (trap.effect === 'continuous' && !prefersReducedMotion) {
           const trapEl = root.querySelector(`[data-uid="${trap.uid}"]`)
           if (trapEl) {
@@ -203,6 +261,11 @@ export default function BattleFx({ game }) {
             removeTimersRef.current.add(t)
           }
         }
+      }
+      // 0b. ผสานร่าง / ขึ้นขี่ / ลงจากหลัง / พิธีอัญเชิญ
+      const sc = entry.event?.showcase
+      if (sc && SHOWCASE_MS[sc.kind]) {
+        enqueueStage(buildShowcaseShow(root, entry.event, sc, prefersReducedMotion, nextKey()))
       }
       // กรณีประกาศโจมตีแล้วรอฝ่ายรับตัดสินใจเปิดกับดัก (kind === 'pending')
       if (entry.kind === 'pending' && game.pendingResponse) {
@@ -355,7 +418,9 @@ export default function BattleFx({ game }) {
         }
 
         // มอนสเตอร์พิธีกรรมที่ถูกอัญเชิญลงสนาม (เช่น พระอินทร์ จอมอาสนี)
-        for (const placed of ev.placed || []) {
+        // ถ้ามีโชว์กลางจอ (ผสาน/พิธี) อยู่แล้ว ไม่ต้องเล่นเอฟเฟกต์เล็กซ้ำ
+        const hasBigShow = Boolean(SHOWCASE_MS[ev.showcase?.kind])
+        for (const placed of hasBigShow ? [] : ev.placed || []) {
           const card = getCardById(placed.cardId)
           const elColor = ELEMENTS[card?.element]?.color || '#f5dc84'
           const cardEl = root.querySelector(`[data-uid="${placed.uid}"]`)
@@ -587,7 +652,12 @@ export default function BattleFx({ game }) {
 
   return (
     <div className="battle-fx-layer" aria-hidden="true">
-      {trapShow && <TrapShow key={trapShow.key} show={trapShow} />}
+      {trapShow &&
+        (trapShow.stage === 'showcase' ? (
+          <ShowcaseStage key={trapShow.key} show={trapShow} />
+        ) : (
+          <TrapShow key={trapShow.key} show={trapShow} />
+        ))}
       {fxItems.map((item) => {
         const style = {
           left: `${item.x}px`,
@@ -835,6 +905,124 @@ function TrapShow({ show }) {
             ))}
           </div>
         )}
+      </div>
+    </>
+  )
+}
+
+/*
+ * ShowcaseStage — โชว์กลางจอของการ์ดพิเศษ (ต่างกันชัดเจน 4 แบบ)
+ * - fusion   "หลอมรวม": วัตถุดิบ 2 ใบหมุนวนเข้าหากัน → แสงม่วงวาบ → การ์ดผลลัพธ์โผล่
+ * - mount    "ขึ้นขี่": สัตว์วิ่งเข้าจากข้าง → คนกระโดดโค้งขึ้นหลัง → ฝุ่นตลบ → พลิกเป็นร่างขี่
+ * - dismount "ลงจากหลัง": ร่างขี่สั่นแล้วแยก → สัตว์วิ่งออก → ตัวที่เหลือกระโดดลงช่องบนสนาม
+ * - ritual   "พิธีอัญเชิญ": เครื่องสังเวยลอยขึ้นเป็นแสงทอง → รวมเป็นการ์ดผลลัพธ์
+ * ทุกชิ้นใช้ transform/opacity · ไม่มี animation infinite · ถอดออกเมื่อครบเวลาใน removeTimersRef
+ */
+function ScCard({ id, className = '', style }) {
+  return (
+    <div className={`fx-sc__card ${className}`} style={style}>
+      {id && <img src={`/cards/${id}.jpg`} alt="" draggable="false" />}
+    </div>
+  )
+}
+
+function ShowcaseStage({ show }) {
+  const style = {
+    left: `${show.x}px`,
+    top: `${show.y}px`,
+    '--dur': `${show.duration}ms`,
+    '--card-w': `${show.cardW}px`,
+    '--ex': `${show.ex}px`,
+    '--ey': `${show.ey}px`,
+    '--s1': show.s1,
+  }
+  const cls = `fx-sc fx-sc--${show.kind}${show.reduced ? ' fx-sc--reduced' : ''}`
+  const title = (
+    <div className="fx-sc__title">
+      <span className="fx-sc__kicker">{show.label}</span>
+      {show.name && <strong className="fx-sc__name">{show.name}</strong>}
+    </div>
+  )
+
+  if (show.reduced) {
+    return (
+      <div className={cls} style={style}>
+        {title}
+      </div>
+    )
+  }
+
+  const [m0, m1] = show.materials
+  const dust = (extra = '') =>
+    [0, 1, 2, 3, 4].map((i) => (
+      <span key={i} className={`fx-sc__dust fx-sc__dust--${i} ${extra}`} />
+    ))
+
+  let body = null
+  if (show.kind === 'fusion') {
+    body = (
+      <>
+        <div className="fx-sc__orbit">
+          <ScCard id={m0 ?? show.cardId} className="fx-sc__mat fx-sc__mat--a" />
+          <ScCard id={m1 ?? show.cardId} className="fx-sc__mat fx-sc__mat--b" />
+        </div>
+        <span className="fx-sc__flash" />
+        <span className="fx-sc__ring" />
+        <ScCard id={show.resultCardId} className="fx-sc__result" />
+      </>
+    )
+  } else if (show.kind === 'mount') {
+    // materialCardIds = [คน, สัตว์]
+    body = (
+      <>
+        <div className="fx-sc__stack">
+          <ScCard id={m1 ?? show.resultCardId} className="fx-sc__animal" />
+          {m0 && <ScCard id={m0} className="fx-sc__rider" />}
+        </div>
+        <div className="fx-sc__base">{dust()}</div>
+        <ScCard id={show.resultCardId} className="fx-sc__result fx-sc__result--flip" />
+      </>
+    )
+  } else if (show.kind === 'dismount') {
+    body = (
+      <>
+        <ScCard id={show.cardId} className="fx-sc__mounted" />
+        <ScCard id={show.resultCardId} className="fx-sc__leaper" />
+        <div className="fx-sc__land">{dust('fx-sc__dust--land')}</div>
+      </>
+    )
+  } else if (show.kind === 'ritual') {
+    const mats = show.materials.length ? show.materials : [show.cardId]
+    const n = mats.length
+    body = (
+      <>
+        {mats.map((id, i) => (
+          <ScCard
+            key={`t${i}`}
+            id={id}
+            className="fx-sc__tribute"
+            style={{ '--tx': (i - (n - 1) / 2) * 0.62, animationDelay: `${i * 40}ms` }}
+          />
+        ))}
+        {mats.map((_, i) => (
+          <span
+            key={`o${i}`}
+            className="fx-sc__orb"
+            style={{ '--tx': (i - (n - 1) / 2) * 0.62, animationDelay: `${i * 40}ms` }}
+          />
+        ))}
+        <span className="fx-sc__ring fx-sc__ring--gold" />
+        <ScCard id={show.resultCardId} className="fx-sc__result" />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <div className={`fx-sc-veil fx-sc-veil--${show.kind}`} style={{ '--dur': `${show.duration}ms` }} />
+      <div className={cls} style={style}>
+        {body}
+        {title}
       </div>
     </>
   )

@@ -1634,3 +1634,475 @@ button.pile:hover {
     transform: none !important;
   }
 }
+
+/* ==========================================================================
+   11. ShowcaseStage — ผสานร่าง / ขึ้นขี่ / ลงจากหลัง / พิธีอัญเชิญ (คิวเดียวกับกับดัก)
+   - ตำแหน่งอ้างอิงจุดกลางจอ (.fx-sc) · การ์ดจัดกึ่งกลางด้วย margin ไม่ต้องใช้ translate(-50%)
+   - ทุกคีย์เฟรมใช้ transform/opacity · ไม่มี infinite · เวลาตาม --dur ของแต่ละแบบ
+   ========================================================================== */
+.fx-sc {
+  position: absolute;
+  width: 0;
+  height: 0;
+  z-index: 5;
+}
+
+.fx-sc-veil {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse 70% 55% at 50% 44%, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.66) 72%);
+  animation: fx-sc-veil var(--dur) ease-out forwards;
+}
+.fx-sc-veil--fusion { background-color: rgba(48, 12, 72, 0.3); }
+.fx-sc-veil--mount { background-color: rgba(60, 40, 12, 0.22); }
+.fx-sc-veil--dismount { background-color: rgba(50, 34, 10, 0.18); }
+.fx-sc-veil--ritual { background-color: rgba(70, 52, 8, 0.26); }
+
+@keyframes fx-sc-veil {
+  0%   { opacity: 0; }
+  14%  { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.fx-sc__card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--card-w);
+  aspect-ratio: 2 / 3;
+  margin-left: calc(var(--card-w) * -0.5);
+  margin-top: calc(var(--card-w) * -0.75);
+  border-radius: 9px;
+  overflow: hidden;
+  background: #120c08;
+  border: 2px solid #d9b24c;
+  box-shadow: 0 0 0 1px #000, 0 12px 26px rgba(0, 0, 0, 0.8);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.fx-sc__card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ป้ายชื่อใต้การ์ดกลางจอ */
+.fx-sc__title {
+  position: absolute;
+  left: 0;
+  top: calc(var(--card-w) * 0.75 + 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  max-width: 92vw;
+  padding: 6px 16px 7px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(24, 15, 9, 0.96) 0%, rgba(9, 6, 4, 0.97) 100%);
+  border: 1.5px solid var(--sc-c, #fae094);
+  box-shadow: 0 0 18px var(--sc-glow, rgba(250, 224, 148, 0.45)), 0 6px 16px rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  text-align: center;
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px) scale(0.85);
+  animation: fx-sc-title var(--dur) ease-out forwards;
+}
+
+.fx-sc__kicker {
+  font-family: 'Sarabun', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--sc-c, #fae094);
+}
+
+.fx-sc__name {
+  font-family: 'Chonburi', 'Noto Serif Thai', serif;
+  font-size: 17px;
+  line-height: 1.25;
+  color: #fff6db;
+  text-shadow: 0 1px 2px #000;
+  max-width: 84vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fx-sc--fusion { --sc-c: #d9a2ff; --sc-glow: rgba(190, 110, 255, 0.55); --sc-title-at: 54%; }
+.fx-sc--mount { --sc-c: #ffd27d; --sc-glow: rgba(255, 196, 90, 0.5); }
+.fx-sc--dismount { --sc-c: #ffd27d; --sc-glow: rgba(255, 196, 90, 0.45); }
+.fx-sc--ritual { --sc-c: #ffe680; --sc-glow: rgba(255, 220, 110, 0.6); }
+
+@keyframes fx-sc-title {
+  0%, 52% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.85); }
+  60%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.05); }
+  66%     { transform: translateX(-50%) translateY(0) scale(1); }
+  86%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  96%     { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.96); }
+  100%    { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.96); }
+}
+
+/* การ์ดผลลัพธ์ (ผสาน/พิธี): โผล่กลางจอ → ค้าง → หดลงช่องบนสนาม */
+.fx-sc__result {
+  border-color: var(--sc-c, #fae094);
+  box-shadow: 0 0 0 1px #000, 0 0 28px var(--sc-glow), 0 12px 28px rgba(0, 0, 0, 0.85);
+  animation: fx-sc-result var(--dur) cubic-bezier(0.3, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes fx-sc-result {
+  0%, 48% { opacity: 0; transform: translate(0, 0) scale(0.35); }
+  56%     { opacity: 1; transform: translate(0, 0) scale(1.14); }
+  62%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  84%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  96%     { opacity: 1; transform: translate(var(--ex), var(--ey)) scale(var(--s1)); }
+  100%    { opacity: 0; transform: translate(var(--ex), var(--ey)) scale(var(--s1)); }
+}
+
+.fx-sc__ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--card-w) * 1.4);
+  aspect-ratio: 1;
+  margin-left: calc(var(--card-w) * -0.7);
+  margin-top: calc(var(--card-w) * -0.7);
+  border-radius: 50%;
+  border: 3px solid var(--sc-c);
+  box-shadow: 0 0 18px var(--sc-glow), inset 0 0 18px var(--sc-glow);
+  opacity: 0;
+  animation: fx-sc-ring var(--dur) ease-out forwards;
+}
+
+@keyframes fx-sc-ring {
+  0%, 46% { opacity: 0; transform: scale(0.25); }
+  50%     { opacity: 1; transform: scale(0.5); }
+  76%     { opacity: 0; transform: scale(1.6); }
+  100%    { opacity: 0; transform: scale(1.6); }
+}
+
+/* ---------- 11.1 ผสานร่าง: หมุนวนเข้าหากัน → แสงม่วงวาบ ---------- */
+.fx-sc__orbit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  animation: fx-sc-orbit var(--dur) cubic-bezier(0.55, 0, 0.75, 1) forwards;
+}
+
+@keyframes fx-sc-orbit {
+  0%   { transform: rotate(0deg); }
+  46%  { transform: rotate(560deg); }
+  100% { transform: rotate(560deg); }
+}
+
+.fx-sc__mat {
+  border-color: #c58cff;
+  box-shadow: 0 0 0 1px #000, 0 0 18px rgba(190, 110, 255, 0.6);
+}
+.fx-sc__mat--a { animation: fx-sc-mat-a var(--dur) cubic-bezier(0.5, 0, 0.8, 1) forwards; }
+.fx-sc__mat--b { animation: fx-sc-mat-b var(--dur) cubic-bezier(0.5, 0, 0.8, 1) forwards; }
+
+@keyframes fx-sc-mat-a {
+  0%   { opacity: 0; transform: translateX(calc(var(--card-w) * -0.95)) rotate(-8deg) scale(0.86); }
+  6%   { opacity: 1; }
+  44%  { opacity: 1; transform: translateX(0) rotate(0deg) scale(0.42); }
+  48%  { opacity: 0; transform: translateX(0) rotate(0deg) scale(0.3); }
+  100% { opacity: 0; transform: translateX(0) rotate(0deg) scale(0.3); }
+}
+
+@keyframes fx-sc-mat-b {
+  0%   { opacity: 0; transform: translateX(calc(var(--card-w) * 0.95)) rotate(8deg) scale(0.86); }
+  6%   { opacity: 1; }
+  44%  { opacity: 1; transform: translateX(0) rotate(0deg) scale(0.42); }
+  48%  { opacity: 0; transform: translateX(0) rotate(0deg) scale(0.3); }
+  100% { opacity: 0; transform: translateX(0) rotate(0deg) scale(0.3); }
+}
+
+.fx-sc__flash {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--card-w) * 2.2);
+  aspect-ratio: 1;
+  margin-left: calc(var(--card-w) * -1.1);
+  margin-top: calc(var(--card-w) * -1.1);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 245, 255, 0.95) 0%, rgba(205, 140, 255, 0.7) 22%, rgba(120, 40, 200, 0.3) 45%, transparent 66%);
+  opacity: 0;
+  animation: fx-sc-flash var(--dur) ease-out forwards;
+}
+
+@keyframes fx-sc-flash {
+  0%, 43% { opacity: 0; transform: scale(0.2); }
+  50%     { opacity: 1; transform: scale(1); }
+  70%     { opacity: 0; transform: scale(1.5); }
+  100%    { opacity: 0; transform: scale(1.5); }
+}
+
+/* ---------- 11.2 ขึ้นขี่: สัตว์วิ่งเข้า → คนกระโดดขึ้นหลัง → ฝุ่น → พลิกเป็นร่างขี่ ---------- */
+.fx-sc__stack {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  animation: fx-sc-stack-out var(--dur) ease-in forwards;
+}
+
+@keyframes fx-sc-stack-out {
+  0%, 66% { opacity: 1; transform: perspective(800px) rotateY(0deg); }
+  77%     { opacity: 1; transform: perspective(800px) rotateY(90deg); }
+  78%     { opacity: 0; transform: perspective(800px) rotateY(90deg); }
+  100%    { opacity: 0; transform: perspective(800px) rotateY(90deg); }
+}
+
+.fx-sc__animal {
+  animation: fx-sc-animal-run var(--dur) cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes fx-sc-animal-run {
+  0%   { opacity: 1; transform: translate(-85vw, 0) rotate(-5deg); }
+  17%  { opacity: 1; transform: translate(12px, -8px) rotate(3deg); }
+  21%  { opacity: 1; transform: translate(-5px, 0) rotate(-1.5deg); }
+  25%  { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  50%  { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  53%  { opacity: 1; transform: translate(0, 5px) rotate(0deg); }
+  58%  { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+}
+
+.fx-sc__rider {
+  border-color: #ffd27d;
+  animation: fx-sc-rider-jump var(--dur) linear forwards;
+}
+
+/* วงโค้งกระโดด: จากขวาล่าง → ยอดโค้ง → ลงซ้อนบนหลังสัตว์ (เฉียงเล็กน้อย) */
+@keyframes fx-sc-rider-jump {
+  0%, 24% { opacity: 0; transform: translate(calc(var(--card-w) * 1.05), calc(var(--card-w) * 0.3)) rotate(0deg) scale(0.82); animation-timing-function: ease-out; }
+  27%     { opacity: 1; transform: translate(calc(var(--card-w) * 0.95), calc(var(--card-w) * 0.2)) rotate(-4deg) scale(0.82); animation-timing-function: ease-out; }
+  38%     { opacity: 1; transform: translate(calc(var(--card-w) * 0.5), calc(var(--card-w) * -0.85)) rotate(-12deg) scale(0.86); animation-timing-function: ease-in; }
+  50%     { opacity: 1; transform: translate(calc(var(--card-w) * 0.12), calc(var(--card-w) * -0.2)) rotate(9deg) scale(0.84); }
+  54%     { opacity: 1; transform: translate(calc(var(--card-w) * 0.12), calc(var(--card-w) * -0.15)) rotate(8deg) scale(0.84); }
+  100%    { opacity: 1; transform: translate(calc(var(--card-w) * 0.12), calc(var(--card-w) * -0.15)) rotate(8deg) scale(0.84); }
+}
+
+/* ฝุ่นตลบที่ฐานการ์ด */
+.fx-sc__base,
+.fx-sc__land {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.fx-sc__base { left: 0; top: calc(var(--card-w) * 0.72); }
+.fx-sc__land { left: var(--ex); top: calc(var(--ey) + var(--card-w) * var(--s1) * 0.7); }
+
+.fx-sc__dust {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--card-w) * 0.55);
+  aspect-ratio: 1.6;
+  margin-left: calc(var(--card-w) * -0.275);
+  margin-top: calc(var(--card-w) * -0.17);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(214, 186, 140, 0.75) 0%, rgba(150, 118, 80, 0.4) 45%, transparent 70%);
+  opacity: 0;
+  animation: fx-sc-dust var(--dur) ease-out forwards;
+}
+.fx-sc__dust--0 { --px: -0.75; }
+.fx-sc__dust--1 { --px: -0.35; }
+.fx-sc__dust--2 { --px: 0; }
+.fx-sc__dust--3 { --px: 0.35; }
+.fx-sc__dust--4 { --px: 0.75; }
+
+@keyframes fx-sc-dust {
+  0%, 49% { opacity: 0; transform: translateX(0) scale(0.3); }
+  55%     { opacity: 0.9; transform: translateX(calc(var(--card-w) * var(--px) * 0.4)) scale(0.9); }
+  74%     { opacity: 0; transform: translateX(calc(var(--card-w) * var(--px))) translateY(-10px) scale(1.7); }
+  100%    { opacity: 0; transform: translateX(calc(var(--card-w) * var(--px))) translateY(-10px) scale(1.7); }
+}
+
+.fx-sc__dust--land {
+  width: calc(var(--card-w) * 0.38);
+  margin-left: calc(var(--card-w) * -0.19);
+  margin-top: calc(var(--card-w) * -0.12);
+  animation-name: fx-sc-dust-land;
+}
+
+@keyframes fx-sc-dust-land {
+  0%, 74% { opacity: 0; transform: translateX(0) scale(0.3); }
+  80%     { opacity: 0.85; transform: translateX(calc(var(--card-w) * var(--px) * 0.25)) scale(0.9); }
+  98%     { opacity: 0; transform: translateX(calc(var(--card-w) * var(--px) * 0.6)) translateY(-8px) scale(1.5); }
+  100%    { opacity: 0; transform: translateX(calc(var(--card-w) * var(--px) * 0.6)) translateY(-8px) scale(1.5); }
+}
+
+/* ร่างขี่: พลิกเข้ามาแทนการ์ดที่ซ้อนกัน แล้วลงช่องบนสนาม */
+.fx-sc__result--flip {
+  animation-name: fx-sc-result-flip;
+}
+
+@keyframes fx-sc-result-flip {
+  0%, 77% { opacity: 0; transform: perspective(800px) translate(0, 0) rotateY(-90deg) scale(1); }
+  78%     { opacity: 1; transform: perspective(800px) translate(0, 0) rotateY(-90deg) scale(1); }
+  86%     { opacity: 1; transform: perspective(800px) translate(0, 0) rotateY(0deg) scale(1.08); }
+  90%     { opacity: 1; transform: perspective(800px) translate(0, 0) rotateY(0deg) scale(1); }
+  98%     { opacity: 1; transform: perspective(800px) translate(var(--ex), var(--ey)) rotateY(0deg) scale(var(--s1)); }
+  100%    { opacity: 0; transform: perspective(800px) translate(var(--ex), var(--ey)) rotateY(0deg) scale(var(--s1)); }
+}
+
+.fx-sc--mount .fx-sc__title { animation-name: fx-sc-title-late; }
+
+@keyframes fx-sc-title-late {
+  0%, 78% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.85); }
+  84%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.06); }
+  88%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  96%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  100%    { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.96); }
+}
+
+/* ---------- 11.3 ลงจากหลัง: ร่างขี่สั่น → แยก → สัตว์วิ่งออก · ตัวที่เหลือกระโดดลงช่อง ---------- */
+.fx-sc__mounted {
+  border-color: #ffd27d;
+  animation: fx-sc-mounted var(--dur) ease-in-out forwards;
+}
+
+@keyframes fx-sc-mounted {
+  0%   { opacity: 0; transform: translateX(0) rotate(0deg) scale(0.7); }
+  12%  { opacity: 1; transform: translateX(0) rotate(0deg) scale(1.05); }
+  18%  { opacity: 1; transform: translateX(0) rotate(0deg) scale(1); }
+  23%  { opacity: 1; transform: translateX(-5px) rotate(-2.5deg) scale(1); }
+  28%  { opacity: 1; transform: translateX(5px) rotate(2.5deg) scale(1); }
+  33%  { opacity: 1; transform: translateX(0) rotate(0deg) scale(1); }
+  64%  { opacity: 1; transform: translateX(-80vw) rotate(-7deg) scale(0.95); }
+  66%  { opacity: 0; transform: translateX(-80vw) rotate(-7deg) scale(0.95); }
+  100% { opacity: 0; transform: translateX(-80vw) rotate(-7deg) scale(0.95); }
+}
+
+.fx-sc__leaper {
+  border-color: #ffd27d;
+  animation: fx-sc-leaper var(--dur) linear forwards;
+}
+
+/* แยกตัวขึ้นจากร่างขี่ → ยอดโค้ง → ลงช่องบนสนาม (หาจาก data-uid ใน event.placed) */
+@keyframes fx-sc-leaper {
+  0%, 31% { opacity: 0; transform: translate(0, 0) rotate(0deg) scale(0.9); animation-timing-function: ease-out; }
+  36%     { opacity: 1; transform: translate(calc(var(--card-w) * 0.15), calc(var(--card-w) * -0.35)) rotate(6deg) scale(0.92); animation-timing-function: ease-out; }
+  52%     { opacity: 1; transform: translate(calc(var(--ex) * 0.5), calc(var(--ey) * 0.35 - var(--card-w) * 0.8)) rotate(-8deg) scale(0.75); animation-timing-function: ease-in; }
+  76%     { opacity: 1; transform: translate(var(--ex), var(--ey)) rotate(0deg) scale(var(--s1)); }
+  80%     { opacity: 1; transform: translate(var(--ex), calc(var(--ey) + 3px)) rotate(0deg) scale(var(--s1)); }
+  90%     { opacity: 1; transform: translate(var(--ex), var(--ey)) rotate(0deg) scale(var(--s1)); }
+  100%    { opacity: 0; transform: translate(var(--ex), var(--ey)) rotate(0deg) scale(var(--s1)); }
+}
+
+.fx-sc--dismount .fx-sc__title { animation-name: fx-sc-title-early; }
+
+@keyframes fx-sc-title-early {
+  0%, 10% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.85); }
+  18%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.05); }
+  24%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  70%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  82%     { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.96); }
+  100%    { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.96); }
+}
+
+/* ---------- 11.4 พิธีอัญเชิญ: เครื่องสังเวยลอยขึ้นเป็นแสงทอง → รวมเป็นการ์ดผลลัพธ์ ---------- */
+.fx-sc__tribute {
+  border-color: #e8c867;
+  animation: fx-sc-tribute var(--dur) ease-out forwards;
+}
+
+/* แผ่นแสงทองค่อย ๆ กลืนการ์ดเครื่องสังเวย */
+.fx-sc__tribute::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(255, 236, 160, 0.95) 0%, rgba(255, 214, 110, 0.7) 50%, rgba(255, 250, 220, 0.9) 100%);
+  opacity: 0;
+  animation: fx-sc-tribute-gold var(--dur) ease-in forwards;
+  animation-delay: inherit;
+}
+
+@keyframes fx-sc-tribute {
+  0%   { opacity: 0; transform: translate(calc(var(--card-w) * var(--tx)), calc(var(--card-w) * 0.5)) scale(0.55); }
+  8%   { opacity: 1; transform: translate(calc(var(--card-w) * var(--tx)), calc(var(--card-w) * 0.38)) scale(0.55); }
+  32%  { opacity: 1; transform: translate(calc(var(--card-w) * var(--tx)), calc(var(--card-w) * 0.05)) scale(0.52); }
+  42%  { opacity: 0; transform: translate(calc(var(--card-w) * var(--tx)), calc(var(--card-w) * -0.15)) scale(0.4); }
+  100% { opacity: 0; transform: translate(calc(var(--card-w) * var(--tx)), calc(var(--card-w) * -0.15)) scale(0.4); }
+}
+
+@keyframes fx-sc-tribute-gold {
+  0%, 12% { opacity: 0; }
+  34%     { opacity: 1; }
+  100%    { opacity: 1; }
+}
+
+.fx-sc__orb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  margin-top: -11px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffbe6 0%, rgba(255, 220, 110, 0.9) 35%, rgba(255, 180, 60, 0) 70%);
+  opacity: 0;
+  animation: fx-sc-orb var(--dur) ease-in forwards;
+}
+
+@keyframes fx-sc-orb {
+  0%, 34% { opacity: 0; transform: translate(calc(var(--card-w) * var(--tx)), calc(var(--card-w) * -0.1)) scale(0.6); }
+  38%     { opacity: 1; transform: translate(calc(var(--card-w) * var(--tx)), calc(var(--card-w) * -0.2)) scale(1.4); }
+  50%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  54%     { opacity: 0; transform: translate(0, 0) scale(2); }
+  100%    { opacity: 0; transform: translate(0, 0) scale(2); }
+}
+
+.fx-sc__ring--gold {
+  border-color: #ffe680;
+  border-style: dashed;
+}
+
+/* การ์ดจริงบนสนาม: ซ่อนไว้ระหว่างโชว์ แล้วค่อยโผล่ตอนการ์ดในโชว์ลงถึงช่อง (opacity อย่างเดียว) */
+.fx-dom-arrive {
+  animation: fx-dom-arrive var(--fx-arrive, 1600ms) linear;
+}
+
+@keyframes fx-dom-arrive {
+  0%, 88% { opacity: 0; }
+  100%    { opacity: 1; }
+}
+
+/* ---------- 11.5 prefers-reduced-motion: แสดงชื่อสั้น ๆ ไม่หมุน ไม่เคลื่อนที่ ---------- */
+.fx-sc--reduced .fx-sc__title {
+  top: 0;
+  transform: translate(-50%, -50%);
+  animation: fx-trap-title-fade var(--dur) ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-sc-veil,
+  .fx-sc__card,
+  .fx-sc__orbit,
+  .fx-sc__stack,
+  .fx-sc__flash,
+  .fx-sc__ring,
+  .fx-sc__orb,
+  .fx-sc__base,
+  .fx-sc__land {
+    display: none !important;
+  }
+
+  .fx-sc__title {
+    top: 0 !important;
+    transform: translate(-50%, -50%) !important;
+    animation: fx-trap-title-fade 1.1s ease-out forwards !important;
+  }
+
+  .fx-dom-arrive {
+    animation: none !important;
+  }
+}
