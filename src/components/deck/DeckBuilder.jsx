@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import MonsterCard from '../cards/MonsterCard'
 import { CARDS, CARD_GROUPS, CARD_TYPES } from '../../data/cards'
-import { allDecks, findDeck, newDeckId, toCounts, toList } from '../../data/decks'
+import { PRESET_DECKS, allDecks, findDeck, newDeckId, toCounts, toList } from '../../data/decks'
 import { DECK_RULES, deckProblems, formatNumber } from '../../engine'
 import './DeckBuilder.css'
 
@@ -16,6 +16,28 @@ const byDeckOrder = (a, b) =>
  * - คลังการ์ด: กรองตามชุด/ค้นหา · แตะ ＋/− เพิ่มลด · แตะภาพดูการ์ดเต็ม
  * - สำรับสำเร็จรูปแก้ไม่ได้ (กดคัดลอกเพื่อแก้)
  */
+// เติมสำรับให้ครบ 40 ใบ: เลือกการ์ดชุดเดียวกับที่ใส่ไว้มากที่สุดก่อน แล้วไล่มอนสเตอร์ตัวเล็ก ATK สูง
+function autoFill(main) {
+  const counts = { ...main }
+  const total = () => Object.values(counts).reduce((a, b) => a + b, 0)
+  const groupScore = {}
+  for (const [id, n] of Object.entries(counts)) {
+    const g = CARDS.find((c) => c.id === id)?.groupTag
+    if (g) groupScore[g] = (groupScore[g] ?? 0) + n
+  }
+  const rank = (c) =>
+    (groupScore[c.groupTag] ?? 0) * 10000 +
+    (c.type === 'monster' && c.level <= 4 ? 3000 + c.atk : c.type === 'monster' ? 1000 + c.atk / 2 : 1500)
+  // ชุดเดียวกันใส่เต็มจำนวนก่อน (สูงสุดใบละ 3) แล้วค่อยเติมการ์ดชุดอื่น
+  const candidates = CARDS.filter((c) => !isExtraCard(c)).sort((a, b) => rank(b) - rank(a))
+  for (const c of candidates) {
+    const room = DECK_RULES.mainSize - total()
+    if (room <= 0) break
+    counts[c.id] = (counts[c.id] ?? 0) + Math.min(room, DECK_RULES.maxCopies - (counts[c.id] ?? 0))
+  }
+  return counts
+}
+
 export default function DeckBuilder({ store, onChange, onPlay }) {
   const [selectedId, setSelectedId] = useState(store.activeId)
   const [group, setGroup] = useState('all')
@@ -98,6 +120,34 @@ export default function DeckBuilder({ store, onChange, onPlay }) {
 
   return (
     <div className="deck-builder">
+      {PRESET_DECKS.length > 0 && (
+        <section className="deck-presets" aria-label="สำรับแนะนำ">
+          <h2 className="deck-presets__title">⭐ สำรับแนะนำ — เลือกแล้วเล่นได้ทันที</h2>
+          <div className="deck-presets__row">
+            {PRESET_DECKS.map((d) => (
+              <article key={d.id} className={`deck-preset${selectedId === d.id ? ' deck-preset--selected' : ''}`}>
+                <button type="button" className="deck-preset__head" onClick={() => setSelectedId(d.id)}>
+                  <span className="deck-preset__icon" aria-hidden="true">
+                    {d.icon}
+                  </span>
+                  <strong>{d.name}</strong>
+                  {d.difficulty && <span className="deck-preset__level">ความยาก: {d.difficulty}</span>}
+                </button>
+                <p className="deck-preset__desc">{d.description}</p>
+                <div className="deck-preset__actions">
+                  <button type="button" className="deck-btn deck-btn--primary" onClick={() => onPlay(d.id)}>
+                    ⚔️ เล่นเลย
+                  </button>
+                  <button type="button" className="deck-btn" onClick={() => createDeck(d)}>
+                    📄 คัดลอกไปแก้
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="deck-bar" aria-label="เลือกสำรับ">
         <select className="deck-bar__select" value={deck.id} onChange={(e) => setSelectedId(e.target.value)}>
           <optgroup label="สำรับสำเร็จรูป">
@@ -164,6 +214,16 @@ export default function DeckBuilder({ store, onChange, onPlay }) {
               <li key={p}>⚠️ {p}</li>
             ))}
           </ul>
+        )}
+        {editable && mainSize < DECK_RULES.mainSize && (
+          <button
+            type="button"
+            className="deck-btn"
+            onClick={() => saveDeck({ ...deck, main: toList(autoFill(main)) })}
+            title="เติมการ์ดชุดเดียวกับที่ใส่ไว้ให้ครบ 40 ใบ"
+          >
+            ✨ เติมให้ครบ 40 ใบอัตโนมัติ
+          </button>
         )}
         {!editable && <p className="deck-summary__note">สำรับสำเร็จรูปแก้ไขไม่ได้ — กด "📄 คัดลอก" เพื่อแก้เป็นของตัวเอง</p>}
         <button
