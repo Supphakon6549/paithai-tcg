@@ -3,12 +3,15 @@ import { getAiAction } from './ai'
 import {
   activationBlocker,
   applyAction,
+  forestLocked,
   getFieldAtk,
   getMountOptions,
   mountBlocker,
   positionChangeBlocker,
   previewBattle,
+  specialSummonBlocker,
 } from './game'
+import { getCardById } from '../data/cards'
 import { AI, PLAYER } from './rules'
 import { handUid, lastLog, makeState, uidAt } from './testUtils'
 
@@ -29,7 +32,7 @@ const grow = (s, zone, n, playerId = PLAYER) => {
 }
 const endBoth = (s) => applyAction(act(s, { type: 'endTurn' }), { type: 'endTurn', player: AI })
 
-describe('ระบบเติบโต + ต้นไทร (รากลึก)', () => {
+describe('ระบบเติบโต + ต้นไทร (รากประสาน)', () => {
   it('จบเทิร์นเรา +1 แต้ม (สูงสุด 3) · ATK/DEF +200 ต่อแต้ม', () => {
     let s = makeState({ player: { field: ['th03-001'] } })
     const uid = uidAt(s, PLAYER, 0)
@@ -43,56 +46,66 @@ describe('ระบบเติบโต + ต้นไทร (รากลึ�
     expect(getFieldAtk(s, PLAYER, uid)).toBe(1200)
   })
 
-  it('ถูกตีแพ้ → ถอนแต้มแทนการถูกทำลาย แต่ยังเสีย LP · ไม่มีแต้มก็ตาย', () => {
-    const s = grow(aiBattle({ player: { field: ['th03-001'] }, ai: { field: ['th01-022'] } }), 0, 1)
-    const diff = previewBattle(s, AI, uidAt(s, AI, 0), uidAt(s, PLAYER, 0)).damage
+  it('รากประสาน: มีพืชป่าหงายตัวอื่น → รอดการต่อสู้และไม่เสีย LP (ครั้งแรกต่อเทิร์น)', () => {
+    const s = aiBattle({ player: { field: ['th03-001', 'th03-002'] }, ai: { field: ['th01-022'] } })
     const hit = aiAttack(s, 0, 0)
-    expect(hit.players.player.field[0]).toMatchObject({ cardId: 'th03-001', growth: 0 })
-    expect(hit.players.player.lp).toBe(8000 - diff)
-    expect(lastLog(hit).details.join(' ')).toContain('รากลึก')
+    expect(hit.players.player.field[0]).toMatchObject({ cardId: 'th03-001' })
+    expect(hit.players.player.lp).toBe(8000)
+    expect(lastLog(hit).details.join(' ')).toContain('รากประสาน')
     hit.players.ai.field[0].hasAttacked = false
     hit.players.ai.field[0].attackCount = 0
     expect(aiAttack(hit, 0, 0).players.player.field[0]).toBeNull()
   })
-})
 
-describe('เถาหวาย: ถอนแต้ม รัดศัตรู ATK −300 ข้ามเทิร์นศัตรู', () => {
-  it('ลดยาวถึงจบเทิร์นถัดไปของศัตรู แล้วหมด', () => {
-    const s = grow(makeState({ player: { field: ['th03-002'] }, ai: { field: ['th01-017'] } }), 0, 1)
-    const target = uidAt(s, AI, 0)
-    let next = act(s, { type: 'activate', uid: uidAt(s, PLAYER, 0), targetUid: target })
-    expect(next.players.player.field[0].growth).toBe(0)
-    expect(getFieldAtk(next, AI, target)).toBe(1400)
-    next = act(next, { type: 'endTurn' })
-    expect(getFieldAtk(next, AI, target)).toBe(1400)
-    next = applyAction(next, { type: 'endTurn', player: AI })
-    expect(getFieldAtk(next, AI, target)).toBe(1700)
-  })
-
-  it('ไม่มีแต้ม → ใช้ไม่ได้', () => {
-    const s = makeState({ player: { field: ['th03-002'] }, ai: { field: ['th01-017'] } })
-    expect(activationBlocker(s, PLAYER, uidAt(s, PLAYER, 0))).toBe('ต้องมีแต้มเติบโตอย่างน้อย 1 แต้ม')
+  it('อยู่ตัวเดียว → ไม่มีเกราะ', () => {
+    const s = aiBattle({ player: { field: ['th03-001'] }, ai: { field: ['th01-022'] } })
+    expect(aiAttack(s, 0, 0).players.player.field[0]).toBeNull()
   })
 })
 
-describe('ด้วงกว่าง: แมลงตัวอื่น +200 ไม่ซ้อน', () => {
+describe('เถาหวาย: เรียกต้นไทรจากกอง/มือ', () => {
+  it('อัญเชิญหงาย → เรียกต้นไทรจากกองท่าตั้งรับ · ล็อกอัญเชิญพิเศษเฉพาะการ์ดป่า', () => {
+    const s = makeState({ player: { hand: ['th03-002', 'th01-009'], deck: ['th01-001', 'th03-001', 'th03-001'] } })
+    const after = act(s, { type: 'summon', uid: handUid(s, PLAYER, 0) })
+    expect(after.pendingChoice.options.map((o) => o.label)).toEqual(['ต้นไทรเดินดิน (จากกอง)', 'ไม่เรียก'])
+    const called = act(after, { type: 'choose', optionId: after.pendingChoice.options[0].id })
+    expect(called.players.player.field[1]).toMatchObject({ cardId: 'th03-001', position: 'defense', cannotAttackTurn: 3 })
+    expect(called.players.player.deck).toHaveLength(2)
+    expect(called.players.player.forestLockTurn).toBe(3)
+    expect(forestLocked(called, PLAYER, getCardById('th01-009'))).toBe(true)
+    expect(forestLocked(called, PLAYER, getCardById('th03-008'))).toBe(false)
+  })
+})
+
+describe('ด้วงกว่าง: แมลงตัวอื่น +200 ไม่ซ้อน + เกราะร่วมรัง', () => {
   it('ด้วง 2 ใบก็ยัง +200 · ด้วงได้จากด้วงอีกใบ', () => {
     const s = makeState({ player: { field: ['th03-003', 'th03-003', 'th03-004'] } })
-    expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 2))).toBe(700)
+    expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 2))).toBe(1000)
     expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 0))).toBe(1600)
     const alone = makeState({ player: { field: ['th03-003'] } })
     expect(getFieldAtk(alone, PLAYER, uidAt(alone, PLAYER, 0))).toBe(1400)
   })
+
+  it('แมลงป่าที่มีแมลงป่าตัวอื่น รอดการโจมตีแรกและไม่เสีย LP', () => {
+    const s = aiBattle({ player: { field: ['th03-004', 'th03-003'] }, ai: { field: ['th01-022'] } })
+    const hit = aiAttack(s, 0, 0)
+    expect(hit.players.player.field[0]).toMatchObject({ cardId: 'th03-004' })
+    expect(hit.players.player.lp).toBe(8000)
+    expect(lastLog(hit).details.join(' ')).toContain('เกราะร่วมรัง')
+  })
 })
 
 describe('ฝูงต่อ: เรียกพวก + เหล็กใน', () => {
-  it('อัญเชิญหงาย → เลือกเรียกแมลงเล็กจากมือ ท่าตั้งรับ โจมตีไม่ได้เทิร์นนี้ (ชื่อละครั้ง)', () => {
-    const s = makeState({ player: { hand: ['th03-004', 'th03-004', 'th03-004'] } })
+  it('อัญเชิญหงาย → เรียกฝูงต่อจากกอง/มือ ท่าโจมตี โจมตีได้ (ชื่อละครั้ง)', () => {
+    const s = makeState({ player: { hand: ['th03-004', 'th03-004'], deck: ['th03-004', 'th03-004'] } })
     const after = act(s, { type: 'summon', uid: handUid(s, PLAYER, 0) })
     expect(after.pendingChoice).toMatchObject({ kind: 'summonFromHand', player: PLAYER })
-    const called = act(after, { type: 'choose', optionId: after.pendingChoice.options[0].id })
+    expect(after.pendingChoice.options).toHaveLength(3)
+    const fromDeck = after.pendingChoice.options.find((o) => o.label.includes('กอง'))
+    const called = act(after, { type: 'choose', optionId: fromDeck.id })
     expect(ids(called.players.player.field).filter(Boolean)).toEqual(['th03-004', 'th03-004'])
-    expect(called.players.player.field[1]).toMatchObject({ position: 'defense', cannotAttackTurn: 3 })
+    expect(called.players.player.field[1].position).toBe('attack')
+    expect(called.players.player.field[1].cannotAttackTurn).toBeUndefined()
     expect(called.pendingChoice).toBeNull()
   })
 
@@ -156,14 +169,69 @@ describe('เสือสมิง: พลิกซุ่ม', () => {
   })
 })
 
-describe('หมอช้างพันธะไพร: ถอนแต้มพืช บัฟสัตว์ใหญ่', () => {
-  it('ATK/DEF +300 ถึงจบเทิร์นศัตรูถัดไป และไม่ซ้อน', () => {
-    const s = grow(makeState({ player: { field: ['th03-008', 'th03-001'] } }), 1, 1)
-    const elephant = uidAt(s, PLAYER, 0)
-    const next = act(s, { type: 'activate', uid: elephant })
-    expect(getFieldAtk(next, PLAYER, elephant)).toBe(1300)
-    expect(next.players.player.field[1].growth).toBe(0)
-    expect(getFieldAtk(applyAction(act(next, { type: 'endTurn' }), { type: 'endTurn', player: AI }), PLAYER, elephant)).toBe(1000)
+describe('หมอช้างพันธะไพร: อัญเชิญพิเศษ + เรียกสัตว์ป่า', () => {
+  it('มีพืชป่าหงาย → อัญเชิญพิเศษจากมือท่าตั้งรับ · ไม่มีพืชทำไม่ได้', () => {
+    const s = makeState({ player: { hand: ['th03-008'], field: ['th03-002'] } })
+    const after = act(s, { type: 'specialSummon', uid: handUid(s, PLAYER, 0) })
+    expect(after.players.player.field[1]).toMatchObject({ cardId: 'th03-008', position: 'defense' })
+    expect(after.players.player.hasNormalSummoned).toBe(false)
+    const none = makeState({ player: { hand: ['th03-008'] } })
+    expect(specialSummonBlocker(none, PLAYER, handUid(none, PLAYER, 0))).toBe('ต้องมีพืชไพรมหาวันหงายบนสนามเรา')
+  })
+
+  it('ถอนแต้มพืช → เรียกสัตว์ป่าระดับ 1–4 จากมือ ท่าตั้งรับ', () => {
+    const s = grow(makeState({ player: { hand: ['th03-007', 'th01-001'], field: ['th03-008', 'th03-001'] } }), 1, 1)
+    const after = act(s, { type: 'activate', uid: uidAt(s, PLAYER, 0) })
+    expect(after.players.player.field[1].growth).toBe(0)
+    expect(after.pendingChoice.options.map((o) => o.label)).toEqual([getCardById('th03-007').name])
+    const called = act(after, { type: 'choose', optionId: after.pendingChoice.options[0].id })
+    expect(called.players.player.field[2]).toMatchObject({ cardId: 'th03-007', position: 'defense', cannotAttackTurn: 3 })
+    const dry = makeState({ player: { hand: ['th03-007'], field: ['th03-008', 'th03-001'] } })
+    expect(activationBlocker(dry, PLAYER, uidAt(dry, PLAYER, 0))).toBe('ต้องมีพืชไพรมหาวันหงายที่มีแต้มเติบโต')
+  })
+})
+
+describe('ผู้ดูแลรังไพร / ไทรใหญ่ / ราชินีต่อ', () => {
+  it('ผู้ดูแลรัง: อัญเชิญพิเศษเมื่อมีแมลงป่า แล้วเรียกฝูงต่อเพิ่มจากกอง', () => {
+    const s = makeState({ player: { hand: ['th03-018'], field: ['th03-004'], deck: ['th03-004', 'th01-001'] } })
+    let next = act(s, { type: 'specialSummon', uid: handUid(s, PLAYER, 0) })
+    expect(next.players.player.field[1]).toMatchObject({ cardId: 'th03-018', position: 'defense' })
+    next = act(next, { type: 'activate', uid: next.players.player.field[1].uid })
+    expect(next.pendingChoice.options.map((o) => o.label)).toEqual(['ฝูงต่อหัวเสือ (จากกอง)'])
+    next = act(next, { type: 'choose', optionId: next.pendingChoice.options[0].id })
+    expect(next.players.player.field[2]).toMatchObject({ cardId: 'th03-004', position: 'defense' })
+  })
+
+  it('ไทรใหญ่: รวมร่างพืชป่า 2 ตัวบนสนาม', () => {
+    const s = makeState({ player: { field: ['th03-001', 'th03-002'] } })
+    s.players.player.extraDeck = [{ uid: 'x-tree', cardId: 'th03-017' }]
+    const options = getMountOptions(s, PLAYER)
+    expect(options).toHaveLength(1)
+    const after = act(s, { type: 'mount', fusionUid: 'x-tree', materials: options[0].pairs[0] })
+    expect(ids(after.players.player.field).filter(Boolean)).toEqual(['th03-017'])
+    expect(lastLog(after).text).toContain('รวมร่าง')
+  })
+
+  it('ไทรใหญ่: ถอนแต้มยกเลิกการโจมตีพืช/แมลงป่าตัวอื่น', () => {
+    const s = grow(aiBattle({ player: { field: ['th03-017', 'th03-004'] }, ai: { field: ['th01-022'] } }), 0, 1)
+    const attacked = aiAttack(s, 0, 1)
+    const option = attacked.pendingResponse.options.find((o) => o.kind === 'canopy')
+    expect(option).toBeTruthy()
+    const after = act(attacked, { type: 'respond', trapUid: option.id })
+    expect(after.players.player.field[1]).toMatchObject({ cardId: 'th03-004' })
+    expect(after.players.player.field[0].growth).toBe(0)
+    expect(after.players.player.lp).toBe(8000)
+  })
+
+  it('ราชินีต่อ: รวมร่างฝูงต่อ 3 ตัว · จบเทิร์นเรียกฝูงต่อจากกอง', () => {
+    const s = makeState({ player: { field: ['th03-004', 'th03-004', 'th03-004'], deck: ['th03-004', 'th01-001'] } })
+    s.players.player.extraDeck = [{ uid: 'x-queen', cardId: 'th03-019' }]
+    const [option] = getMountOptions(s, PLAYER)
+    expect(option.pairs[0]).toHaveLength(3)
+    let next = act(s, { type: 'mount', fusionUid: 'x-queen', materials: option.pairs[0] })
+    expect(ids(next.players.player.field).filter(Boolean)).toEqual(['th03-019'])
+    next = act(next, { type: 'endTurn' })
+    expect(ids(next.players.player.field).filter(Boolean)).toEqual(['th03-019', 'th03-004'])
   })
 })
 
@@ -182,9 +250,9 @@ describe('พรานผู้ผูกมิตร: คืนลูกพร�
 describe('ไพรมหาวัน / ฝนแรกผลิใบ', () => {
   it('สัตว์ต่างเผ่า 2 ตัว → สัตว์ฝ่ายเรา ATK +200 · ตัวเดียวไม่ได้', () => {
     const s = makeState({ player: { field: ['th03-004', 'th03-007'], fieldSpell: 'th03-010' } })
-    expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 0))).toBe(700)
+    expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 0))).toBe(1000)
     const alone = makeState({ player: { field: ['th03-004'], fieldSpell: 'th03-010' } })
-    expect(getFieldAtk(alone, PLAYER, uidAt(alone, PLAYER, 0))).toBe(500)
+    expect(getFieldAtk(alone, PLAYER, uidAt(alone, PLAYER, 0))).toBe(800)
   })
 
   it('ฝนแรก: พืชทุกตัว +1 ไม่เกินเพดาน แล้วจั่ว 1', () => {

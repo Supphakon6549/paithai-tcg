@@ -145,5 +145,41 @@
     "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-ada5e12c-2d85-4ee8-8d1a-942ebdfbdde5.png",
     "original": "art-originals/th03-016.png",
     "image": "/cards/th03-016.jpg"
+  },
+  {
+    "id": "th03-017",
+    "tool": "built-in imagegen",
+    "prompt": "Use case: stylized-concept. Create one new landscape 4:3 Thai fantasy TCG artwork for TH03-017, Great Banyan of the Living Forest. Match established TH03: highly polished painterly realism, emerald Thai rainforest, warm amber sunbeams, bark umber, dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Character-focused composition: an imposing but benevolent living banyan guardian formed of two intertwined trunks, distinct wise emerald eyes in a rugged bark face, huge root arms curling protectively around small living saplings below. Show a powerful readable upper body and rooted stance in a low three-quarter view; giant tree character fills 75 percent of frame, backdrop softly subdued. Trailing aerial banyan roots, tiny figs and broad leaves, natural bark armor, amber sap glow between fused trunks. Tree union and protective shelter, not horror or haunted tree. No humanoid people, no buildings, no artificial armor, no text, letters, watermarks, card border, collage or panels. Full important silhouette with breathing room, no injured animals.",
+    "styleReference": [
+      "public/cards/th03-001.jpg",
+      "public/cards/th03-004.jpg"
+    ],
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-ce3568c5-9c23-41ca-9c46-9234156f3d1f.png",
+    "original": "art-originals/th03-017.png",
+    "image": "/cards/th03-017.jpg"
+  },
+  {
+    "id": "th03-018",
+    "tool": "built-in imagegen",
+    "prompt": "Use case: stylized-concept. Single new landscape 4:3 illustration, TH03-018 Keeper of the Forest Nest, premium Thai fantasy TCG. A small adult living fig-tree guardian made entirely of curling banyan roots and moss, expressive clever emerald eyes in a charming rugged bark face, no human skin. Three-quarter medium close shot, this distinctive character fills most of frame, cradling a small rounded layered PAPER HORNET NEST against its trunk torso with one wooden hand, extending the other toward one orange-headed black-and-amber hornet landing gently. Root feet firmly on moss, leaves and tiny figs growing on shoulders, one tender banyan sapling beside its feet. It symbolizes cooperation between plants and hornets. Do not depict honeybees or honeycomb, no honey. Thai tropical rainforest softly receding, rich emerald foliage and umber bark, warm amber shafts, realistic tactile bark and papery nest, glowing pollen particles. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style, polished painterly realism matching a lifelike living banyan and giant tiger hornet card set. Warm vitality, not horror. Clear whole key anatomy, legible face and nest at small card size. No text, letters, numbers, border, watermark, panels, weapons, gore, temples, crowns or clothes.",
+    "styleReference": [
+      "public/cards/th03-001.jpg",
+      "public/cards/th03-004.jpg"
+    ],
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-ae0f4420-d83b-4f91-b32a-8cf2d1ae1652.png",
+    "original": "art-originals/th03-018.png",
+    "image": "/cards/th03-018.jpg"
+  },
+  {
+    "id": "th03-019",
+    "tool": "built-in imagegen",
+    "prompt": "Edit the supplied hornet queen artwork for TH03-019. Preserve the landscape 4:3 composition, coherent insect anatomy, royal queen prominent in front of a layered paper nest, and two small NORMAL orange-and-black worker hornets below. The queen must now look BEAUTIFUL and immediately DIFFERENT from ordinary hornets, not just larger. Transform ONLY the queen's visual identity: luminous deep emerald and peacock-teal iridescent chitin, refined antique-gold natural filigree-like markings across face/thorax/abdomen, elegant ivory-gold facial accents with bright amber compound eyes, translucent opalescent wings with teal-to-pearl-to-soft-gold sheen and elegant branching gold veins. Slender graceful antennae, subtly crown-like natural thorax crest made of chitin (NOT a metal crown), regal poised posture, striking long elegant abdomen with alternating emerald and pale-gold organic bands rather than ordinary black orange bands. Maintain readable insect face, six legs, paired wings, not a woman, fairy or dragon. Worker hornets keep natural black/orange colors so contrast is unmistakable. Warm emerald Thai rainforest, amber rim lighting, cinematic deep shadows, glowing elemental aura particles, intense fantasy TCG digital painting style, richly detailed painterly realism. Make the queen refined and wondrous rather than monstrous, vivid jewel color but cohesive forest palette. No text, letters, card frames, watermark, jewelry, humanoid limbs, weapons, gore or honeycomb. Keep full important anatomy framed.",
+    "styleReference": [
+      "public/cards/th03-001.jpg",
+      "public/cards/th03-004.jpg"
+    ],
+    "generatedPath": "D:\\User\\user\\.codex\\generated_images\\01a14a1d-205a-7e13-b685-19e8c0d7d460\\exec-f9843862-4623-42e1-94c5-9a37d5de8b1c.png",
+    "original": "art-originals/th03-019.png",
+    "image": "/cards/th03-019.jpg"
   }
 ]

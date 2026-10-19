@@ -26,7 +26,11 @@ import { TRIBES } from '../data/tribes'
  *   flyOver                ศัตรูไม่มีมอนสเตอร์หงาย (มีแต่คว่ำ) → โจมตีตรงได้
  *   growth                 แต้มเติบโต: +1 ตอนจบเทิร์นเจ้าของ (สูงสุด cap) · ATK/DEF +atkPer/defPer ต่อแต้ม
  *   rootShield             จะถูกทำลายจากการต่อสู้ → ถอนแต้มเติบโต 1 แทน
- *   onSummonCall           อัญเชิญหงาย: เรียกมอนสเตอร์ที่ matches จากมือ (ชื่อละครั้ง/เทิร์น)
+ *   ward / wardAura        เกราะ: ถูกโจมตีตอนมีพวกตามเงื่อนไข → รอดการต่อสู้นั้นและไม่เสีย LP (ครั้งแรกต่อใบต่อเทิร์น)
+ *   onSummonCall           อัญเชิญหงาย: เรียกมอนสเตอร์ที่ matches (ชื่อละครั้ง/เทิร์น)
+ *                          from: ['hand'|'deck'] · position · noAttack · forestLock (หลังใช้ อัญเชิญพิเศษได้เฉพาะการ์ดป่า)
+ *   canopy                 ไทรใหญ่: ศัตรูโจมตีพืช/แมลงป่าตัวอื่น → ถอนแต้มเติบโต 1 ยกเลิกการโจมตี
+ *   endTurnCall            จบเทิร์นเรา: เรียกการ์ดรหัสที่กำหนดจากกอง/สุสาน ท่าตั้งรับ
  *   onSummonLook           อัญเชิญหงาย: ดูบนกอง count ใบ เลือกที่ matches ขึ้นมือ ที่เหลือไว้ใต้กอง
  *   sting                  ถูกทำลายจากการต่อสู้ตอนเป็นฝ่ายรับ → ผู้โจมตี ATK amount จนจบเทิร์น
  *   deathCurse             ถูกทำลายจากการต่อสู้ → คำสาปใส่ตัวที่ทำลาย: mode 'destroy' (ทำลายตาม) | 'halve' (ATK เหลือครึ่งถาวร)
@@ -71,6 +75,8 @@ import { TRIBES } from '../data/tribes'
  *                                | 'vine' (ถอนแต้มเติบโต · ศัตรู ATK amount ถึงจบเทิร์นถัดไปของศัตรู)
  *                                | 'growthBuff' (ถอนแต้มพืช · สัตว์ใหญ่ของเรา ATK/DEF +amount)
  *                                | 'scout' (ดูเวท/กับดักคว่ำศัตรู · ใบนั้นเปิดตอนใบนี้โจมตีไม่ได้)
+ *                                | 'forestCall' (ถอนแต้มพืชป่า · เรียกสัตว์ป่าระดับ 1–4 จากมือ)
+ *                                | 'nestCall' (มีต้นไทร/ฝูงต่อหงาย · เรียกชื่อเดียวกันจากกอง/มือ)
  *                                | 'lockAttack' | 'searchTrap'
  *                          oncePer: 'card' (ใบละครั้ง) | 'name' (ชื่อละครั้ง) ต่อเทิร์น
  *   fieldSpell.aura        เวทสนาม: ปรับ ATK มอนสเตอร์หงายฝ่ายเจ้าของที่เข้าเงื่อนไข
@@ -101,6 +107,11 @@ const hasDiverseAnimals = (cards) => {
   return sets.some((a, i) => sets.some((b, j) => j > i && !a.some((t) => b.includes(t))))
 }
 const isTiger = (c) => c.id === 'th03-006' || c.id === 'th03-007'
+// การ์ดชุดไพรมหาวัน (TH03) — ใช้กับคอมโบป่าและข้อจำกัดอัญเชิญพิเศษเฉพาะการ์ดป่า
+export const isForestCard = (c) => c?.groupTag === 'wild-forest'
+const isForestPlant = (c) => isForestCard(c) && isPlant(c)
+const isForestInsect = (c) => isForestCard(c) && isInsect(c)
+const isForestAnimal = (c) => isForestCard(c) && c.type === 'monster' && animalSetOf(c).length > 0
 // คนเป็น ๆ สำหรับขึ้นขี่: มีเผ่ามนุษย์ที่กำหนด และไม่มีเผ่าผี/อสูรติดอยู่ (ปอบ กระสือ พรานไสยเวท ขี่ไม่ได้)
 const livingHuman = (tribe) => (c) => hasTribe(tribe)(c) && !hasTribe('ghost')(c) && !hasTribe('demon')(c)
 const hasGhostAlly = ({ allies }) => allies.some(isGhost)
@@ -404,22 +415,34 @@ export const CARD_EFFECTS = {
   // ต้นไทรเดินดิน
   'th03-001': {
     growth: { cap: 3, atkPer: 200, defPer: 200 },
-    rootShield: { reason: 'ต้นไทร: รากลึก ถอนแต้มเติบโตแทนการถูกทำลาย' },
+    ward: { needsAlly: isForestPlant, reason: 'ต้นไทร: รากประสาน' },
   },
   // เถาหวายร้อยรัด
   'th03-002': {
     growth: { cap: 2, atkPer: 0, defPer: 200 },
-    activated: { kind: 'vine', amount: -300, label: 'ถอนแต้ม · รัดศัตรู ATK −300', oncePer: 'card' },
+    onSummonCall: {
+      label: 'ต้นไทรเดินดิน',
+      matches: (c) => c.id === 'th03-001',
+      from: ['deck', 'hand'],
+      position: 'defense',
+      noAttack: true,
+      forestLock: true,
+    },
   },
   // ด้วงกว่างเกราะไพร (ออร่าไม่ซ้อนจากหลายใบ)
   'th03-003': {
     allyAura: { amount: 200, appliesTo: isInsect, unique: true, reason: 'ด้วงกว่างเกราะไพร: แมลงตัวอื่นฝ่ายเรา' },
+    wardAura: { appliesTo: isForestInsect, needsAlly: isForestInsect, reason: 'ด้วงกว่าง: เกราะร่วมรัง' },
   },
   // ฝูงต่อหัวเสือ
   'th03-004': {
     onSummonCall: {
-      label: 'แมลงระดับ 1–2',
-      matches: (c) => c.type === 'monster' && isInsect(c) && c.level <= 2,
+      label: 'ฝูงต่อหัวเสือ',
+      matches: (c) => c.id === 'th03-004',
+      from: ['deck', 'hand'],
+      position: 'attack',
+      noAttack: false,
+      forestLock: true,
     },
     sting: { amount: -300, reason: 'ฝูงต่อ: เหล็กใน' },
   },
@@ -446,7 +469,19 @@ export const CARD_EFFECTS = {
   },
   // หมอช้างพันธะไพร
   'th03-008': {
-    activated: { kind: 'growthBuff', amount: 300, label: 'ถอนแต้มพืช · สัตว์ใหญ่ ATK/DEF +300', oncePer: 'name' },
+    specialSummon: {
+      requires: (cards) => cards.some(isForestPlant),
+      requiresText: 'ต้องมีพืชไพรมหาวันหงายบนสนามเรา',
+      position: 'defense',
+      forestLock: true,
+      label: 'มีพืชป่าหงาย · อัญเชิญจากมือท่าตั้งรับ',
+    },
+    activated: {
+      kind: 'forestCall',
+      label: 'ถอนแต้มพืช · เรียกสัตว์ป่าจากมือ',
+      oncePer: 'name',
+      matches: (c) => isForestAnimal(c) && c.level <= 4,
+    },
   },
   // พรานผู้ผูกมิตร: คืนลูกพรานขึ้นมือ → อัญเชิญพิเศษ แล้วเรียกสัตว์เล็กเผ่าที่ยังไม่มี
   'th03-009': {
@@ -485,6 +520,40 @@ export const CARD_EFFECTS = {
       appliesTo: (c) => animalSetOf(c).length > 0,
       reason: 'สับแนวพงไพร: ถอนสัตว์ขึ้นมือ ส่งตัวใหม่ลงแทน การโจมตีจบลง',
     },
+  },
+  // พฤกษาไทรใหญ่แห่งมหาวัน (รวมร่างพืชป่า 2 ใบ)
+  'th03-017': {
+    fusionMaterials: [
+      { label: 'พืชไพรมหาวัน', matches: isForestPlant },
+      { label: 'พืชไพรมหาวัน', matches: isForestPlant },
+    ],
+    mount: true,
+    mountVerb: 'รวมร่าง',
+    dismount: true,
+    growth: { cap: 3, atkPer: 100, defPer: 100 },
+    canopy: { reason: 'ไทรใหญ่: ปกป้องพุ่มไพร', protects: (c) => isForestPlant(c) || isForestInsect(c) },
+  },
+  // ผู้ดูแลรังไพร
+  'th03-018': {
+    specialSummon: {
+      requires: (cards) => cards.some((c) => isForestPlant(c) || isForestInsect(c)),
+      requiresText: 'ต้องมีพืชหรือแมลงไพรมหาวันหงายบนสนามเรา',
+      position: 'defense',
+      forestLock: true,
+      label: 'มีพืช/แมลงป่าหงาย · อัญเชิญจากมือท่าตั้งรับ',
+    },
+    activated: { kind: 'nestCall', label: 'เรียกต้นไทร/ฝูงต่อเพิ่มจากกองหรือมือ', oncePer: 'name', keys: ['th03-001', 'th03-004'] },
+  },
+  // ราชินีต่อรังมหาวัน (รวมร่างฝูงต่อ 3 ใบ)
+  'th03-019': {
+    fusionMaterials: [
+      { label: 'ฝูงต่อหัวเสือ', matches: (c) => c.id === 'th03-004' },
+      { label: 'ฝูงต่อหัวเสือ', matches: (c) => c.id === 'th03-004' },
+      { label: 'ฝูงต่อหัวเสือ', matches: (c) => c.id === 'th03-004' },
+    ],
+    mount: true,
+    mountVerb: 'รวมร่าง',
+    endTurnCall: { id: 'th03-004', from: ['deck', 'graveyard'], reason: 'ราชินีต่อ: รังผลิฝูง' },
   },
   // พรานขี่เสือ
   'th03-013': {
@@ -767,6 +836,11 @@ export const canMount = (card) => effectOf(card).mount === true
 export const canDismount = (card) => effectOf(card).dismount === true
 export const getMercy = (card) => effectOf(card).mercy ?? null
 export const getEndTurnGrow = (card) => effectOf(card).endTurnGrow ?? null
+export const getWard = (card) => effectOf(card).ward ?? null
+export const getWardAura = (card) => effectOf(card).wardAura ?? null
+export const getCanopy = (card) => effectOf(card).canopy ?? null
+export const getEndTurnCall = (card) => effectOf(card).endTurnCall ?? null
+export const getMountVerb = (card) => effectOf(card).mountVerb ?? 'ขึ้นขี่'
 export const getGrowthSpell = (card) => effectOf(card).growthSpell ?? null
 export const isPlantCard = isPlant
 export const hasDiverseAnimalTeam = hasDiverseAnimals
@@ -811,11 +885,28 @@ export function getFusionMaterials(card) {
 }
 
 // วัตถุดิบ 2 ใบ (การ์ดข้อมูล) ตรงกับสูตรของมอนสเตอร์ผสานร่างไหม (สลับลำดับได้)
+// เรียงวัตถุดิบให้ตรงช่องสูตร (คืนลำดับ index ของ materials ตามช่อง หรือ null) — รองรับ 2–3 ใบ
+export function assignFusionSlots(recipe, materialCards) {
+  if (!recipe || materialCards.length !== recipe.length) return null
+  const used = new Set()
+  const order = []
+  const place = (slot) => {
+    if (slot === recipe.length) return true
+    for (let i = 0; i < materialCards.length; i++) {
+      if (used.has(i) || !recipe[slot].matches(materialCards[i])) continue
+      used.add(i)
+      order.push(i)
+      if (place(slot + 1)) return true
+      used.delete(i)
+      order.pop()
+    }
+    return false
+  }
+  return place(0) ? order : null
+}
+
 export function matchesFusion(fusionCard, materialCards) {
-  const recipe = getFusionMaterials(fusionCard)
-  if (!recipe || materialCards.length !== 2) return false
-  const [a, b] = materialCards
-  return (recipe[0].matches(a) && recipe[1].matches(b)) || (recipe[0].matches(b) && recipe[1].matches(a))
+  return assignFusionSlots(getFusionMaterials(fusionCard), materialCards) !== null
 }
 
 export function isBattleIndestructible(card) {

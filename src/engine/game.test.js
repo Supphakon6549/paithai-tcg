@@ -351,6 +351,7 @@ describe('ความคงที่ของจำนวนการ์ด', (
   it('การ์ดฝ่ายละเท่าขนาดสำรับเสมอหลังแอ็กชันต่าง ๆ', () => {
     let s = createGame({ seed: 3 })
     s = applyAction(s, { type: 'summon', player: PLAYER, uid: getSummonableHand(s, PLAYER)[0].uid })
+    while (s.pendingChoice) s = applyAction(s, { type: 'choose', player: PLAYER, optionId: s.pendingChoice.options[0].id })
     s = applyAction(s, { type: 'endTurn', player: PLAYER })
     expect(countCards(s.players.player)).toBe(STARTER_SIZE)
     expect(countCards(s.players.ai)).toBe(STARTER_SIZE)

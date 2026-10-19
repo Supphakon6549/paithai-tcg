@@ -10,7 +10,13 @@ import {
   canMount,
   cardHasTribe,
   getAmbushFlip,
+  assignFusionSlots,
   getAttackGuard,
+  getCanopy,
+  getEndTurnCall,
+  getWard,
+  getWardAura,
+  isForestCard,
   getEndTurnGrow,
   getGrowth,
   getGrowthSpell,
@@ -29,6 +35,7 @@ import {
   getBurnOnKill,
   getFlyOver,
   getMillOnKill,
+  getMountVerb,
   getReturnOnDestroy,
   getShroud,
   getSummonOnlyBy,
@@ -372,6 +379,14 @@ export function getOpponentMonsters(state, playerId) {
   return state.players[opponentOf(playerId)].field.filter(Boolean)
 }
 
+// คอมโบป่า: หลังใช้แล้ว เทิร์นนั้นผู้เล่นอัญเชิญพิเศษได้เฉพาะการ์ดไพรมหาวัน
+export const forestLocked = (state, playerId, card) =>
+  state.players[playerId].forestLockTurn === state.turn && !isForestCard(card)
+const setForestLock = (state, playerId) => {
+  state.players[playerId].forestLockTurn = state.turn
+}
+const FOREST_LOCK_TEXT = 'เทิร์นนี้ใช้คอมโบป่าแล้ว อัญเชิญพิเศษได้เฉพาะการ์ดไพรมหาวัน'
+
 // ห้ามโจมตี: ระบุเทิร์นเดียว (cannotAttackTurn) หรือถึงเทิร์นที่กำหนด (cannotAttackUntil)
 export const isAttackLocked = (state, m) => m.cannotAttackTurn === state.turn || m.cannotAttackUntil >= state.turn
 
@@ -559,6 +574,17 @@ export function activationBlocker(state, playerId, uid) {
     }
     if (growthBuffTargets(p).length === 0) return 'ไม่มีสัตว์ใหญ่หงายที่ยังไม่ได้รับบัฟนี้'
   }
+  if (activated.kind === 'forestCall') {
+    if (!p.field.includes(null)) return 'ไม่มีช่องมอนสเตอร์ว่าง'
+    if (!p.field.some((x) => x && !x.faceDown && isForestCard(cardOf(x)) && isPlantCard(cardOf(x)) && x.growth > 0)) {
+      return 'ต้องมีพืชไพรมหาวันหงายที่มีแต้มเติบโต'
+    }
+    if (!p.hand.some((h) => activated.matches(cardOf(h)))) return 'ไม่มีสัตว์ไพรมหาวันระดับ 1–4 ในมือ'
+  }
+  if (activated.kind === 'nestCall') {
+    if (!p.field.includes(null)) return 'ไม่มีช่องมอนสเตอร์ว่าง'
+    if (nestCallOptions(p, activated).length === 0) return 'ต้องมีต้นไทร/ฝูงต่อหงาย และมีชื่อเดียวกันในกองหรือมือ'
+  }
   if (activated.kind === 'scout' && !state.players[opponentOf(playerId)].spellTrap.some((t) => t?.faceDown)) {
     return 'ฝ่ายตรงข้ามไม่มีเวท/กับดักคว่ำ'
   }
@@ -566,6 +592,19 @@ export function activationBlocker(state, playerId, uid) {
     return 'ไม่มีการ์ดกับดักเหลือในกอง'
   }
   return null
+}
+
+// ผู้ดูแลรัง: ชื่อที่เรียกได้ = คีย์ที่หงายบนสนาม (ต้นไทร/ฝูงต่อ) ที่ยังมีสำเนาในกองหรือมือ
+function nestCallOptions(p, activated) {
+  const out = []
+  for (const key of activated.keys) {
+    if (!p.field.some((m) => m && !m.faceDown && m.cardId === key)) continue
+    const fromDeck = p.deck.find((c) => c.cardId === key)
+    const fromHand = p.hand.find((c) => c.cardId === key)
+    if (fromDeck) out.push({ id: fromDeck.uid, label: `${getCardById(key).name} (จากกอง)` })
+    if (fromHand) out.push({ id: fromHand.uid, label: `${getCardById(key).name} (จากมือ)` })
+  }
+  return out
 }
 
 // หมอช้างพันธะไพร: สัตว์ใหญ่หงายของเราที่ยังไม่มีบัฟจากหมอช้าง
@@ -644,9 +683,11 @@ export function fusionProblem(state, playerId, spellUid, fusionUid, materialUids
   if (!fusionInst) return 'เลือกมอนสเตอร์ผสานร่างจากกองพิเศษ'
   const pool = fusionMaterialPool(state, playerId)
   const chosen = [...new Set(materialUids)].map((uid) => pool.find((c) => c.uid === uid))
-  if (chosen.length !== 2) return 'เลือกวัตถุดิบ 2 ตัว'
+  const need = getFusionMaterials(cardOf(fusionInst))?.length ?? 2
+  if (chosen.length !== need) return `เลือกวัตถุดิบ ${need} ตัว`
   if (chosen.includes(undefined)) return 'วัตถุดิบต้องเป็นมอนสเตอร์ในมือหรือบนสนามของเรา'
   const target = cardOf(fusionInst)
+  if (forestLocked(state, playerId, target)) return FOREST_LOCK_TEXT
   if (!matchesFusion(target, chosen.map(cardOf))) {
     return `วัตถุดิบไม่ตรงสูตร: ${getFusionMaterials(target).map((m) => m.label).join(' + ')}`
   }
@@ -656,16 +697,21 @@ export function fusionProblem(state, playerId, spellUid, fusionUid, materialUids
 }
 
 // คู่วัตถุดิบทั้งหมดที่ผสานเป็น fusionUid ได้ (ใช้เช็กว่าทำได้ไหม และให้ AI เลือก)
+// ชุดวัตถุดิบ (ขนาดตามสูตร 2–3 ใบ) ทั้งหมดที่ผสานเป็น fusionUid ได้
 export function getFusionPairs(state, playerId, spellUid, fusionUid) {
   const pool = fusionMaterialPool(state, playerId)
-  const pairs = []
-  for (let i = 0; i < pool.length; i++) {
-    for (let j = i + 1; j < pool.length; j++) {
-      const uids = [pool[i].uid, pool[j].uid]
-      if (!fusionProblem(state, playerId, spellUid, fusionUid, uids)) pairs.push(uids)
+  const fusion = state.players[playerId].extraDeck.find((c) => c.uid === fusionUid)
+  const need = (fusion && getFusionMaterials(cardOf(fusion))?.length) || 2
+  const sets = []
+  const pick = (start, chosen) => {
+    if (chosen.length === need) {
+      if (!fusionProblem(state, playerId, spellUid, fusionUid, chosen)) sets.push([...chosen])
+      return
     }
+    for (let i = start; i < pool.length; i++) pick(i + 1, [...chosen, pool[i].uid])
   }
-  return pairs
+  pick(0, [])
+  return sets
 }
 
 // มอนสเตอร์ในกองพิเศษที่ผสานได้ตอนนี้
@@ -681,7 +727,12 @@ export function getReviveTargets(state, playerId, spellCard) {
   if (!revive) return []
   return state.players[playerId].graveyard.filter((c) => {
     const card = cardOf(c)
-    return card.type === 'monster' && !revive.excludeSummonTypes.includes(card.summonType) && !getSummonOnlyBy(card)
+    return (
+      card.type === 'monster' &&
+      !revive.excludeSummonTypes.includes(card.summonType) &&
+      !getSummonOnlyBy(card) &&
+      !forestLocked(state, playerId, card)
+    )
   })
 }
 
@@ -706,22 +757,32 @@ export function getMountOptions(state, playerId) {
   return p.extraDeck
     .filter((c) => canMount(cardOf(c)))
     .map((c) => {
-      const [human, animal] = getFusionMaterials(cardOf(c))
+      // ชุดวัตถุดิบเรียงตามช่องสูตร (เช่น [คน, สัตว์]) · ไม่ซ้ำชุดเดิม
+      const recipe = getFusionMaterials(cardOf(c))
       const pairs = []
-      for (const a of faceUp) {
-        for (const b of faceUp) {
-          if (a !== b && human.matches(cardOf(a)) && animal.matches(cardOf(b))) pairs.push([a.uid, b.uid])
+      const seen = new Set()
+      const pick = (start, chosen) => {
+        if (chosen.length === recipe.length) {
+          const order = assignFusionSlots(recipe, chosen.map(cardOf))
+          const key = chosen.map((m) => m.uid).sort().join('|')
+          if (order && !seen.has(key)) {
+            seen.add(key)
+            pairs.push(order.map((i) => chosen[i].uid))
+          }
+          return
         }
+        for (let i = start; i < faceUp.length; i++) pick(i + 1, [...chosen, faceUp[i]])
       }
+      pick(0, [])
       return { fusionUid: c.uid, pairs }
     })
-    .filter((o) => o.pairs.length > 0)
+    .filter((o) => o.pairs.length > 0 && !forestLocked(state, playerId, cardOf(p.extraDeck.find((c) => c.uid === o.fusionUid))))
 }
 
 export function mountBlocker(state, playerId) {
   if (!isPlayersOpenMain(state, playerId)) return 'ขึ้นขี่ได้เฉพาะเฟสหลักในตาของเรา'
   if (state.players[playerId].mountedTurn === state.turn) return 'ขึ้นขี่ไปแล้วเทิร์นนี้ (เทิร์นละ 1 ครั้ง)'
-  if (getMountOptions(state, playerId).length === 0) return 'ไม่มีคน + สัตว์หงายบนสนามที่ตรงสูตรร่างขี่'
+  if (getMountOptions(state, playerId).length === 0) return 'ไม่มีวัตถุดิบหงายบนสนามที่ตรงสูตรร่างขี่/รวมร่าง'
   return null
 }
 
@@ -731,8 +792,8 @@ function mount(state, playerId, fusionUid, materials = []) {
   const p = state.players[playerId]
   const option = getMountOptions(state, playerId).find((o) => o.fusionUid === fusionUid)
   if (!option) throw new GameRuleError('ร่างขี่ใบนี้ยังขึ้นขี่ไม่ได้')
-  const pair = option.pairs.find(([a, b]) => materials.length === 2 && materials.includes(a) && materials.includes(b))
-  if (!pair) throw new GameRuleError('เลือกคน 1 ตัว + สัตว์ 1 ตัวบนสนามที่ตรงสูตร')
+  const pair = option.pairs.find((set) => materials.length === set.length && set.every((uid) => materials.includes(uid)))
+  if (!pair) throw new GameRuleError('เลือกวัตถุดิบบนสนามให้ครบและตรงสูตร')
   const zone = p.field.findIndex((m) => m?.uid === pair[0])
   const materialText = pair.map((uid) => sendMaterialToGrave(p, uid))
   const inst = p.extraDeck.splice(p.extraDeck.findIndex((c) => c.uid === fusionUid), 1)[0]
@@ -747,7 +808,7 @@ function mount(state, playerId, fusionUid, materials = []) {
     materials: pair,
   }
   p.mountedTurn = state.turn
-  addLog(state, playerId, 'summon', `🐎 ${PLAYER_NAMES[playerId]}ขึ้นขี่ → ${rider.name} (ระดับ ${rider.level} · ATK ${formatNumber(rider.atk)} / DEF ${formatNumber(rider.def)}) ลงช่องที่ ${zone + 1}`, [
+  addLog(state, playerId, 'summon', `${rider.id === 'th03-017' ? '🌳' : rider.id === 'th03-019' ? '🐝' : '🐎'} ${PLAYER_NAMES[playerId]}${getMountVerb(rider)} → ${rider.name} (ระดับ ${rider.level} · ATK ${formatNumber(rider.atk)} / DEF ${formatNumber(rider.def)}) ลงช่องที่ ${zone + 1}`, [
     `วัตถุดิบ: ${materialText.join(' + ')}`,
   ])
 }
@@ -759,6 +820,13 @@ export function specialSummonBlocker(state, playerId, uid) {
   const special = inst && getSpecialSummon(cardOf(inst))
   if (!special) return 'การ์ดใบนี้อัญเชิญพิเศษไม่ได้'
   if (!isPlayersOpenMain(state, playerId)) return 'อัญเชิญได้เฉพาะเฟสหลักในตาของเรา'
+  if (forestLocked(state, playerId, cardOf(inst))) return FOREST_LOCK_TEXT
+  if (special.requires) {
+    if ((p.usedEffects ?? {})[`special:${inst.cardId}`] === state.turn) return 'ใช้ทางนี้ไปแล้วเทิร์นนี้'
+    if (!p.field.includes(null)) return 'ไม่มีช่องมอนสเตอร์ว่าง'
+    const faceUp = p.field.filter((m) => m && !m.faceDown).map(cardOf)
+    return special.requires(faceUp) ? null : special.requiresText
+  }
   if (special.returnId) {
     if ((p.usedEffects ?? {})[`name:${inst.cardId}`] === state.turn) return 'ใช้ทางนี้ไปแล้วเทิร์นนี้'
     if (!p.field.some((m) => m?.cardId === special.returnId && !m.faceDown)) {
@@ -804,6 +872,7 @@ export function handCardBlocker(state, playerId, uid) {
   }
   if (getBranchSpell(card)) {
     if ((p.usedEffects ?? {})[`name:${card.id}`] === state.turn) return `ใช้ "${card.name}" ไปแล้วเทิร์นนี้`
+    if (p.forestLockTurn === state.turn) return FOREST_LOCK_TEXT
     if (getEquipTargets(state, playerId, card).length === 0) {
       return 'ต้องมีต้นสาย (พรานหนุ่ม/พระอาจารย์) หงายบนสนาม และร่างสายมืดที่คู่กันในมือ'
     }
@@ -818,6 +887,7 @@ export function handCardBlocker(state, playerId, uid) {
   const ritual = getRitualInfo(card)
   if (ritual) {
     if (!p.hand.some((c) => c.cardId === ritual.target)) return `ต้องมี "${getCardById(ritual.target).name}" อยู่ในมือ`
+    if (forestLocked(state, playerId, getCardById(ritual.target))) return FOREST_LOCK_TEXT
     const pool = ritualTributePool(state, playerId, uid)
     const hasSubstitute = pool.some((c) => ritual.substitutes.includes(c.cardId))
     const total = pool.reduce((sum, c) => sum + getRitualLevel(cardOf(c), card), 0)
@@ -964,15 +1034,35 @@ function onSummoned(state, playerId, card, { skipSearch = false } = {}) {
   if (!skipSearch) triggerSummonSearch(state, playerId, card)
   const call = getOnSummonCall(card)
   if (call && !used(`name:${card.id}`) && p.field.includes(null)) {
-    const candidates = p.hand.filter((h) => call.matches(cardOf(h)))
+    const from = call.from ?? ['hand']
+    const pool = [
+      ...(from.includes('hand') ? p.hand.map((c) => [c, 'มือ']) : []),
+      ...(from.includes('deck') ? p.deck.map((c) => [c, 'กอง']) : []),
+    ].filter(([c]) => call.matches(cardOf(c)) && !(call.forestLock === undefined && false))
+    // ตัวเลือกละ 1 ใบต่อชื่อต่อแหล่ง (ไม่ต้องให้เลือกการ์ดชื่อซ้ำในกอง)
+    const seen = new Set()
+    const candidates = pool.filter(([c, where]) => {
+      const key = `${c.cardId}:${where}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
     if (candidates.length) {
+      const position = call.position ?? 'defense'
+      const noAttack = call.noAttack ?? true
       queueChoice(state, {
         player: playerId,
         kind: 'summonFromHand',
         source: card.id,
         markName: true,
-        prompt: `${card.name}: เรียก${call.label}จากมือลงสนามท่าตั้งรับไหม? (โจมตีไม่ได้เทิร์นนี้)`,
-        options: [...candidates.map((h) => ({ id: h.uid, label: cardOf(h).name })), { id: 'skip', label: 'ไม่เรียก' }],
+        position,
+        noAttack,
+        forestLock: Boolean(call.forestLock),
+        prompt: `${card.name}: เรียก${call.label}ลงสนาม${position === 'attack' ? 'ท่าโจมตี' : 'ท่าตั้งรับ'}ไหม?${noAttack ? ' (โจมตีไม่ได้เทิร์นนี้)' : ''}`,
+        options: [
+          ...candidates.map(([c, where]) => ({ id: c.uid, label: `${cardOf(c).name} (จาก${where})` })),
+          { id: 'skip', label: 'ไม่เรียก' },
+        ],
       })
     }
   }
@@ -1069,19 +1159,31 @@ function choose(state, playerId, optionId) {
       return
     }
     if (choice.markName) p.usedEffects = { ...(p.usedEffects ?? {}), [`name:${choice.source}`]: state.turn }
+    if (choice.forestLock) setForestLock(state, playerId)
     const zone = p.field.indexOf(null)
-    if (zone === -1) throw new GameRuleError('ไม่มีช่องมอนสเตอร์ว่าง')
-    const [inst] = p.hand.splice(p.hand.findIndex((h) => h.uid === optionId), 1)
+    // เป้าอาจอยู่ในมือ กอง หรือสุสาน (ราชินีต่อ) — หายไปแล้ว/สนามเต็ม = ไม่เกิดผล
+    const zoneOf = [p.hand, p.deck, p.graveyard].find((list) => list.some((c) => c.uid === optionId))
+    if (zone === -1 || !zoneOf) {
+      addLog(state, playerId, 'effect', `${source.name}: เรียกไม่สำเร็จ (ไม่มีช่องว่างหรือการ์ดไม่อยู่แล้ว)`)
+      return
+    }
+    const [inst] = zoneOf.splice(zoneOf.findIndex((c) => c.uid === optionId), 1)
+    const position = choice.position ?? 'defense'
+    const noAttack = choice.noAttack ?? true
     p.field[zone] = {
-      ...inst,
+      uid: inst.uid,
+      cardId: inst.cardId,
       hasAttacked: false,
       summonedTurn: state.turn,
-      position: 'defense',
+      position,
       faceDown: false,
       positionChangedTurn: null,
-      cannotAttackTurn: state.turn,
+      ...(noAttack ? { cannotAttackTurn: state.turn } : {}),
     }
-    addLog(state, playerId, 'summon', `✨ ${source.name}: ${PLAYER_NAMES[playerId]}เรียก ${cardOf(inst).name} ลงช่องที่ ${zone + 1} ท่าตั้งรับ (โจมตีไม่ได้เทิร์นนี้)`)
+    const where = zoneOf === p.deck ? 'กอง' : zoneOf === p.graveyard ? 'สุสาน' : 'มือ'
+    addLog(state, playerId, 'summon', `✨ ${source.name}: ${PLAYER_NAMES[playerId]}เรียก ${cardOf(inst).name} จาก${where} ลงช่องที่ ${zone + 1} ${position === 'attack' ? 'ท่าโจมตี' : 'ท่าตั้งรับ'}${noAttack ? ' (โจมตีไม่ได้เทิร์นนี้)' : ''}`, [
+      choice.forestLock ? 'เทิร์นนี้อัญเชิญพิเศษได้เฉพาะการ์ดไพรมหาวัน' : null,
+    ].filter(Boolean))
     onSummoned(state, playerId, cardOf(inst))
     return
   }
@@ -1170,6 +1272,18 @@ function specialSummon(state, playerId, uid, position = 'attack') {
   const p = state.players[playerId]
   const card = cardOf(p.hand.find((c) => c.uid === uid))
   const special = getSpecialSummon(card)
+  if (special.requires) {
+    const zone = p.field.indexOf(null)
+    const inst = p.hand.splice(p.hand.findIndex((c) => c.uid === uid), 1)[0]
+    p.field[zone] = { ...inst, hasAttacked: false, summonedTurn: state.turn, position: special.position ?? position, faceDown: false, positionChangedTurn: null }
+    p.usedEffects = { ...(p.usedEffects ?? {}), [`special:${card.id}`]: state.turn }
+    if (special.forestLock) setForestLock(state, playerId)
+    addLog(state, playerId, 'summon', `✨ ${PLAYER_NAMES[playerId]}อัญเชิญพิเศษ ${card.name} (ATK ${formatNumber(card.atk)} / DEF ${formatNumber(card.def)}) ลงช่องที่ ${zone + 1} ท่าตั้งรับ`, [
+      special.forestLock ? 'เทิร์นนี้อัญเชิญพิเศษได้เฉพาะการ์ดไพรมหาวัน' : null,
+    ].filter(Boolean))
+    onSummoned(state, playerId, card)
+    return
+  }
   if (special.returnId) {
     const zone = p.field.findIndex((m) => m?.cardId === special.returnId && !m.faceDown)
     const back = p.field[zone]
@@ -1670,6 +1784,21 @@ function resolveDirectAttack(state, playerId, attacker, details) {
 // กับดักของ defenderId ที่เปิดตอบโต้การโจมตีนี้ได้ (กับดักต้องวางไว้ก่อนเทิร์นนี้)
 // ตัวเลือกตอบโต้ของ defenderId ต่อการโจมตีนี้ (target = null คือโจมตีตรง)
 // กับดักต้องวางไว้ก่อนเทิร์นนี้ · ขุนศึกอาทมาฏโจมตี = เปิดกับดักไม่ได้
+// เกราะป่าของมอนสเตอร์ที่ถูกโจมตี (คืนชื่อเกราะ หรือ null): ต้องหงาย · ใบละครั้งต่อเทิร์น
+function wardFor(state, ownerId, defender) {
+  const p = state.players[ownerId]
+  if (defender.faceDown || (p.usedEffects ?? {})[`ward:${defender.uid}`] === state.turn) return null
+  const card = cardOf(defender)
+  const allies = getAllies(state, ownerId, defender.uid)
+  const own = getWard(card)
+  if (own && allies.some(own.needsAlly)) return own.reason
+  const aura = p.field
+    .filter((m) => m && !m.faceDown)
+    .map((m) => getWardAura(cardOf(m)))
+    .find((a) => a && a.appliesTo(card) && allies.some(a.needsAlly))
+  return aura ? aura.reason : null
+}
+
 // เสือสมิง: ถูกโจมตีจนพลิกหงาย → เปลี่ยนเป็นท่าโจมตีถ้าจะชนะ (+โบนัสเมื่อมีสัตว์ต่างเผ่า)
 function tryAmbushFlip(state, attackerOwner, attacker, defender, details) {
   const card = cardOf(defender)
@@ -1742,6 +1871,14 @@ function getTrapResponses(state, defenderId, attacker, target) {
       options.push({ id: `mercy:${monk.uid}`, kind: 'mercy', monkUid: monk.uid, label: `🐅 ${cardOf(monk).name}: ยกเลิกการโจมตี` })
     }
   }
+  // ไทรใหญ่: ศัตรูโจมตีพืช/แมลงป่าตัวอื่นที่หงาย → ถอนแต้มเติบโต 1 ยกเลิก (ชื่อละครั้งต่อเทิร์น)
+  if (target && !target.faceDown) {
+    const tree = p.field.find((x) => x && !x.faceDown && x.uid !== target.uid && getCanopy(cardOf(x)) && x.growth > 0)
+    const canopy = tree && getCanopy(cardOf(tree))
+    if (canopy && canopy.protects(cardOf(target)) && (p.usedEffects ?? {})[`name:${tree.cardId}`] !== state.turn) {
+      options.push({ id: `canopy:${tree.uid}`, kind: 'canopy', treeUid: tree.uid, label: `🌳 ${cardOf(tree).name}: ถอนแต้ม ยกเลิกการโจมตี` })
+    }
+  }
   // ผีเรือน: รับการโจมตีแทนผีหงายตัวอื่น (ไม่ใช่กับดัก จึงใช้ได้แม้ขุนศึกอาทมาฏโจมตี)
   if (target && !target.faceDown && cardHasTribe(cardOf(target), 'ghost')) {
     for (const g of p.field) {
@@ -1768,7 +1905,8 @@ function findFieldFusionPair(p, fusionCard, pair) {
 }
 // ทำลายจากการต่อสู้ (การ์ดที่ไม่ถูกทำลายจากการต่อสู้จะรอด) — คืน true ถ้าถูกทำลายจริง
 // รอดการต่อสู้: การ์ดที่ไม่ถูกทำลายจากการต่อสู้ หรือผีเรือนที่รับการโจมตีแทน
-const survivesBattle = (inst) => isBattleIndestructible(cardOf(inst)) || Boolean(inst.guardShield)
+const survivesBattle = (inst) =>
+  isBattleIndestructible(cardOf(inst)) || Boolean(inst.guardShield) || Boolean(inst.wardShield)
 // ต้นไทร: มีแต้มเติบโต → ถอน 1 แต้มแทนการถูกทำลาย
 const rootSaves = (inst) => Boolean(hasRootShield(cardOf(inst)) && !inst.faceDown && inst.growth > 0)
 
@@ -1847,6 +1985,14 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
     details.push(`เปิดการ์ดคว่ำ: ${defenderCard.name} (DEF ${formatNumber(defenderCard.def)})`)
     tryAmbushFlip(state, playerId, attacker, defender, details)
   }
+  // เกราะป่า: ใช้ครั้งแรกที่เข้าเงื่อนไขต่อใบต่อเทิร์น — รอดการต่อสู้นี้และฝ่ายรับไม่เสีย LP
+  const ward = wardFor(state, oppId, defender)
+  if (ward) {
+    const owner = state.players[oppId]
+    owner.usedEffects = { ...(owner.usedEffects ?? {}), [`ward:${defender.uid}`]: state.turn }
+    defender.wardShield = true
+    details.push(`🛡️ ${ward}: ${defenderCard.name} รอดการต่อสู้นี้ และ${PLAYER_NAMES[oppId]}ไม่เสีย LP`)
+  }
   const inDefense = defender.position === 'defense'
   const result = previewBattle(state, playerId, attacker.uid, defender.uid)
 
@@ -1858,7 +2004,9 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
 
   // คิดความเสียหายก่อนทำลายการ์ด (เอฟเฟกต์ลดความเสียหายของตัวที่แพ้ยังมีผล)
   const hitDefenderOwner = (amount) =>
-    damagePlayer(state, oppId, amount, details, { ownMonster: defenderCard, opposingMonster: attackerCard })
+    ward
+      ? details.push(`${PLAYER_NAMES[oppId]}ไม่เสีย LP (${ward})`)
+      : damagePlayer(state, oppId, amount, details, { ownMonster: defenderCard, opposingMonster: attackerCard })
   const hitAttackerOwner = (amount) =>
     damagePlayer(state, playerId, amount, details, { ownMonster: attackerCard, opposingMonster: defenderCard })
 
@@ -1932,10 +2080,11 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
     }
   }
 
-  // บัฟเฉพาะการต่อสู้นี้ (เสือสมิง) หมดผล
+  // บัฟเฉพาะการต่อสู้นี้ (เสือสมิง) และเกราะป่า หมดผล
   for (const inst of [attacker, defender]) {
     if (inst.tempAtk) inst.tempAtk = inst.tempAtk.filter((x) => !x.battleOnly)
   }
+  delete defender.wardShield
   applyAttackDecay(state, playerId, attacker.uid, details)
   const target = `${defenderCard.name}${inDefense ? ' (ท่าตั้งรับ)' : ''}`
   addLog(state, playerId, 'battle', `⚔️ ${attackerCard.name} โจมตี ${target}`, details)
@@ -1965,6 +2114,15 @@ function respond(state, playerId, optionId) {
   }
 
   const p = state.players[playerId]
+  if (option.kind === 'canopy') {
+    const tree = p.field.find((m) => m?.uid === option.treeUid)
+    tree.growth -= 1
+    p.usedEffects = { ...(p.usedEffects ?? {}), [`name:${tree.cardId}`]: state.turn }
+    details.push(`🌳 ${PLAYER_NAMES[playerId]}ใช้ ${getCanopy(cardOf(tree)).reason}: ถอนแต้มเติบโต 1 (เหลือ ${tree.growth}) → ยกเลิกการโจมตี`)
+    applyAttackDecay(state, attackerOwner, pending.attackerUid, details)
+    addLog(state, attackerOwner, 'battle', `⚔️ ${cardOf(attacker).name} โจมตี ${cardOf(defender).name} — ถูกยกเลิก (ไทรใหญ่)`, details)
+    return
+  }
   if (option.kind === 'mercy') {
     const monk = p.field.find((m) => m?.uid === option.monkUid)
     p.usedEffects = { ...(p.usedEffects ?? {}), [`name:${monk.cardId}`]: state.turn }
@@ -2240,6 +2398,38 @@ function activate(state, playerId, uid, discardUid, targetUid) {
       `ถอนแต้มเติบโตจาก ${cardOf(plant).name} (เหลือ ${plant.growth})`,
       `อยู่ถึงจบเทิร์นถัดไปของ${PLAYER_NAMES[opponentOf(playerId)]}`,
     ])
+  }
+  if (activated.kind === 'forestCall') {
+    const plant = p.field
+      .filter((x) => x && !x.faceDown && isForestCard(cardOf(x)) && isPlantCard(cardOf(x)) && x.growth > 0)
+      .sort((a, b) => b.growth - a.growth)[0]
+    plant.growth -= 1
+    setForestLock(state, playerId)
+    addLog(state, playerId, 'effect', `🐘 ${card.name}: ถอนแต้มเติบโตจาก ${cardOf(plant).name} (เหลือ ${plant.growth})`, [
+      'เทิร์นนี้อัญเชิญพิเศษได้เฉพาะการ์ดไพรมหาวัน',
+    ])
+    queueChoice(state, {
+      player: playerId,
+      kind: 'summonFromHand',
+      source: card.id,
+      position: 'defense',
+      noAttack: true,
+      prompt: `${card.name}: เลือกสัตว์ไพรมหาวันจากมือลงสนามท่าตั้งรับ (โจมตีไม่ได้เทิร์นนี้)`,
+      options: p.hand.filter((h) => activated.matches(cardOf(h))).map((h) => ({ id: h.uid, label: cardOf(h).name })),
+    })
+  }
+  if (activated.kind === 'nestCall') {
+    setForestLock(state, playerId)
+    addLog(state, playerId, 'effect', `🪺 ${card.name}: เรียกพวกเข้ารัง`, ['เทิร์นนี้อัญเชิญพิเศษได้เฉพาะการ์ดไพรมหาวัน'])
+    queueChoice(state, {
+      player: playerId,
+      kind: 'summonFromHand',
+      source: card.id,
+      position: 'defense',
+      noAttack: true,
+      prompt: `${card.name}: เลือกการ์ดที่จะเรียกลงสนามท่าตั้งรับ (โจมตีไม่ได้เทิร์นนี้)`,
+      options: nestCallOptions(p, activated),
+    })
   }
   if (activated.kind === 'scout') {
     const opp = state.players[opponentOf(playerId)]
@@ -2576,6 +2766,19 @@ function startNextTurn(state, endingPlayerId) {
         `${cardOf(plant).name} แต้มเติบโต ${plant.growth}/${getGrowth(cardOf(plant)).cap}`,
         `LP ${formatNumber(before)} + ${formatNumber(grow.heal)} = ${formatNumber(ending.lp)}`,
       ])
+    }
+  }
+  // ราชินีต่อ: เรียกฝูงต่อจากกอง (หรือสุสาน) ท่าตั้งรับ (ชื่อละครั้ง)
+  const queen = ending.field.find((m) => m && !m.faceDown && getEndTurnCall(cardOf(m)))
+  if (queen && ending.field.includes(null)) {
+    const call = getEndTurnCall(cardOf(queen))
+    const source = call.from.map((z) => [ending[z], z]).find(([list]) => list.some((c) => c.cardId === call.id))
+    if (source) {
+      const [list, z] = source
+      const [inst] = list.splice(list.findIndex((c) => c.cardId === call.id), 1)
+      const zone = ending.field.indexOf(null)
+      ending.field[zone] = { uid: inst.uid, cardId: inst.cardId, hasAttacked: false, summonedTurn: state.turn, position: 'defense', faceDown: false, positionChangedTurn: null, cannotAttackTurn: state.turn }
+      addLog(state, endingPlayerId, 'summon', `🐝 ${call.reason}: เรียก ${getCardById(call.id).name} จาก${z === 'deck' ? 'กอง' : 'สุสาน'} ลงช่องที่ ${zone + 1} ท่าตั้งรับ`)
     }
   }
   for (const m of ending.field) {

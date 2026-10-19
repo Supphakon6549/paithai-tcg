@@ -39,6 +39,7 @@ import {
   getFusionSpell,
   getFusionTargets,
   getMountOptions,
+  getMountVerb,
   getHandOverflow,
   getReadyAttackers,
   getReviveSpell,
@@ -154,8 +155,14 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
   const mountOptions = mountPick ? getMountOptions(game, PLAYER) : []
   const mountOption = mountPick?.fusionUid ? mountOptions.find((o) => o.fusionUid === mountPick.fusionUid) : null
   const mountPool = new Set(mountOption ? mountOption.pairs.flat() : [])
+  // จำนวนวัตถุดิบตามสูตร (ขี่ 2 · ราชินีต่อ 3)
+  const mountNeed = mountOption ? mountOption.pairs[0].length : 2
+  const mountRider = mountOption ? cardOf(me.extraDeck.find((c) => c.uid === mountPick.fusionUid)) : null
+  const mountVerb = mountRider ? getMountVerb(mountRider) : 'ขึ้นขี่'
   const mountReady =
-    mountOption && mountOption.pairs.some(([a, b]) => mountPick.selected.length === 2 && mountPick.selected.includes(a) && mountPick.selected.includes(b))
+    mountOption &&
+    mountOption.pairs.some((set) => mountPick.selected.length === set.length && set.every((uid) => mountPick.selected.includes(uid)))
+  const fusionNeed = fusionTargetInst ? getFusionMaterials(cardOf(fusionTargetInst)).length : 2
   const isTributeSelected = (uid) =>
     Boolean(
       tributePick?.selected.includes(uid) ||
@@ -242,7 +249,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
     }
     if (fusionPick) {
       if (fusionPick.targetUid && fusionPool.has(inst.uid)) {
-        setFusionPick((f) => ({ ...f, selected: toggle(f.selected, inst.uid, 2) }))
+        setFusionPick((f) => ({ ...f, selected: toggle(f.selected, inst.uid, fusionNeed) }))
       }
       return
     }
@@ -259,7 +266,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
 
   function onMyMonsterTap(monster) {
     if (mountPick) {
-      if (mountPool.has(monster.uid)) setMountPick((m) => ({ ...m, selected: toggle(m.selected, monster.uid, 2) }))
+      if (mountPool.has(monster.uid)) setMountPick((m) => ({ ...m, selected: toggle(m.selected, monster.uid, mountNeed) }))
       return
     }
     if (equipPick) {
@@ -277,7 +284,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
       return
     }
     if (fusionPick) {
-      if (fusionPick.targetUid) setFusionPick((f) => ({ ...f, selected: toggle(f.selected, monster.uid, 2) }))
+      if (fusionPick.targetUid) setFusionPick((f) => ({ ...f, selected: toggle(f.selected, monster.uid, fusionNeed) }))
       return
     }
     if (effectPick) return
@@ -383,6 +390,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
   // โหมดขึ้นขี่: ป้ายบอกว่าการ์ดใบนี้ใช้เป็น "คน" หรือ "สัตว์" ได้
   function mountRoleBadge(m) {
     if (!mountOption || !mountPool.has(m.uid)) return null
+    if (mountVerb !== 'ขึ้นขี่') return { tone: 'tie', text: '🌿 วัตถุดิบ' }
     const human = mountOption.pairs.some(([a]) => a === m.uid)
     const animal = mountOption.pairs.some(([, b]) => b === m.uid)
     return { tone: 'tie', text: human && animal ? 'คน/สัตว์' : human ? '👤 คน' : '🐾 สัตว์' }
@@ -391,8 +399,10 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
   // ปุ่มขึ้นขี่บอกร่างที่จะได้ เช่น "🐎 ขึ้นขี่ → พรานขี่เสือ" (หลายแบบ = บอกจำนวน)
   function mountButtonLabel() {
     const options = getMountOptions(game, PLAYER)
-    if (options.length !== 1) return `🐎 ขึ้นขี่ (${options.length} แบบ)`
-    return `🐎 ขึ้นขี่ → ${cardOf(me.extraDeck.find((c) => c.uid === options[0].fusionUid)).name}`
+    if (options.length !== 1) return `🐎 ขึ้นขี่/รวมร่าง (${options.length} แบบ)`
+    const rider = cardOf(me.extraDeck.find((c) => c.uid === options[0].fusionUid))
+    const verb = getMountVerb(rider)
+    return `${verb === 'ขึ้นขี่' ? '🐎' : '🌿'} ${verb} → ${rider.name}`
   }
 
   // ป้ายสถานะบนมอนสเตอร์: คำสาป / ห้ามโจมตี (รากตะเคียน/พระอาจารย์)
@@ -435,21 +445,23 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
     }, 0)
     hint = `เลือกเครื่องสังเวยจากมือ/สนามให้ ${target.name}: ระดับรวม ${total}/${ritual.requiredLevel}`
   } else if (mountPick) {
-    if (!mountOption) hint = 'เลือกร่างขี่จากกองพิเศษ'
+    if (!mountOption) hint = 'เลือกร่างขี่/ร่างรวมจากกองพิเศษ'
     else {
       const recipe = getFusionMaterials(cardOf(game.players.player.extraDeck.find((c) => c.uid === mountPick.fusionUid)))
         .map((m) => m.label)
         .join(' + ')
       const names = mountPick.selected.map((uid) => cardOf(me.field.find((m) => m?.uid === uid)).name).join(' + ')
       hint = mountReady
-        ? `พร้อมขึ้นขี่: ${names} — กดปุ่ม 🐎 ด้านล่างเพื่อยืนยัน (แตะการ์ดเพื่อเปลี่ยน)`
-        : `แตะการ์ดที่มีป้าย 👤 คน / 🐾 สัตว์ (${mountPick.selected.length}/2): ${recipe}`
+        ? `พร้อม${mountVerb}: ${names} — กดปุ่มด้านล่างเพื่อยืนยัน (แตะการ์ดเพื่อเปลี่ยน)`
+        : mountVerb === 'ขึ้นขี่'
+          ? `แตะการ์ดที่มีป้าย 👤 คน / 🐾 สัตว์ (${mountPick.selected.length}/2): ${recipe}`
+          : `แตะการ์ดที่มีป้าย 🌿 วัตถุดิบ (${mountPick.selected.length}/${mountNeed}): ${recipe}`
     }
   } else if (fusionPick) {
     if (!fusionTargetInst) hint = 'เลือกมอนสเตอร์ผสานร่างจากกองพิเศษ'
     else {
       const recipe = getFusionMaterials(cardOf(fusionTargetInst)).map((m) => m.label).join(' + ')
-      hint = `เลือกวัตถุดิบจากมือ/สนาม (${fusionPick.selected.length}/2): ${recipe}`
+      hint = `เลือกวัตถุดิบจากมือ/สนาม (${fusionPick.selected.length}/${fusionNeed}): ${recipe}`
     }
   } else if (revivePick) {
     hint = reviveTargets.length ? 'เลือกมอนสเตอร์ในสุสานที่จะคืนชีพ (ท่าโจมตี)' : 'ไม่มีมอนสเตอร์ในสุสานที่คืนชีพได้'
@@ -548,7 +560,8 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
               className="btn btn--primary"
               onClick={() => setMountPick({ fusionUid: o.fusionUid, selected: o.pairs.length === 1 ? o.pairs[0] : [] })}
             >
-              🐎 {riderOf(o.fusionUid).name} · ATK {formatNumber(riderOf(o.fusionUid).atk)}
+              {getMountVerb(riderOf(o.fusionUid)) === 'ขึ้นขี่' ? '🐎' : '🌿'} {riderOf(o.fusionUid).name} · ATK{' '}
+              {formatNumber(riderOf(o.fusionUid).atk)}
             </button>
           ))}
         {mountOption && (
@@ -558,7 +571,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
             disabled={!mountReady}
             onClick={() => play({ type: 'mount', fusionUid: mountPick.fusionUid, materials: mountPick.selected })}
           >
-            🐎 ขึ้นขี่เป็น {riderOf(mountPick.fusionUid).name}
+            {mountVerb === 'ขึ้นขี่' ? '🐎' : '🌿'} {mountVerb}เป็น {riderOf(mountPick.fusionUid).name}
           </button>
         )}
         {mountOption && mountOptions.length > 1 && (

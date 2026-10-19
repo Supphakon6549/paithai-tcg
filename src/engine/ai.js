@@ -346,9 +346,9 @@ function chooseActivation(state, playerId) {
     if (activated.kind === 'heal' || activated.kind === 'destroySpellsTraps' || activated.kind === 'searchTrap') {
       return { type: 'activate', player: playerId, uid: m.uid }
     }
-    if (activated.kind === 'growthBuff') return { type: 'activate', player: playerId, uid: m.uid }
+    if (activated.kind === 'forestCall' || activated.kind === 'nestCall') return { type: 'activate', player: playerId, uid: m.uid }
     if (activated.kind === 'scout' && canAttackThisTurn(state)) return { type: 'activate', player: playerId, uid: m.uid }
-    if (['bind', 'drain', 'curse', 'vine'].includes(activated.kind)) {
+    if (['bind', 'drain', 'curse'].includes(activated.kind)) {
       // เลือกศัตรูที่ ATK สูงสุด (ภัยใหญ่สุด) · ดูดพลังใช้เฉพาะเทิร์นที่โจมตีได้
       if (activated.kind === 'drain' && !canAttackThisTurn(state)) continue
       const oppId = opponentOf(playerId)
