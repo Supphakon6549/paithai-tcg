@@ -30,6 +30,8 @@ import { TRIBES } from '../data/tribes'
  *   onSummonLook           อัญเชิญหงาย: ดูบนกอง count ใบ เลือกที่ matches ขึ้นมือ ที่เหลือไว้ใต้กอง
  *   sting                  ถูกทำลายจากการต่อสู้ตอนเป็นฝ่ายรับ → ผู้โจมตี ATK amount จนจบเทิร์น
  *   deathCurse             ถูกทำลายจากการต่อสู้ → คำสาปใส่ตัวที่ทำลาย: mode 'destroy' (ทำลายตาม) | 'halve' (ATK เหลือครึ่งถาวร)
+ *                          | 'lock' (โจมตีไม่ได้ถึงจบเทิร์นถัดไปของผู้ควบคุมมัน)
+ *   taunt                  ขณะหงายท่าตั้งรับ ศัตรูต้องโจมตีใบนี้ก่อน (มีหลายใบ เลือกตีใบไหนก็ได้ในกลุ่มนี้)
  *   ambushFlip             ถูกโจมตีจนพลิกหงาย → เปลี่ยนเป็นท่าโจมตีได้ (+bonus เมื่อมีสัตว์ต่างเผ่า)
  *   huntBonus              โจมตีมอนสเตอร์หงายที่ ATK สูงสุดฝ่ายศัตรู → ATK +amount เฉพาะการต่อสู้นั้น
  *   mount / dismount       ร่างขี่: ขึ้นขี่จากคน+สัตว์บนสนาม (ไม่ต้องใช้เวท) · ถูกทำลาย → คืนวัตถุดิบ 1 ตัว
@@ -394,7 +396,10 @@ export const CARD_EFFECTS = {
   // ผีคำสาปตอนตาย (TH06 รอบปรับสมดุล): ถูกทำลายจากการต่อสู้ → สาปตัวที่ทำลาย
   'th06-013': { deathCurse: { mode: 'halve', reason: 'ผีตายโหงผูกเงา: คำสาปผูกเงา' } },
   'th06-014': { deathCurse: { mode: 'destroy', reason: 'ผีพรายทวงสัญญา: ทวงชีวิตคืน' } },
-  'th06-015': { deathCurse: { mode: 'halve', reason: 'ผีอาฆาตเฝ้าทาง: คำสาปอาฆาต' } },
+  'th06-015': {
+    taunt: { reason: 'ผีอาฆาตเฝ้าทาง: ต้องโจมตีใบนี้ก่อน' },
+    deathCurse: { mode: 'lock', reason: 'ผีอาฆาตเฝ้าทาง: คำสาปตรึงเท้า' },
+  },
   // ---------- TH03 ไพรมหาวัน (docs/TH03-DESIGN.md) ----------
   // ต้นไทรเดินดิน
   'th03-001': {
@@ -755,6 +760,7 @@ export const getOnSummonCall = (card) => effectOf(card).onSummonCall ?? null
 export const getOnSummonLook = (card) => effectOf(card).onSummonLook ?? null
 export const getSting = (card) => effectOf(card).sting ?? null
 export const getDeathCurse = (card) => effectOf(card).deathCurse ?? null
+export const getTaunt = (card) => effectOf(card).taunt ?? null
 export const getAmbushFlip = (card) => effectOf(card).ambushFlip ?? null
 export const getHuntBonus = (card) => effectOf(card).huntBonus ?? null
 export const canMount = (card) => effectOf(card).mount === true

@@ -35,7 +35,8 @@ import {
   ritualTributeProblem,
   specialSummonBlocker,
   trapActivationBlocker,
-  getOpponentMonsters,
+  getAttackableTargets,
+  isAttackLocked,
   getReadyAttackers,
   getFieldAtk,
   getSummonableHand,
@@ -264,7 +265,7 @@ function chooseBuffSpell(state, playerId) {
   if (!canAttackThisTurn(state)) return null
   for (const spell of playable(state, playerId, (c) => Boolean(getBuffSpell(c)))) {
     const target = [...getEquipTargets(state, playerId, cardOf(spell))]
-      .filter((m) => m.position === 'attack' && !m.hasAttacked && m.cannotAttackTurn !== state.turn)
+      .filter((m) => m.position === 'attack' && !m.hasAttacked && !isAttackLocked(state, m))
       .sort(byAtkDesc)[0]
     if (target) return { type: 'playSpell', player: playerId, uid: spell.uid, targetUid: target.uid }
   }
@@ -431,7 +432,7 @@ function chooseFlip(state, playerId) {
 
 function chooseAttack(state, playerId) {
   const attackers = [...getReadyAttackers(state, playerId)].sort(byAtkDesc)
-  const targets = getOpponentMonsters(state, playerId)
+  const targets = getAttackableTargets(state, playerId)
   const visible = targets.filter((t) => !t.faceDown)
   const hidden = targets.filter((t) => t.faceDown)
 

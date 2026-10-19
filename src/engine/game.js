@@ -20,6 +20,7 @@ import {
   getOnSummonLook,
   getSting,
   getDeathCurse,
+  getTaunt,
   hasRootShield,
   isPlantCard,
   getAttackingBoost,
@@ -347,7 +348,7 @@ function targetableEnemies(state, playerId) {
 }
 
 function canDeclareAttack(state, playerId, m) {
-  if (m.cannotAttackTurn === state.turn) return false
+  if (isAttackLocked(state, m)) return false
   // โจมตีตรงไม่ได้ + ศัตรูไม่มีมอนสเตอร์ = ไม่มีอะไรให้โจมตี
   if (hasNoDirectAttack(cardOf(m)) && !state.players[opponentOf(playerId)].field.some(Boolean)) return false
   return m.position !== 'defense' && attacksMade(m) < maxAttacks(state, playerId, m)
@@ -369,6 +370,16 @@ export function positionChangeBlocker(state, playerId, uid) {
 
 export function getOpponentMonsters(state, playerId) {
   return state.players[opponentOf(playerId)].field.filter(Boolean)
+}
+
+// ห้ามโจมตี: ระบุเทิร์นเดียว (cannotAttackTurn) หรือถึงเทิร์นที่กำหนด (cannotAttackUntil)
+export const isAttackLocked = (state, m) => m.cannotAttackTurn === state.turn || m.cannotAttackUntil >= state.turn
+
+// เป้าที่โจมตีได้: ถ้าศัตรูมีผีเฝ้าทาง (หงายท่าตั้งรับ) ต้องตีตัวนั้นก่อน
+export function getAttackableTargets(state, playerId) {
+  const all = getOpponentMonsters(state, playerId)
+  const guards = all.filter((m) => !m.faceDown && m.position === 'defense' && getTaunt(cardOf(m)))
+  return guards.length ? guards : all
 }
 
 // การ์ดมอนสเตอร์ตัวอื่นบนสนามของ playerId (ใช้เช็กเงื่อนไขเอฟเฟกต์)
@@ -1578,7 +1589,7 @@ function attack(state, playerId, attackerUid, targetUid) {
   const attacker = me.field.find((m) => m?.uid === attackerUid)
   if (!attacker) throw new GameRuleError('ไม่พบมอนสเตอร์ที่จะโจมตี')
   if (attacker.position === 'defense') throw new GameRuleError('มอนสเตอร์ท่าตั้งรับโจมตีไม่ได้')
-  if (attacker.cannotAttackTurn === state.turn) throw new GameRuleError('มอนสเตอร์ตัวนี้ถูกห้ามโจมตีในเทิร์นนี้')
+  if (isAttackLocked(state, attacker)) throw new GameRuleError('มอนสเตอร์ตัวนี้ถูกห้ามโจมตีในเทิร์นนี้')
   if (targetUid === null && hasNoDirectAttack(cardOf(attacker))) {
     throw new GameRuleError(`${cardOf(attacker).name} โจมตีตรงไม่ได้`)
   }
@@ -1598,6 +1609,10 @@ function attack(state, playerId, attackerUid, targetUid) {
   } else {
     defender = opp.field.find((m) => m?.uid === targetUid)
     if (!defender) throw new GameRuleError('ไม่พบมอนสเตอร์เป้าหมาย')
+    if (!getAttackableTargets(state, playerId).some((m) => m.uid === targetUid)) {
+      const guard = getAttackableTargets(state, playerId)[0]
+      throw new GameRuleError(`ต้องโจมตี ${cardOf(guard).name} ก่อน (${getTaunt(cardOf(guard)).reason.split(': ')[1] ?? 'เฝ้าทาง'})`)
+    }
   }
 
   attacker.attackCount = attackNo
@@ -1781,6 +1796,13 @@ function applyDeathCurse(state, killerOwner, killer, victimCard, details) {
   const curse = getDeathCurse(victimCard)
   if (!curse || !state.players[killerOwner].field.some((m) => m?.uid === killer.uid)) return
   const name = cardOf(killer).name
+  if (curse.mode === 'lock') {
+    // ถึงจบเทิร์นถัดไปของผู้ควบคุมตัวที่ทำลาย (ตาเขาอยู่ตอนนี้ = ข้ามไปอีกรอบ)
+    const until = killerOwner === state.activePlayer ? state.turn + 2 : state.turn + 1
+    killer.cannotAttackUntil = Math.max(killer.cannotAttackUntil ?? 0, until)
+    details.push(`👻 ${curse.reason}: ${name} โจมตีไม่ได้ถึงจบเทิร์นถัดไปของเจ้าของ`)
+    return
+  }
   if (curse.mode === 'destroy') {
     if (effectDestroy(state, killerOwner, killer.uid, details)) details.push(`👻 ${curse.reason}: ${name} ถูกทำลายตาม`)
     return

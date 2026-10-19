@@ -297,9 +297,40 @@ describe('ผีคำสาปตอนตาย (013–015)', () => {
   })
 
   it('ผีเป็นฝ่ายโจมตีแล้วตาย → ฝ่ายรับโดนคำสาปด้วย', () => {
-    const s = makeState({ phase: 'battle', player: { field: ['th06-015'] }, ai: { field: ['th01-018'] } })
+    const s = makeState({ phase: 'battle', player: { field: ['th06-013'] }, ai: { field: ['th01-018'] } })
     const after = act(s, { type: 'attack', attackerUid: uidAt(s, PLAYER, 0), targetUid: uidAt(s, AI, 0) })
     expect(after.players.player.field[0]).toBeNull()
     expect(getFieldAtk(after, AI, uidAt(s, AI, 0))).toBe(1250)
+  })
+})
+
+describe('ผีอาฆาตเฝ้าทาง: เฝ้าทาง + สาปห้ามโจมตี', () => {
+  const guarded = () =>
+    aiBattle({ player: { field: [{ id: 'th06-015', position: 'defense' }, 'th06-004'] }, ai: { field: ['th01-022', 'th01-017'] } })
+
+  it('ท่าตั้งรับหงาย → ศัตรูต้องตีผีอาฆาตก่อน', () => {
+    const s = guarded()
+    expect(() => aiAttack(s, 0, 1)).toThrow('ต้องโจมตี ผีอาฆาตเฝ้าทาง ก่อน')
+    expect(getAiAction(s)).toMatchObject({ type: 'attack', targetUid: uidAt(s, PLAYER, 0) })
+  })
+
+  it('ท่าโจมตี → ไม่บังคับ', () => {
+    const s = aiBattle({ player: { field: ['th06-015', 'th06-004'] }, ai: { field: ['th01-022'] } })
+    expect(() => aiAttack(s, 0, 1)).not.toThrow()
+  })
+
+  it('ถูกทำลาย → ตัวที่ทำลายโจมตีไม่ได้ถึงจบเทิร์นถัดไปของเจ้าของ (รวมเทิร์นนี้)', () => {
+    let s = aiAttack(guarded(), 0, 0)
+    expect(s.players.player.field[0]).toBeNull()
+    const killer = uidAt(guarded(), AI, 0)
+    expect(s.players.ai.field[0].cannotAttackUntil).toBe(5)
+    s = applyAction(s, { type: 'endTurn', player: AI })
+    s = act(s, { type: 'endTurn' })
+    s = applyAction(s, { type: 'enterBattle', player: AI })
+    expect(getReadyAttackers(s, AI).map((m) => m.uid)).not.toContain(killer)
+    s = applyAction(s, { type: 'endTurn', player: AI })
+    s = act(s, { type: 'endTurn' })
+    s = applyAction(s, { type: 'enterBattle', player: AI })
+    expect(getReadyAttackers(s, AI).map((m) => m.uid)).toContain(killer)
   })
 })

@@ -25,6 +25,7 @@ import {
   fusionProblem,
   getActivated,
   getActivationTargets,
+  getAttackableTargets,
   getAiAction,
   getBranchSpell,
   getBuffSpell,
@@ -132,6 +133,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
   const selectedHand = me.hand.find((c) => c.uid === selectedHandUid) ?? null
   const selectedField = me.field.find((m) => m?.uid === selectedFieldUid) ?? null
   const oppHasMonsters = opp.field.some(Boolean)
+  const attackableTargets = new Set(getAttackableTargets(game, PLAYER).map((m) => m.uid))
 
   const tributeInst = tributePick ? me.hand.find((c) => c.uid === tributePick.handUid) : null
   const tributeCard = tributeInst ? cardOf(tributeInst) : null
@@ -396,7 +398,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
   // ป้ายสถานะบนมอนสเตอร์: คำสาป / ห้ามโจมตี (รากตะเคียน/พระอาจารย์)
   function statusBadge(m) {
     if (m.curse?.until >= game.turn) return { tone: 'lose', text: 'ต้องสาป' }
-    if (m.cannotAttackTurn >= game.turn) return { tone: 'lose', text: 'ห้ามโจมตี' }
+    if (m.cannotAttackTurn >= game.turn || m.cannotAttackUntil >= game.turn) return { tone: 'lose', text: 'ห้ามโจมตี' }
     if (m.growth > 0 && !m.faceDown) return { tone: 'win', text: `🌱 ${m.growth}` }
     return null
   }
@@ -750,7 +752,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
               targetBadge(m) ?? statusBadge(m)
             }
             classFor={(m) =>
-              attacker ||
+              (attacker && attackableTargets.has(m.uid)) ||
               (pickingTarget && activationTargets.has(m.uid))
                 ? 'mini-card--target'
                 : ''
