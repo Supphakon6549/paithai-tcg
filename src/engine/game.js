@@ -1808,7 +1808,8 @@ function applyDeathCurse(state, killerOwner, killer, victimCard, details) {
     return
   }
   const before = getFieldAtk(state, killerOwner, killer.uid)
-  const cut = Math.floor(before / 2)
+  // เหลือครึ่งปัดลง: 1,001 → 500 (หักออก = ส่วนที่เหลือปัดขึ้น)
+  const cut = before - Math.floor(before / 2)
   killer.statMods = [...(killer.statMods ?? []), { atk: -cut, until: Number.MAX_SAFE_INTEGER, reason: curse.reason }]
   details.push(`👻 ${curse.reason}: ${name} ATK ${formatNumber(before)} → ${formatNumber(before - cut)} (ถาวร)`)
 }
@@ -1913,8 +1914,11 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
         ? `${a} = ${d} → เสมอ ${fallText(attackerCard, attacker)} · ${fallText(defenderCard, defender)} · ไม่มีใครเสีย LP`
         : `${a} = ${d} → เสมอ ทำลายทั้งคู่ ไม่มีใครเสีย LP`
     )
-    battleDestroy(state, playerId, attacker, details)
-    battleDestroy(state, oppId, defender, details)
+    const attackerDied = battleDestroy(state, playerId, attacker, details)
+    const defenderDied = battleDestroy(state, oppId, defender, details)
+    // เสมอแต่อีกฝ่ายรอด (เช่น จอมทัพ) → คำสาปของตัวที่ตายยังเกิด · ตายทั้งคู่ไม่มีเป้าให้สาป
+    if (attackerDied && !defenderDied) applyDeathCurse(state, oppId, defender, attackerCard, details)
+    if (defenderDied && !attackerDied) applyDeathCurse(state, playerId, attacker, defenderCard, details)
   }
 
   // เอฟเฟกต์หลังคำนวณความเสียหาย: ทำลายคู่ต่อสู้ตามเผ่า (ถ้ายังอยู่บนสนาม)

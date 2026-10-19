@@ -334,3 +334,22 @@ describe('ผีอาฆาตเฝ้าทาง: เฝ้าทาง + �
     expect(getReadyAttackers(s, AI).map((m) => m.uid)).toContain(killer)
   })
 })
+
+describe('คำสาปตอนตาย: กรณีขอบ (ตามข้อกำหนด DC05 / DC17)', () => {
+  it('เลขคี่ปัดลง: ATK 1,001 เหลือ 500', () => {
+    const s = aiBattle({ player: { field: ['th06-013'] }, ai: { field: ['th01-022'] } })
+    s.players.ai.field[0].tempAtk = [{ amount: -1999, reason: 'ทดสอบ' }]
+    s.players.player.field[0].tempAtk = [{ amount: -1000, reason: 'ทดสอบให้ผีแพ้' }]
+    const after = aiAttack(s, 0, 0)
+    expect(after.players.player.field[0]).toBeNull()
+    expect(getFieldAtk(after, AI, uidAt(s, AI, 0))).toBe(500)
+  })
+
+  it('เสมอแต่จอมทัพรอด → ผีพรายยังทำลายตาม', () => {
+    const s = aiBattle({ player: { field: ['th06-014'] }, ai: { field: ['th01-022'] } })
+    s.players.player.field[0].tempAtk = [{ amount: 1700, reason: 'ทดสอบให้เท่ากัน' }]
+    const after = aiAttack(s, 0, 0)
+    expect(lastLog(after).details.join(' ')).toContain('ถูกทำลายตาม')
+    expect(after.players.ai.field[0]).toBeNull()
+  })
+})
