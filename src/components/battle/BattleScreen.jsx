@@ -378,6 +378,21 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
     return 'สนามเต็มแล้ว'
   }
 
+  // โหมดขึ้นขี่: ป้ายบอกว่าการ์ดใบนี้ใช้เป็น "คน" หรือ "สัตว์" ได้
+  function mountRoleBadge(m) {
+    if (!mountOption || !mountPool.has(m.uid)) return null
+    const human = mountOption.pairs.some(([a]) => a === m.uid)
+    const animal = mountOption.pairs.some(([, b]) => b === m.uid)
+    return { tone: 'tie', text: human && animal ? 'คน/สัตว์' : human ? '👤 คน' : '🐾 สัตว์' }
+  }
+
+  // ปุ่มขึ้นขี่บอกร่างที่จะได้ เช่น "🐎 ขึ้นขี่ → พรานขี่เสือ" (หลายแบบ = บอกจำนวน)
+  function mountButtonLabel() {
+    const options = getMountOptions(game, PLAYER)
+    if (options.length !== 1) return `🐎 ขึ้นขี่ (${options.length} แบบ)`
+    return `🐎 ขึ้นขี่ → ${cardOf(me.extraDeck.find((c) => c.uid === options[0].fusionUid)).name}`
+  }
+
   // ป้ายสถานะบนมอนสเตอร์: คำสาป / ห้ามโจมตี (รากตะเคียน/พระอาจารย์)
   function statusBadge(m) {
     if (m.curse?.until >= game.turn) return { tone: 'lose', text: 'ต้องสาป' }
@@ -423,7 +438,10 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
       const recipe = getFusionMaterials(cardOf(game.players.player.extraDeck.find((c) => c.uid === mountPick.fusionUid)))
         .map((m) => m.label)
         .join(' + ')
-      hint = `แตะคน + สัตว์บนสนาม (${mountPick.selected.length}/2): ${recipe}`
+      const names = mountPick.selected.map((uid) => cardOf(me.field.find((m) => m?.uid === uid)).name).join(' + ')
+      hint = mountReady
+        ? `พร้อมขึ้นขี่: ${names} — กดปุ่ม 🐎 ด้านล่างเพื่อยืนยัน (แตะการ์ดเพื่อเปลี่ยน)`
+        : `แตะการ์ดที่มีป้าย 👤 คน / 🐾 สัตว์ (${mountPick.selected.length}/2): ${recipe}`
     }
   } else if (fusionPick) {
     if (!fusionTargetInst) hint = 'เลือกมอนสเตอร์ผสานร่างจากกองพิเศษ'
@@ -526,7 +544,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
               key={o.fusionUid}
               type="button"
               className="btn btn--primary"
-              onClick={() => setMountPick({ fusionUid: o.fusionUid, selected: [] })}
+              onClick={() => setMountPick({ fusionUid: o.fusionUid, selected: o.pairs.length === 1 ? o.pairs[0] : [] })}
             >
               🐎 {riderOf(o.fusionUid).name} · ATK {formatNumber(riderOf(o.fusionUid).atk)}
             </button>
@@ -660,11 +678,13 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
             onClick={() => {
               const options = getMountOptions(game, PLAYER)
               clearSelections()
-              setMountPick({ fusionUid: options.length === 1 ? options[0].fusionUid : null, selected: [] })
+              // มีร่างเดียวและคู่เดียว → เลือกวัตถุดิบให้เลย กดยืนยันได้ทันที
+              const only = options.length === 1 ? options[0] : null
+              setMountPick({ fusionUid: only?.fusionUid ?? null, selected: only?.pairs.length === 1 ? only.pairs[0] : [] })
               setError(null)
             }}
           >
-            🐎 ขึ้นขี่
+            {mountButtonLabel()}
           </button>
         )}
         {game.phase === 'main1' && (
@@ -776,9 +796,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
             atkOf={(m) => getFieldAtk(game, PLAYER, m.uid)}
             xpOf={xpOf(PLAYER)}
             renderBadge={(m) =>
-              isTributeSelected(m.uid)
-                ? materialBadge
-                : statusBadge(m)
+              isTributeSelected(m.uid) ? materialBadge : mountRoleBadge(m) ?? statusBadge(m)
             }
             classFor={(m) =>
               [
@@ -791,6 +809,9 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
                   equipTargets.has(m.uid) ||
                   readyAttackers.has(m.uid)) &&
                   'mini-card--ready',
+                (tributePick || ritualPick || (fusionTargetInst && fusionPool.has(m.uid)) || mountPool.has(m.uid) || equipTargets.has(m.uid)) &&
+                  !isTributeSelected(m.uid) &&
+                  'mini-card--pickable',
                 m.hasAttacked && !readyAttackers.has(m.uid) && 'mini-card--spent',
               ]
                 .filter(Boolean)
@@ -876,6 +897,9 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
               !picking && summonable.has(inst.uid) && 'mini-card--ready',
               ritualPick && ritualPool.has(inst.uid) && 'mini-card--ready',
               fusionTargetInst && fusionPool.has(inst.uid) && 'mini-card--ready',
+              ((ritualPick && ritualPool.has(inst.uid)) || (fusionTargetInst && fusionPool.has(inst.uid))) &&
+                !isTributeSelected(inst.uid) &&
+                'mini-card--pickable',
               ((game.phase === 'discard' && isMyTurn) || pickingDiscard) && 'mini-card--discardable',
             ]
               .filter(Boolean)

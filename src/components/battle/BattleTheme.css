@@ -139,6 +139,19 @@
     0 16px 24px rgba(0, 0, 0, 0.88);
 }
 
+/* 1.2a ฉากสำรอง: เวทสนามที่ยังไม่มีภาพฉากเฉพาะ ใช้ภาพการ์ดปูพื้น (ฉากเฉพาะด้านล่างใช้ !important จึงทับได้) */
+.board-side[data-field-spell]:not([data-field-spell='none']) {
+  background-image:
+    url('/board/table-border.png'),
+    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(8, 6, 4, 0.42) 0%, rgba(6, 4, 3, 0.72) 100%),
+    var(--field-art);
+  background-size: auto 15px, 100% 100%, cover;
+  background-position: center top, center center, center center;
+}
+.board-side--me[data-field-spell]:not([data-field-spell='none']) {
+  background-position: center bottom, center center, center center;
+}
+
 /* 1.2b ฉากเวทสนาม 3 ภาพ (public/board/fields/<cardId>.webp) เปลี่ยนพื้นสนามตามเวทสนามที่เปิดอยู่ */
 .board-side[data-field-spell='th04-007'] {
   background-image:

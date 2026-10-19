@@ -16,6 +16,8 @@ export default function BoardSide({ player, isOpponent, monsterRow, onOpenPile, 
       aria-label={`กระดานของ${owner}`}
       data-owner={player.id}
       data-field-spell={player.fieldSpell?.cardId ?? 'none'}
+      // ฉากสำรองของเวทสนามที่ยังไม่มีภาพฉากเฉพาะ: ใช้ภาพการ์ดปูพื้น (ธีมกำหนดใน BattleTheme.css)
+      style={player.fieldSpell ? { '--field-art': `url('/cards/${player.fieldSpell.cardId}.jpg')` } : undefined}
     >
       {lpBadge}
       <div className="board-side__monsters">{monsterRow}</div>

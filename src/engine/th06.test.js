@@ -75,11 +75,11 @@ describe('กุมารทองนำทาง: อัญเชิญแล�
 describe('นางตานีม่านใบ: มีผีตัวอื่น +200 และกันเลือกเป้า', () => {
   it('ไม่มีเพื่อน 1,000 / เพื่อนคว่ำ 1,000 / เพื่อนหงาย 1,200', () => {
     const alone = makeState({ player: { field: ['th06-003'] } })
-    expect(getFieldAtk(alone, PLAYER, uidAt(alone, PLAYER, 0))).toBe(1000)
+    expect(getFieldAtk(alone, PLAYER, uidAt(alone, PLAYER, 0))).toBe(1200)
     const hidden = makeState({ player: { field: ['th06-003', { id: 'th06-001', position: 'defense', faceDown: true }] } })
-    expect(getFieldAtk(hidden, PLAYER, uidAt(hidden, PLAYER, 0))).toBe(1000)
+    expect(getFieldAtk(hidden, PLAYER, uidAt(hidden, PLAYER, 0))).toBe(1200)
     const friend = makeState({ player: { field: ['th06-003', 'th06-001'] } })
-    expect(getFieldAtk(friend, PLAYER, uidAt(friend, PLAYER, 0))).toBe(1200)
+    expect(getFieldAtk(friend, PLAYER, uidAt(friend, PLAYER, 0))).toBe(1400)
   })
 
   it('ความสามารถศัตรูเลือกนางตานีไม่ได้เมื่อมีเพื่อนผี (แต่ยังเลือกเพื่อนได้)', () => {
@@ -97,10 +97,10 @@ describe('นางตานีม่านใบ: มีผีตัวอื�
 
 describe('ผีกองกอย: +100 ต่อผีในสุสานเรา สูงสุด +300', () => {
   it.each([
-    [[], 1300],
-    [['th06-001', 'th06-007'], 1500],
-    [['th06-001', 'th06-002', 'th06-003', 'th06-005', 'th06-006'], 1600],
-    [['th06-011', 'th01-001', 'th06-012'], 1300],
+    [[], 1500],
+    [['th06-001', 'th06-007'], 1700],
+    [['th06-001', 'th06-002', 'th06-003', 'th06-005', 'th06-006'], 1800],
+    [['th06-011', 'th01-001', 'th06-012'], 1500],
   ])('สุสาน %j → ATK %i', (cards, atk) => {
     const s = grave(makeState({ player: { field: ['th06-004'] } }), PLAYER, cards)
     expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 0))).toBe(atk)
@@ -108,7 +108,7 @@ describe('ผีกองกอย: +100 ต่อผีในสุสานเ
 
   it('ไม่นับสุสานศัตรู', () => {
     const s = grave(makeState({ player: { field: ['th06-004'] } }), AI, ['th06-001', 'th06-002'])
-    expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 0))).toBe(1300)
+    expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 0))).toBe(1500)
   })
 })
 
@@ -164,14 +164,14 @@ describe('ปอบเงาสิง: ดูดพลัง 300', () => {
     const s = makeState({ player: { field: ['th06-007'] }, ai: { field: ['th01-017'] } })
     const after = act(s, { type: 'activate', uid: uidAt(s, PLAYER, 0), targetUid: uidAt(s, AI, 0) })
     expect(getFieldAtk(after, AI, uidAt(s, AI, 0))).toBe(1400)
-    expect(getFieldAtk(after, PLAYER, uidAt(s, PLAYER, 0))).toBe(1400)
+    expect(getFieldAtk(after, PLAYER, uidAt(s, PLAYER, 0))).toBe(1600)
     const next = act(after, { type: 'endTurn' })
-    expect(getFieldAtk(next, PLAYER, uidAt(s, PLAYER, 0))).toBe(1100)
+    expect(getFieldAtk(next, PLAYER, uidAt(s, PLAYER, 0))).toBe(1300)
   })
 })
 
 describe('กระสือแสงหลง: บินข้ามการ์ดคว่ำ', () => {
-  it('ศัตรูมีแต่การ์ดคว่ำ → โจมตีตรงได้ 1,400', () => {
+  it('ศัตรูมีแต่การ์ดคว่ำ → โจมตีตรงได้ 1,600', () => {
     const s = makeState({
       phase: 'battle',
       player: { field: ['th06-008'] },
@@ -179,7 +179,7 @@ describe('กระสือแสงหลง: บินข้ามการ�
     })
     expect(canAttackDirectly(s, PLAYER, uidAt(s, PLAYER, 0))).toBe(true)
     const after = act(s, { type: 'attack', attackerUid: uidAt(s, PLAYER, 0), targetUid: null })
-    expect(after.players.ai.lp).toBe(8000 - 1400)
+    expect(after.players.ai.lp).toBe(8000 - 1600)
     expect(lastLog(after).details[0]).toContain('บินข้ามการ์ดคว่ำ')
   })
 
@@ -260,7 +260,7 @@ describe('คำสาปพันธะเงา + สายมืด', () => {
 describe('ป่าช้าวัดร้าง: เวทสนามฝ่ายผี', () => {
   it('ผีฝ่ายเรา +200 · ไม่ใช่สนามอสูร (ทศกัณฐ์ยังอ่อนแรง)', () => {
     const s = makeState({ phase: 'battle', player: { field: ['th06-004', 'th01-011'], fieldSpell: 'th06-011' } })
-    expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 0))).toBe(1500)
+    expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 0))).toBe(1700)
     expect(getFieldAtk(s, PLAYER, uidAt(s, PLAYER, 1))).toBe(1800)
     const after = act(s, { type: 'attack', attackerUid: uidAt(s, PLAYER, 1), targetUid: null })
     expect(getFieldAtk(after, PLAYER, uidAt(s, PLAYER, 1))).toBe(1600)
@@ -274,5 +274,32 @@ describe('AI ไม่เลือกเป้าที่กันเลือ�
     const action = getAiAction(s)
     if (action?.type === 'activate') expect(action.targetUid).not.toBe(uidAt(s, PLAYER, 0))
     expect(() => applyAction(s, action)).not.toThrow()
+  })
+})
+
+describe('ผีคำสาปตอนตาย (013–015)', () => {
+  it('ผีพรายถูกตีตาย → ผู้โจมตีถูกทำลายตาม', () => {
+    const s = aiBattle({ player: { field: ['th06-014'] }, ai: { field: ['th01-022'] } })
+    s.players.ai.field[0].hasAttacked = false
+    const after = aiAttack(s, 0, 0)
+    expect(after.players.player.field[0]).toBeNull()
+    // จอมทัพไม่ตายจากการต่อสู้ แต่คำสาปเป็นเอฟเฟกต์ จึงตายตาม
+    expect(after.players.ai.field[0]).toBeNull()
+    expect(lastLog(after).details.join(' ')).toContain('ผีพรายทวงสัญญา: ทวงชีวิตคืน: จอมทัพยุทธหัตถี คชสารศึก ถูกทำลายตาม')
+  })
+
+  it('ผีตายโหงถูกตีตาย → ผู้โจมตี ATK เหลือครึ่งถาวร', () => {
+    const s = aiBattle({ player: { field: ['th06-013'] }, ai: { field: ['th01-022'] } })
+    const after = aiAttack(s, 0, 0)
+    expect(getFieldAtk(after, AI, uidAt(s, AI, 0))).toBe(1500)
+    const later = applyAction(applyAction(after, { type: 'endTurn', player: AI }), { type: 'endTurn', player: PLAYER })
+    expect(getFieldAtk(later, AI, uidAt(s, AI, 0))).toBe(1500)
+  })
+
+  it('ผีเป็นฝ่ายโจมตีแล้วตาย → ฝ่ายรับโดนคำสาปด้วย', () => {
+    const s = makeState({ phase: 'battle', player: { field: ['th06-015'] }, ai: { field: ['th01-018'] } })
+    const after = act(s, { type: 'attack', attackerUid: uidAt(s, PLAYER, 0), targetUid: uidAt(s, AI, 0) })
+    expect(after.players.player.field[0]).toBeNull()
+    expect(getFieldAtk(after, AI, uidAt(s, AI, 0))).toBe(1250)
   })
 })

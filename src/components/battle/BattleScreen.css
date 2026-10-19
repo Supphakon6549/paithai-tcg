@@ -221,6 +221,17 @@
   filter: drop-shadow(0 0 5px rgba(235, 209, 131, 0.75));
 }
 
+/* การ์ดที่ต้องแตะเลือก (สังเวย/พิธี/ผสาน/ขึ้นขี่/สวมใส่): กรอบทองกะพริบให้เห็นชัดบนภาพการ์ดโทนมืด */
+.mini-card--pickable {
+  outline: 2px dashed var(--gold-light);
+  outline-offset: 3px;
+  animation: pick-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes pick-pulse {
+  50% { outline-color: rgba(235, 209, 131, 0.25); }
+}
+
 .mini-card--selected {
   transform: translateY(-6px);
   outline: 2px solid var(--gold-light);
