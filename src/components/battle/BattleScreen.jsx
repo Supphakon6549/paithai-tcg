@@ -65,21 +65,25 @@ import BattleFx from './fx/BattleFx'
 
 const AI_STEP_DELAY = { attack: 1100, respond: 1100, default: 750 }
 
-// deckList / extraDeckList จากหน้าจัดสำรับ (ไม่ระบุ = สำรับเริ่มต้น) — AI ใช้สำรับเริ่มต้นเสมอ
-const newGame = (deckList, extraDeckList) =>
-  createGame({
+// deckList / extraDeckList จากหน้าจัดสำรับ (ไม่ระบุ = สำรับทดสอบ)
+// aiDecks = สำรับสำเร็จรูปให้ AI สุ่มใช้ (ว่าง = สำรับทดสอบ)
+const newGame = (deckList, extraDeckList, aiDecks = []) => {
+  const ai = aiDecks.length ? aiDecks[Math.floor(Math.random() * aiDecks.length)] : null
+  return createGame({
     seed: Date.now(),
     firstPlayer: Math.random() < 0.5 ? PLAYER : AI,
     ...(deckList && { deckList }),
     ...(extraDeckList && { extraDeckList }),
+    ...(ai && { aiDeckList: ai.main, aiExtraDeckList: ai.extra ?? [], aiDeckName: ai.name }),
   })
+}
 
 // สำรับที่ส่งมาใช้ไม่ได้ → เล่นด้วยสำรับเริ่มต้นแทน พร้อมข้อความแจ้ง
-function startGame(deckList, extraDeckList) {
+function startGame(deckList, extraDeckList, aiDecks) {
   try {
-    return { game: newGame(deckList, extraDeckList), deckError: null }
+    return { game: newGame(deckList, extraDeckList, aiDecks), deckError: null }
   } catch (e) {
-    return { game: newGame(), deckError: `${e.message} — ใช้สำรับเริ่มต้นแทน` }
+    return { game: newGame(), deckError: `${e.message} — ใช้สำรับทดสอบแทน` }
   }
 }
 
@@ -93,9 +97,9 @@ const toggle = (list, uid, max = Infinity) =>
   list.includes(uid) ? list.filter((u) => u !== uid) : list.length < max ? [...list, uid] : list
 
 // initialGame: สถานะเกมที่จัดเตรียมไว้ (ใช้ทดสอบ / โหมดโจทย์ในอนาคต) — ไม่ระบุ = เริ่มเกมใหม่จากสำรับ
-export default function BattleScreen({ active = true, deckList, extraDeckList, initialGame }) {
+export default function BattleScreen({ active = true, deckList, extraDeckList, aiDecks, initialGame }) {
   const [initial] = useState(() =>
-    initialGame ? { game: initialGame, deckError: null } : startGame(deckList, extraDeckList)
+    initialGame ? { game: initialGame, deckError: null } : startGame(deckList, extraDeckList, aiDecks)
   )
   const [game, setGame] = useState(initial.game)
   const [selectedHandUid, setSelectedHandUid] = useState(null)
@@ -219,7 +223,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, i
   }, [game, active])
 
   function restart() {
-    const next = startGame(deckList, extraDeckList)
+    const next = startGame(deckList, extraDeckList, aiDecks)
     setGame(next.game)
     clearSelections()
     setError(next.deckError)

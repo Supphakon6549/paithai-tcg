@@ -1,0 +1,237 @@
+/* ==========================================================================
+   หน้าจัดสำรับ — มือถือก่อน: สลับแท็บ "การ์ดทั้งหมด / ในสำรับ"
+   จอกว้าง ≥ 900px: คลังการ์ดซ้าย รายการในสำรับขวา
+   ========================================================================== */
+
+.deck-builder {
+  --gold: #c59b38;
+  --gold-light: #ebd183;
+  --panel: #17120e;
+  --panel-line: rgba(197, 155, 56, 0.3);
+  --text: #f2e5c9;
+  --text-dim: rgba(242, 229, 201, 0.66);
+  --ok: #5fc27a;
+  --warn: #e0574a;
+
+  width: 100%;
+  max-width: 1320px;
+  display: grid;
+  gap: 10px;
+  color: var(--text);
+  font-family: 'Sarabun', sans-serif;
+}
+
+.deck-btn {
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  background: #221a13;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.deck-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.deck-btn--primary { background: linear-gradient(180deg, #d9b24c, #a87c25); color: #1a1209; font-weight: 700; border-color: #fae094; }
+.deck-btn--danger { color: #f3a093; }
+
+/* ----- แถบเลือกสำรับ ----- */
+.deck-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.deck-bar__select {
+  flex: 1 1 220px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+.deck-bar__buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ----- สรุปสำรับ ----- */
+.deck-summary {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.deck-summary__title { margin: 0; font-size: 18px; color: var(--gold-light); }
+.deck-summary__name {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--panel-line);
+  border-radius: 6px;
+  background: #0e0b09;
+  color: var(--gold-light);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+}
+.deck-summary__desc,
+.deck-summary__note { margin: 0; font-size: 13px; color: var(--text-dim); }
+.deck-summary__counts { display: flex; flex-wrap: wrap; gap: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.deck-summary__counts .ok { color: var(--ok); }
+.deck-summary__counts .warn { color: var(--warn); }
+.deck-summary__active { color: var(--gold-light); }
+.deck-summary__problems { margin: 0; padding-left: 4px; list-style: none; font-size: 13px; color: #f3a093; }
+
+/* ----- แท็บมือถือ ----- */
+.deck-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.deck-tabs button {
+  min-height: 40px;
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text-dim);
+  font: inherit;
+  cursor: pointer;
+}
+.deck-tabs button[aria-selected='true'] { border-color: var(--gold); color: var(--gold-light); font-weight: 700; }
+
+.deck-body--pool .deck-list,
+.deck-body--deck .deck-pool { display: none; }
+
+/* ----- คลังการ์ด ----- */
+.deck-filters { display: grid; gap: 8px; margin-bottom: 10px; }
+.deck-filters__search {
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  background: #0e0b09;
+  color: var(--text);
+  font: inherit;
+}
+.deck-filters__groups { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.deck-chip {
+  flex: none;
+  padding: 5px 10px;
+  border: 1px solid var(--panel-line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.deck-chip--active { border-color: var(--gold); color: var(--gold-light); }
+
+.deck-pool__grid {
+  --deck-zoom: 0.33;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(316px * var(--deck-zoom)), 1fr));
+  gap: 10px;
+}
+
+.deck-card { display: grid; gap: 4px; justify-items: center; }
+.deck-card__art {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  border-radius: 8px;
+}
+.deck-card__scale { display: block; zoom: var(--deck-zoom); pointer-events: none; }
+.deck-card--in .deck-card__art { outline: 2px solid var(--gold-light); outline-offset: 2px; }
+.deck-card__count,
+.deck-card__tag {
+  position: absolute;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.deck-card__count { top: 4px; right: 4px; background: var(--gold-light); color: #1a1209; }
+.deck-card__tag { bottom: 4px; left: 4px; background: rgba(110, 60, 160, 0.9); color: #fff; }
+.deck-card__controls { display: flex; gap: 6px; }
+.deck-card__controls button,
+.deck-row__btn {
+  width: 40px;
+  height: 34px;
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  background: #221a13;
+  color: var(--gold-light);
+  font-size: 18px;
+  cursor: pointer;
+}
+.deck-card__controls button:disabled,
+.deck-row__btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ----- รายการในสำรับ ----- */
+.deck-list {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 8px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.deck-list__empty { margin: 8px; color: var(--text-dim); }
+.deck-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.deck-row__name {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: zoom-in;
+}
+.deck-row__name small { display: block; color: var(--text-dim); }
+.deck-row__count { min-width: 28px; text-align: center; font-weight: 700; color: var(--gold-light); }
+
+/* ----- ดูการ์ดเต็ม ----- */
+.deck-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  background: rgba(8, 6, 4, 0.86);
+}
+.deck-preview__card { zoom: 0.95; }
+.deck-preview__hint { margin: 0; color: var(--text-dim); font-size: 13px; }
+
+@media (min-width: 520px) {
+  .deck-pool__grid { --deck-zoom: 0.4; }
+}
+
+/* จอกว้าง: คลังซ้าย · รายการขวา (ไม่ต้องสลับแท็บ) */
+@media (min-width: 900px) {
+  .deck-tabs { display: none; }
+  .deck-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 14px;
+    align-items: start;
+  }
+  .deck-body--pool .deck-list,
+  .deck-body--deck .deck-pool { display: grid; }
+  .deck-body--deck .deck-pool { display: block; }
+  .deck-list { position: sticky; top: 12px; max-height: calc(100svh - 24px); overflow-y: auto; }
+  .deck-pool__grid { --deck-zoom: 0.45; }
+}

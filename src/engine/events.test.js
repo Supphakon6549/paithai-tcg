@@ -25,6 +25,7 @@ describe('ข้อมูลเหตุการณ์สำหรับแอ�
       spellPlaced: [],
       spellRemoved: [],
       trapActivated: [],
+      showcase: null,
     })
   })
 
@@ -56,6 +57,7 @@ describe('ข้อมูลเหตุการณ์สำหรับแอ�
       spellPlaced: [],
       spellRemoved: [],
       trapActivated: [],
+      showcase: null,
     })
   })
 
@@ -100,5 +102,34 @@ describe('ข้อมูลเหตุการณ์สำหรับแอ�
     const drum = makeState({ player: { spellTrap: [{ id: 'th01-024', setTurn: 1 }] } })
     const opened = applyAction(drum, { type: 'activateTrap', player: PLAYER, uid: drum.players.player.spellTrap[0].uid })
     expect(lastLog(opened).event.trapActivated).toMatchObject([{ cardId: 'th01-024', zone: 0, effect: 'continuous' }])
+  })
+
+  it('showcase: บอกการ์ดที่ใช้ ชนิด และมอนสเตอร์ที่ได้', () => {
+    const fusion = makeState({ player: { hand: ['th01-013', 'th01-016', 'th01-019'] } })
+    const extra = fusion.players.player.extraDeck.find((c) => c.cardId === 'th01-021').uid
+    const fused = applyAction(fusion, {
+      type: 'playSpell',
+      player: PLAYER,
+      uid: handUid(fusion, PLAYER, 0),
+      fusionTarget: extra,
+      tributes: [handUid(fusion, PLAYER, 1), handUid(fusion, PLAYER, 2)],
+    })
+    expect(lastLog(fused).event.showcase).toEqual({
+      player: PLAYER,
+      cardId: 'th01-013',
+      kind: 'fusion',
+      label: '🌀 ผสานร่าง',
+      resultCardId: 'th01-021',
+      materialCardIds: ['th01-016', 'th01-019'],
+    })
+
+    const riders = makeState({ player: { field: ['th01-019', 'th01-001'] } })
+    const rider = riders.players.player.extraDeck.find((c) => c.cardId === 'th03-013').uid
+    const mounted = applyAction(riders, { type: 'mount', player: PLAYER, fusionUid: rider, materials: [uidAt(riders, PLAYER, 0), uidAt(riders, PLAYER, 1)] })
+    expect(lastLog(mounted).event.showcase).toMatchObject({ kind: 'mount', resultCardId: 'th03-013', materialCardIds: ['th01-001', 'th01-019'] })
+
+    const effect = makeState({ player: { field: ['th04-003'] }, ai: { field: ['th01-017'] } })
+    const used = applyAction(effect, { type: 'activate', player: PLAYER, uid: uidAt(effect, PLAYER, 0), targetUid: uidAt(effect, AI, 0) })
+    expect(lastLog(used).event.showcase).toMatchObject({ cardId: 'th04-003', kind: 'effect', label: '✨ ลด ATK ศัตรู 200' })
   })
 })

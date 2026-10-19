@@ -4,6 +4,7 @@ import {
   GameRuleError,
   applyAction,
   createGame,
+  deckProblems,
   expandDeckList,
   getSummonableHand,
   tributesRequired,
@@ -353,5 +354,22 @@ describe('ความคงที่ของจำนวนการ์ด', (
     s = applyAction(s, { type: 'endTurn', player: PLAYER })
     expect(countCards(s.players.player)).toBe(STARTER_SIZE)
     expect(countCards(s.players.ai)).toBe(STARTER_SIZE)
+  })
+})
+
+describe('กติกาจัดสำรับ (deckProblems)', () => {
+  it('40 ใบพอดี · ชื่อเดียวกันไม่เกิน 3 · กองพิเศษไม่เกิน 5', () => {
+    expect(deckProblems([['th01-001', 3], ['th01-016', 3], ['th01-017', 3], ['th01-019', 3], ['th04-001', 3], ['th04-002', 3],
+      ['th04-003', 3], ['th04-004', 3], ['th06-001', 3], ['th06-002', 3], ['th06-003', 3], ['th06-004', 3], ['th05-001', 3], ['th05-002', 1]],
+      [['th01-021', 1]])).toEqual([])
+    expect(deckProblems([['th01-001', 39]])).toEqual([
+      'กองหลักต้องมี 40 ใบพอดี (ตอนนี้ 39 ใบ)',
+      'ลูกพราน ใส่ได้ไม่เกิน 3 ใบ (ตอนนี้ 39)',
+    ])
+    expect(deckProblems([['th01-001', 1]], [['th01-021', 6]])).toContain('กองพิเศษใส่ได้ไม่เกิน 5 ใบ (ตอนนี้ 6 ใบ)')
+  })
+
+  it('บันทึกเริ่มเกมบอกชื่อสำรับของ AI', () => {
+    expect(createGame({ seed: 1, aiDeckName: 'สายผีไทย' }).log[0].text).toContain('คู่ต่อสู้ใช้สำรับ "สายผีไทย"')
   })
 })

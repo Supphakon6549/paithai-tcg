@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import MonsterCard from './components/cards/MonsterCard'
 import BattleScreen from './components/battle/BattleScreen'
+import DeckBuilder from './components/deck/DeckBuilder'
+import { PRESET_DECKS, findDeck, loadDeckStore, saveDeckStore } from './data/decks'
 import { ElementSeal, RarityGem } from './components/cards/ThaiIcons'
 import {
   CARDS,
@@ -259,6 +261,7 @@ function CardInspectorModal({ card, onClose, onSelectCard }) {
 
 const VIEWS = [
   { id: 'gallery', label: '🃏 คลังการ์ด' },
+  { id: 'deck', label: '🗂️ จัดสำรับ' },
   { id: 'battle', label: '⚔️ ต่อสู้' },
 ]
 
@@ -266,10 +269,25 @@ function App() {
   const [view, setView] = useState('gallery')
   // เปิดหน้าต่อสู้ครั้งแรกแล้วให้ค้างไว้ สลับแท็บกลับมาเกมยังอยู่
   const [battleOpened, setBattleOpened] = useState(false)
+  // สำรับที่จัดไว้ (เก็บในเบราว์เซอร์) · battleKey เปลี่ยน = เริ่มเกมใหม่ด้วยสำรับที่เลือก
+  const [deckStore, setDeckStore] = useState(loadDeckStore)
+  const [battleKey, setBattleKey] = useState(0)
+  const activeDeck = findDeck(deckStore, deckStore.activeId)
+
+  const updateDecks = (next) => {
+    setDeckStore(next)
+    saveDeckStore(next)
+  }
 
   const switchView = (id) => {
     setView(id)
     if (id === 'battle') setBattleOpened(true)
+  }
+
+  const playDeck = (id) => {
+    updateDecks({ ...deckStore, activeId: id })
+    setBattleKey((k) => k + 1)
+    switchView('battle')
   }
 
   return (
@@ -290,10 +308,17 @@ function App() {
 
       {battleOpened && (
         <div className="view-panel" hidden={view !== 'battle'}>
-          <BattleScreen active={view === 'battle'} />
+          <BattleScreen
+            key={battleKey}
+            active={view === 'battle'}
+            deckList={activeDeck.main}
+            extraDeckList={activeDeck.extra}
+            aiDecks={PRESET_DECKS}
+          />
         </div>
       )}
       {view === 'gallery' && <GalleryView />}
+      {view === 'deck' && <DeckBuilder store={deckStore} onChange={updateDecks} onPlay={playDeck} />}
     </div>
   )
 }

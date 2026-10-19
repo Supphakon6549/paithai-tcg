@@ -234,6 +234,7 @@ describe('ขึ้นขี่ / ลงจากหลัง', () => {
     expect(hit.pendingChoice).toMatchObject({ kind: 'dismount', player: PLAYER })
     expect(hit.pendingChoice.options.map((o) => o.label)).toEqual(['ลูกพราน', 'ม้าศึกอาชาไนย', 'ไม่คืน'])
     const back = act(hit, { type: 'choose', optionId: hit.pendingChoice.options[1].id })
+    expect(lastLog(back).event.showcase).toMatchObject({ kind: 'dismount', cardId: 'th03-013', resultCardId: 'th01-019' })
     expect(back.players.player.field.find(Boolean)).toMatchObject({ cardId: 'th01-019', position: 'defense' })
   })
 

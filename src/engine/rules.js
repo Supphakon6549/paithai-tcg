@@ -15,6 +15,13 @@ export const RULES = {
   maxNormalSummonLevel: 4,
 }
 
+// กติกาสำรับที่ผู้เล่นจัดเอง (หน้าจัดสำรับ) — สำรับทดสอบ STARTER_DECK_LIST ได้รับยกเว้น
+export const DECK_RULES = {
+  mainSize: 40,
+  maxCopies: 3,
+  extraMax: 5,
+}
+
 // สำรับทดสอบ 62 ใบ = การ์ดทุกแบบในกองหลัก แบบละ 1 ใบ (TH01 / TH03 / TH04 / TH05 / TH06)
 // สับใหม่ทุกเกม จึงได้เจอการ์ดครบทุกแบบ — ภายหลังจะให้ผู้เล่นจัดสำรับเอง
 export const STARTER_DECK_LIST = [

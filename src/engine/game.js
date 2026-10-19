@@ -61,6 +61,7 @@ import {
   PLAYER,
   PLAYER_NAMES,
   RULES,
+  DECK_RULES,
   EXTRA_DECK_LIST,
   STARTER_DECK_LIST,
   formatNumber,
@@ -159,6 +160,27 @@ export function validateDeck(deckList, extraDeckList = []) {
   return problems
 }
 
+// ตรวจสำรับตามกติกาการจัดสำรับ (40 ใบพอดี · ชื่อเดียวกันไม่เกิน 3 · กองพิเศษ ≤ 5)
+// คืนรายการปัญหาภาษาไทย (ว่าง = พร้อมเล่น)
+export function deckProblems(deckList, extraDeckList = []) {
+  // ข้อขั้นต่ำ "มากกว่า 5 ใบ" ของ validateDeck ถูกแทนด้วยกติกา 40 ใบด้านล่าง
+  const problems = validateDeck(deckList, extraDeckList).filter((p) => !p.startsWith('กองหลักต้องมีมากกว่า'))
+  const broken = problems.some((p) => /ไม่พบการ์ด|ไม่ถูกต้อง|ต้องเป็นรายการ/.test(p))
+  if (broken) return problems
+  const main = expandDeckList(deckList).length
+  const extra = expandDeckList(extraDeckList).length
+  if (main !== DECK_RULES.mainSize) {
+    problems.push(`กองหลักต้องมี ${DECK_RULES.mainSize} ใบพอดี (ตอนนี้ ${main} ใบ)`)
+  }
+  if (extra > DECK_RULES.extraMax) problems.push(`กองพิเศษใส่ได้ไม่เกิน ${DECK_RULES.extraMax} ใบ (ตอนนี้ ${extra} ใบ)`)
+  const copies = {}
+  for (const [cardId, n] of [...deckList, ...extraDeckList]) copies[cardId] = (copies[cardId] ?? 0) + n
+  for (const [cardId, n] of Object.entries(copies)) {
+    if (n > DECK_RULES.maxCopies) problems.push(`${getCardById(cardId).name} ใส่ได้ไม่เกิน ${DECK_RULES.maxCopies} ใบ (ตอนนี้ ${n})`)
+  }
+  return problems
+}
+
 /**
  * deckList / extraDeckList = สำรับของผู้เล่น · aiDeckList / aiExtraDeckList = สำรับของ AI
  * (ไม่ระบุ = สำรับเริ่มต้น) รูปแบบ: [['th01-001', 4], ...]
@@ -170,6 +192,7 @@ export function createGame({
   extraDeckList = EXTRA_DECK_LIST,
   aiDeckList = STARTER_DECK_LIST,
   aiExtraDeckList = EXTRA_DECK_LIST,
+  aiDeckName = null, // ชื่อสำรับของ AI (แสดงในบันทึกตอนเริ่มเกม)
 } = {}) {
   for (const [main, extra, owner] of [
     [deckList, extraDeckList, 'ผู้เล่น'],
@@ -226,7 +249,9 @@ export function createGame({
     state,
     null,
     'system',
-    `เริ่มเกม! LP ฝ่ายละ ${formatNumber(RULES.startingLP)} · ${deckText} · จั่วมือแรกฝ่ายละ ${RULES.startingHand} ใบ`
+    `เริ่มเกม! LP ฝ่ายละ ${formatNumber(RULES.startingLP)} · ${deckText} · จั่วมือแรกฝ่ายละ ${RULES.startingHand} ใบ${
+      aiDeckName ? ` · คู่ต่อสู้ใช้สำรับ "${aiDeckName}"` : ''
+    }`
   )
   addLog(
     state,
@@ -1214,6 +1239,11 @@ function activateContinuousTrap(state, playerId, uid) {
  *   trapActivated: [{ player, uid, cardId, zone, wasFaceDown, effect }]  กับดักที่ถูกเปิดใช้ (พลิกหงาย)
  *                  effect: 'negate' | 'thorns' | 'weaken' | 'drum' | 'continuous'
  *                  (กับดักที่เปิดตอบโต้การโจมตีลงสุสานทันที — ใช้ zone หาตำแหน่งช่องเดิม)
+ *   showcase: { player, cardId, kind, label, resultCardId, materialCardIds } | null  การ์ดที่ "ใช้" (โชว์กลางจอ)
+ *             materialCardIds = วัตถุดิบ/เครื่องสังเวย (ผสาน: 2 ใบ · ขึ้นขี่: [คน, สัตว์] · พิธี: หลายใบ) หรือ []
+ *             kind: 'spell' | 'field' | 'equip' | 'fusion' | 'ritual' | 'effect' | 'special' | 'mount' | 'evolve'
+ *                   | 'dismount' (cardId = ร่างขี่ที่ถูกทำลาย · resultCardId = วัตถุดิบที่กลับลงสนาม)
+ *             resultCardId = มอนสเตอร์ที่ได้ (ผสาน/พิธี/ขึ้นขี่/เลื่อนยศ/อัญเชิญพิเศษ) หรือ null
  * }
  * การโจมตีที่ต้องรอกับดัก: บันทึกตอนประกาศเป็น kind 'pending' (ไม่มี event)
  * แล้ว event มาพร้อมผล (type 'attack' หรือ 'attackNegated') หลังฝ่ายรับตัดสินใจ
@@ -1270,6 +1300,7 @@ function attachEvent(prev, next, action) {
   }
   const pending = prev.pendingResponse
   const isRespond = action.type === 'respond'
+  const showcase = buildShowcase(prev, action, placed)
   const trapActivated = []
   const trapAt = (playerId, uid) => {
     const zone = prev.players[playerId].spellTrap.findIndex((t) => t?.uid === uid)
@@ -1318,7 +1349,47 @@ function attachEvent(prev, next, action) {
     spellPlaced,
     spellRemoved,
     trapActivated,
+    showcase,
   }
+}
+
+// การ์ดที่ผู้เล่น "ใช้" ในแอ็กชันนี้ — ชั้นแอนิเมชันโชว์การ์ดกลางจอเหมือนตอนเปิดกับดัก
+function buildShowcase(prev, action, placed) {
+  const pl = prev.players[action.player]
+  if (!pl) return null
+  const find = (uid) =>
+    [...pl.hand, ...pl.field.filter(Boolean), ...pl.extraDeck, ...pl.spellTrap.filter(Boolean), ...pl.graveyard].find(
+      (c) => c.uid === uid
+    )
+  const result = placed.find((x) => x.player === action.player)?.cardId ?? null
+  const materials = (uids = []) => uids.map((uid) => find(uid)?.cardId).filter(Boolean)
+  const make = (inst, kind, label, materialCardIds = []) =>
+    inst ? { player: action.player, cardId: inst.cardId, kind, label, resultCardId: result, materialCardIds } : null
+  if (action.type === 'playSpell') {
+    const card = cardOf(find(action.uid))
+    if (card.type === 'ritual') return make(find(action.uid), 'ritual', '🙏 พิธีอัญเชิญ', materials(action.tributes))
+    if (getFusionSpell(card)) return make(find(action.uid), 'fusion', '🌀 ผสานร่าง', materials(action.tributes))
+    if (isFieldSpell(card)) return make(find(action.uid), 'field', '🏞️ เวทสนาม')
+    if (getEquip(card)) return make(find(action.uid), 'equip', '🗡️ เวทสวมใส่')
+    return make(find(action.uid), 'spell', '✨ ใช้เวทมนตร์')
+  }
+  if (action.type === 'activate') {
+    const inst = find(action.uid)
+    return make(inst, 'effect', `✨ ${getActivated(cardOf(inst))?.label ?? 'ใช้ความสามารถ'}`)
+  }
+  if (action.type === 'specialSummon') return make(find(action.uid), 'special', '✨ อัญเชิญพิเศษ')
+  if (action.type === 'mount') {
+    // เรียง [คน, สัตว์] ตามสูตรร่างขี่ — ฝั่งแอนิเมชันให้คนกระโดดขึ้นหลังสัตว์
+    const [human] = getFusionMaterials(cardOf(find(action.fusionUid)))
+    const pair = materials(action.materials)
+    const ordered = human.matches(getCardById(pair[0])) ? pair : [...pair].reverse()
+    return make(find(action.fusionUid), 'mount', '🐎 ขึ้นขี่', ordered)
+  }
+  if (action.type === 'evolve') return make(find(action.uid), 'evolve', '🎖️ เลื่อนยศ')
+  if (action.type === 'choose' && prev.pendingChoice?.kind === 'dismount' && action.optionId !== 'skip') {
+    return make(find(prev.pendingChoice.source), 'dismount', '🐎 ลงจากหลัง')
+  }
+  return null
 }
 
 function summon(state, playerId, uid, zone, tributeUids = [], position = 'attack') {
