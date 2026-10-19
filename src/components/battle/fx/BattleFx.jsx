@@ -65,6 +65,8 @@ function buildTrapShow(root, trap, reduced, key) {
 
 // โชว์กลางจอ: ผสานร่าง / ขึ้นขี่ / ลงจากหลัง / พิธีอัญเชิญ (ใช้คิวเดียวกับกับดัก)
 const SHOWCASE_MS = { fusion: 1600, mount: 1650, dismount: 1250, ritual: 1600 }
+// โชว์ "ใช้การ์ด" (เวท / ความสามารถ / อัญเชิญพิเศษ / เลื่อนยศ) — สั้นกว่าแบบใหญ่ ความสามารถสั้นสุดเพราะเกิดบ่อย
+const CAST_MS = { spell: 1150, field: 1150, equip: 1150, effect: 900, special: 1250, evolve: 1350 }
 const SHOWCASE_REDUCED_MS = 1100
 const SHOWCASE_LABEL = {
   fusion: '🌀 ผสานร่าง!',
@@ -76,9 +78,10 @@ const SHOWCASE_LABEL = {
 function buildShowcaseShow(root, ev, sc, reduced, key) {
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const cardW = Math.round(Math.min(vw * 0.36, 170))
+  const cardW = Math.round(Math.min(vw * 0.36, 170) * (sc.kind === 'effect' ? 0.8 : 1))
   const center = { x: vw / 2, y: Math.min(vh * 0.44, vh / 2 - 40) }
-  const resultId = sc.resultCardId ?? null
+  // เวท/ความสามารถ: ชื่อที่โชว์คือการ์ดที่ใช้ · อัญเชิญพิเศษ/เลื่อนยศ: ชื่อร่างที่ได้
+  const resultId = CAST_MS[sc.kind] && !['special', 'evolve'].includes(sc.kind) ? null : sc.resultCardId ?? null
   const mine = (ev.placed || []).filter((p) => p.player === sc.player)
   const placed = mine.find((p) => p.cardId === resultId) || mine[0] || null
   const endRect = placed
@@ -88,15 +91,16 @@ function buildShowcaseShow(root, ev, sc, reduced, key) {
   const materials = (sc.materialCardIds || []).slice(0, 4)
   return {
     stage: 'showcase',
-    duration: reduced ? SHOWCASE_REDUCED_MS : SHOWCASE_MS[sc.kind],
+    duration: reduced ? SHOWCASE_REDUCED_MS : SHOWCASE_MS[sc.kind] ?? CAST_MS[sc.kind],
     key,
     reduced,
     kind: sc.kind,
     cardId: sc.cardId,
     resultCardId: resultId || sc.cardId,
-    resultUid: placed?.uid ?? null,
+    // โชว์แบบใหญ่ (ผสาน/ขึ้นขี่/พิธี) บินลงช่องจริง จึงซ่อนการ์ดบนสนามไว้ก่อน · โชว์ "ใช้การ์ด" ไม่ซ่อน
+    resultUid: SHOWCASE_MS[sc.kind] ? placed?.uid ?? null : null,
     materials,
-    label: SHOWCASE_LABEL[sc.kind],
+    label: SHOWCASE_LABEL[sc.kind] ?? sc.label,
     name: getCardById(resultId || sc.cardId)?.name ?? '',
     x: center.x,
     y: center.y,
@@ -264,7 +268,7 @@ export default function BattleFx({ game }) {
       }
       // 0b. ผสานร่าง / ขึ้นขี่ / ลงจากหลัง / พิธีอัญเชิญ
       const sc = entry.event?.showcase
-      if (sc && SHOWCASE_MS[sc.kind]) {
+      if (sc && (SHOWCASE_MS[sc.kind] || CAST_MS[sc.kind]) && !entry.event.trapActivated?.length) {
         enqueueStage(buildShowcaseShow(root, entry.event, sc, prefersReducedMotion, nextKey()))
       }
       // กรณีประกาศโจมตีแล้วรอฝ่ายรับตัดสินใจเปิดกับดัก (kind === 'pending')
@@ -991,6 +995,21 @@ function ShowcaseStage({ show }) {
         <div className="fx-sc__land">{dust('fx-sc__dust--land')}</div>
       </>
     )
+  } else if (CAST_MS[show.kind]) {
+    // ใช้การ์ด: การ์ดเด้งขึ้นกลางจอพร้อมวงแสง · เลื่อนยศ = ร่างเก่าพลิกเป็นร่างใหม่
+    body =
+      show.kind === 'evolve' ? (
+        <>
+          <ScCard id={show.cardId} className="fx-sc__cast fx-sc__cast--from" />
+          <span className="fx-sc__cast-ring" />
+          <ScCard id={show.resultCardId} className="fx-sc__cast fx-sc__cast--to" />
+        </>
+      ) : (
+        <>
+          <span className="fx-sc__cast-ring" />
+          <ScCard id={show.kind === 'special' ? show.resultCardId : show.cardId} className="fx-sc__cast" />
+        </>
+      )
   } else if (show.kind === 'ritual') {
     const mats = show.materials.length ? show.materials : [show.cardId]
     const n = mats.length
@@ -1019,7 +1038,9 @@ function ShowcaseStage({ show }) {
 
   return (
     <>
-      <div className={`fx-sc-veil fx-sc-veil--${show.kind}`} style={{ '--dur': `${show.duration}ms` }} />
+      {show.kind !== 'effect' && (
+        <div className={`fx-sc-veil fx-sc-veil--${show.kind}`} style={{ '--dur': `${show.duration}ms` }} />
+      )}
       <div className={cls} style={style}>
         {body}
         {title}
