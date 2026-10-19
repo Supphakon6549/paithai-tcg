@@ -292,3 +292,13 @@ describe('AI ใช้การ์ด TH03', () => {
     expect(positionChangeBlocker(next, AI, uidAt(s, AI, 0))).toBe('ถูกรากตะเคียนพันไว้ เปลี่ยนท่าไม่ได้')
   })
 })
+
+describe('ขึ้นขี่: คนที่เป็นผี/อสูรขี่ไม่ได้', () => {
+  it('ปอบ / พรานไสยเวท / อาจารย์ไสยดำ ไม่เข้าสูตร · หมอช้างเป็นคนจริงเข้าได้', () => {
+    const ghosts = makeState({ player: { field: ['th06-007', 'th06-009', 'th06-010', 'th01-020', 'th03-005'] } })
+    expect(getMountOptions(ghosts, PLAYER)).toEqual([])
+    const living = makeState({ player: { field: ['th01-004', 'th01-020'] } })
+    const riders = getMountOptions(living, PLAYER).map((o) => living.players.player.extraDeck.find((c) => c.uid === o.fusionUid).cardId)
+    expect(riders).toEqual(['th03-015'])
+  })
+})

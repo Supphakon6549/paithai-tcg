@@ -98,6 +98,8 @@ const hasDiverseAnimals = (cards) => {
   return sets.some((a, i) => sets.some((b, j) => j > i && !a.some((t) => b.includes(t))))
 }
 const isTiger = (c) => c.id === 'th03-006' || c.id === 'th03-007'
+// คนเป็น ๆ สำหรับขึ้นขี่: มีเผ่ามนุษย์ที่กำหนด และไม่มีเผ่าผี/อสูรติดอยู่ (ปอบ กระสือ พรานไสยเวท ขี่ไม่ได้)
+const livingHuman = (tribe) => (c) => hasTribe(tribe)(c) && !hasTribe('ghost')(c) && !hasTribe('demon')(c)
 const hasGhostAlly = ({ allies }) => allies.some(isGhost)
 const isHolyWater = (c) => c.id === 'th01-014' || (c.spellSubtypeName ?? '').includes('น้ำมนต์')
 
@@ -477,7 +479,7 @@ export const CARD_EFFECTS = {
   // พรานขี่เสือ
   'th03-013': {
     fusionMaterials: [
-      { label: 'มนุษย์เผ่าพรานป่า', matches: hasTribe('hunter') },
+      { label: 'มนุษย์เผ่าพรานป่า (ไม่ใช่ผี/อสูร)', matches: livingHuman('hunter') },
       { label: 'สัตว์ใหญ่', matches: hasTribe('largeBeast') },
     ],
     mount: true,
@@ -497,7 +499,7 @@ export const CARD_EFFECTS = {
   // หมอช้างทรงคชสาร
   'th03-015': {
     fusionMaterials: [
-      { label: 'มนุษย์เผ่าหมอยา', matches: hasTribe('healer') },
+      { label: 'มนุษย์เผ่าหมอยา (ไม่ใช่ผี/อสูร)', matches: livingHuman('healer') },
       { label: 'สัตว์ใหญ่', matches: hasTribe('largeBeast') },
     ],
     mount: true,
@@ -507,7 +509,7 @@ export const CARD_EFFECTS = {
   // โหราจารย์ทรงนกเงือก
   'th03-016': {
     fusionMaterials: [
-      { label: 'มนุษย์เผ่าโหราจารย์', matches: hasTribe('astrologer') },
+      { label: 'มนุษย์เผ่าโหราจารย์ (ไม่ใช่ผี/อสูร)', matches: livingHuman('astrologer') },
       { label: 'นก', matches: hasTribe('bird') },
     ],
     mount: true,

@@ -62,8 +62,9 @@
   border-style: solid;
   border-color: #d9b24c;
   overflow: visible;
-  transform-style: preserve-3d;
-  will-change: transform;
+  /* แบน (flat) ไม่ใช่ preserve-3d: การ์ดบนกระดานไม่ได้ใช้ 3 มิติ — preserve-3d ทำให้เบราว์เซอร์มือถือ
+     สลับวิธีวาดทั้งกระดานทุกครั้งที่แอนิเมชันใส่ filter ให้การ์ด จนภาพกระพริบ (กระดานยังเอียงได้เหมือนเดิม) */
+  transform-style: flat;
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
 }
 
