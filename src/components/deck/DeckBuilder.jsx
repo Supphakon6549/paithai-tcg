@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import MonsterCard from '../cards/MonsterCard'
+import CardZoom from '../cards/CardZoom'
 import { CARDS, CARD_GROUPS, CARD_TYPES } from '../../data/cards'
 import { PRESET_DECKS, allDecks, findDeck, newDeckId, toCounts, toList } from '../../data/decks'
 import { DECK_RULES, deckProblems, formatNumber } from '../../engine'
@@ -333,14 +334,7 @@ export default function DeckBuilder({ store, onChange, onPlay }) {
         </section>
       </div>
 
-      {preview && (
-        <div className="deck-preview" role="dialog" aria-label={preview.name} onClick={() => setPreview(null)}>
-          <div className="deck-preview__card">
-            <MonsterCard card={preview} />
-          </div>
-          <p className="deck-preview__hint">แตะที่ใดก็ได้เพื่อปิด</p>
-        </div>
-      )}
+      {preview && <CardZoom card={preview} onClose={() => setPreview(null)} />}
     </div>
   )
 }

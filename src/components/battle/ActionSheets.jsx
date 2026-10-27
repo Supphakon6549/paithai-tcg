@@ -17,7 +17,7 @@ function SheetButtons({ children, onInspect, onClose }) {
     <div className="hand-sheet__buttons">
       {children}
       <button type="button" className="btn" onClick={onInspect} aria-label="ดูการ์ดขนาดเต็ม">
-        🔍
+        🔍 ดูการ์ด
       </button>
       <button type="button" className="btn" onClick={onClose} aria-label="ปิด">
         ✕

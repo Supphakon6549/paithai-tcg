@@ -1,6 +1,48 @@
+import { useContext, useRef } from 'react'
 import MonsterCard from '../cards/MonsterCard'
 import { ELEMENTS } from '../../data/elements'
 import { formatNumber } from '../../engine'
+import { InspectContext } from './inspectContext'
+
+const LONG_PRESS_MS = 450
+
+// กดค้าง (มือถือ) / คลิกขวา (PC) → onLong · fired บอกว่าการแตะครั้งนี้ใช้ไปกับกดค้างแล้ว
+function useLongPress(onLong) {
+  const timer = useRef(null)
+  const start = useRef(null)
+  const fired = useRef(false)
+  const cancel = () => {
+    clearTimeout(timer.current)
+    timer.current = null
+  }
+  if (!onLong) return { fired, handlers: {} }
+  return {
+    fired,
+    handlers: {
+      onPointerDown: (e) => {
+        fired.current = false
+        start.current = { x: e.clientX, y: e.clientY }
+        cancel()
+        timer.current = setTimeout(() => {
+          fired.current = true
+          onLong()
+        }, LONG_PRESS_MS)
+      },
+      onPointerMove: (e) => {
+        if (start.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10) cancel()
+      },
+      onPointerUp: cancel,
+      onPointerCancel: cancel,
+      onPointerLeave: cancel,
+      onContextMenu: (e) => {
+        e.preventDefault()
+        cancel()
+        if (!fired.current) onLong()
+        fired.current = true
+      },
+    },
+  }
+}
 
 // MonsterCard เดิมย่อด้วย CSS zoom (ขนาดกำหนดจาก --mini-zoom ของคอนเทนเนอร์)
 // พร้อมป้าย ATK/DEF ตัวใหญ่ให้อ่านออกบนจอมือถือ
@@ -20,6 +62,8 @@ export default function MiniCard({
   xp, // { text: '⭐ 1/2', ready } ตัวนับแต้มสายประสบการณ์
   onPreview, // (card | null) ชี้เมาส์ค้าง → แสดงการ์ดขยาย (PC)
 }) {
+  const inspect = useContext(InspectContext)
+  const { fired, handlers } = useLongPress(inspect && !hidden ? () => inspect(card) : null)
   const element = ELEMENTS[card.element]
   const boosted = !defense && atk > card.atk
   const weakened = !defense && atk < card.atk
@@ -43,7 +87,15 @@ export default function MiniCard({
     <button
       type="button"
       className={classes}
-      onClick={onClick}
+      onClick={(e) => {
+        // กดค้างดูการ์ดไปแล้ว ไม่นับเป็นการแตะเลือก
+        if (fired.current) {
+          fired.current = false
+          return
+        }
+        onClick?.(e)
+      }}
+      {...handlers}
       onMouseEnter={onPreview && !hidden ? () => onPreview(card) : undefined}
       onMouseLeave={onPreview ? () => onPreview(null) : undefined}
       aria-label={aria}

@@ -121,6 +121,10 @@
   position: relative;
   display: block;
   flex: none;
+  /* กดค้างเพื่อดูการ์ด: ไม่ให้มือถือขึ้นเมนูคัดลอก/เลือกข้อความ */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   width: calc(316px * var(--mini-zoom));
   padding: 0;
   border: 0;

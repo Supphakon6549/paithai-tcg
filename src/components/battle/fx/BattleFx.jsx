@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { getCardById } from '../../../data/cards'
 import { ELEMENTS } from '../../../data/elements'
+import BossSummonStage from './BossSummonStage'
+
+const BOSS_FULL_MS = 3600
+const BOSS_SHORT_MS = 1050
+const BOSS_REDUCED_MS = 1000
+
+// ตรวจสอบว่าการ์ดได้ฉากอัญเชิญบอสหรือไม่ (รองรับธง card.boss ในอนาคต · ปัจจุบันใช้ rarity === 'divine')
+function isBossCard(card) {
+  if (!card) return false
+  if (typeof card.boss === 'boolean') return card.boss
+  return card.rarity === 'divine'
+}
 
 /*
  * ชั้นเอฟเฟกต์ภาพและแอนิเมชันของกระดานต่อสู้ (BattleFx)
@@ -75,7 +87,91 @@ const SHOWCASE_LABEL = {
   ritual: '🙏 พิธีอัญเชิญ!',
 }
 
-function buildShowcaseShow(root, ev, sc, reduced, key) {
+function buildBossShow(root, ev, sc, reduced, key, seenBossNames) {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const isWide =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(min-width: 720px)').matches ?? vw >= 720)
+  const resultCardId = sc.resultCardId || sc.cardId
+  const bossCard = getCardById(resultCardId)
+  const bossKey = bossCard?.name || resultCardId
+  const alreadySeen = Boolean(seenBossNames && bossKey && seenBossNames.has(bossKey))
+  if (seenBossNames && bossKey && !sc.forceFull) {
+    seenBossNames.add(bossKey)
+  }
+  const short = sc.forceShort ? true : sc.forceFull ? false : reduced || alreadySeen
+  const duration = reduced ? BOSS_REDUCED_MS : short ? BOSS_SHORT_MS : BOSS_FULL_MS
+
+  const mine = (ev?.placed || []).filter((p) => p.player === sc.player)
+  const placed = mine.find((p) => p.cardId === resultCardId) || mine[0] || null
+  const resultUid = sc.resultUid ?? placed?.uid ?? null
+  const foundRect =
+    placed || resultUid
+      ? findCardOrZoneRect(root, placed?.player ?? sc.player, resultUid, placed?.zone, 'monster')
+      : null
+  const fallbackZone = root?.querySelector(
+    `[data-owner="${sc.player || 'player'}"] [data-zone-type="monster"] [data-zone="2"]`
+  )
+  const slotRect = foundRect ||
+    getCenterRect(fallbackZone) || {
+      x: vw / 2,
+      y: sc.player === 'ai' ? vh * 0.28 : vh * 0.68,
+      w: isWide ? 84 : 64,
+      h: isWide ? 118 : 90,
+    }
+
+  const cardW = isWide
+    ? Math.round(Math.min(vw * 0.19, 204))
+    : Math.round(Math.min(vw * 0.56, 224))
+  const center = isWide
+    ? { x: slotRect.x, y: slotRect.y }
+    : { x: vw / 2, y: Math.min(vh * 0.43, vh / 2 - 28) }
+  const clamp = (v) => Math.max(0.16, Math.min(1, v))
+  const cardH = cardW * 1.45
+  const idealRise = sc.player === 'ai' ? 115 : 155
+  const maxRiseBeforeClip = Math.max(54, slotRect.y - cardH * 0.58 - 22)
+  const riseY = Math.round(Math.min(idealRise, maxRiseBeforeClip))
+
+  return {
+    stage: 'boss',
+    duration,
+    key,
+    reduced,
+    short,
+    isWide,
+    player: sc.player || 'player',
+    kind: sc.kind,
+    cardId: sc.cardId,
+    resultCardId,
+    resultUid,
+    materials: (sc.materialCardIds || []).slice(0, 3),
+    label: SHOWCASE_LABEL[sc.kind] ?? sc.label,
+    name: bossCard?.name ?? '',
+    x: center.x,
+    y: center.y,
+    slotX: slotRect.x,
+    slotY: slotRect.y,
+    cardW,
+    riseY,
+    ex: isWide ? 0 : slotRect.x - center.x,
+    ey: isWide ? 0 : slotRect.y - center.y,
+    s1: clamp(slotRect.w / cardW),
+  }
+}
+
+function buildShowcaseShow(root, ev, sc, reduced, key, seenBossNames) {
+  // ถ้าการ์ดผลลัพธ์จาก ritual / fusion / mount (หรือการอัญเชิญลงสนาม) เป็นบอส ให้เล่นฉากบอสแทน
+  const bossCandidateId =
+    sc.kind !== 'dismount' &&
+    (SHOWCASE_MS[sc.kind] || ['special', 'evolve', 'spell'].includes(sc.kind))
+      ? sc.resultCardId
+      : null
+  const bossCandidate = bossCandidateId ? getCardById(bossCandidateId) : null
+  if (bossCandidate && isBossCard(bossCandidate)) {
+    return buildBossShow(root, ev, sc, reduced, key, seenBossNames)
+  }
+
   const vw = window.innerWidth
   const vh = window.innerHeight
   const cardW = Math.round(Math.min(vw * 0.36, 170) * (sc.kind === 'effect' ? 0.8 : 1))
@@ -84,9 +180,11 @@ function buildShowcaseShow(root, ev, sc, reduced, key) {
   const resultId = CAST_MS[sc.kind] && !['special', 'evolve'].includes(sc.kind) ? null : sc.resultCardId ?? null
   const mine = (ev.placed || []).filter((p) => p.player === sc.player)
   const placed = mine.find((p) => p.cardId === resultId) || mine[0] || null
-  const endRect = placed
-    ? findCardOrZoneRect(root, placed.player, placed.uid, placed.zone, 'monster')
-    : null
+  const placedUid = sc.resultUid ?? placed?.uid ?? null
+  const endRect =
+    placed || placedUid
+      ? findCardOrZoneRect(root, placed?.player ?? sc.player, placedUid, placed?.zone, 'monster')
+      : null
   const clamp = (v) => Math.max(0.12, Math.min(1, v))
   const materials = (sc.materialCardIds || []).slice(0, 4)
   return {
@@ -98,7 +196,7 @@ function buildShowcaseShow(root, ev, sc, reduced, key) {
     cardId: sc.cardId,
     resultCardId: resultId || sc.cardId,
     // โชว์แบบใหญ่ (ผสาน/ขึ้นขี่/พิธี) บินลงช่องจริง จึงซ่อนการ์ดบนสนามไว้ก่อน · โชว์ "ใช้การ์ด" ไม่ซ่อน
-    resultUid: SHOWCASE_MS[sc.kind] ? placed?.uid ?? null : null,
+    resultUid: SHOWCASE_MS[sc.kind] ? placedUid : null,
     materials,
     label: SHOWCASE_LABEL[sc.kind] ?? sc.label,
     name: getCardById(resultId || sc.cardId)?.name ?? '',
@@ -175,27 +273,174 @@ export default function BattleFx({ game }) {
   // ตัวตั้งเวลาลบเอฟเฟกต์ ต้องอยู่รอดข้ามการเปลี่ยนสถานะเกม (AI เล่นเร็วกว่าเอฟเฟกต์จบ)
   // ยกเลิกเฉพาะตอนปิดหน้าจอ ไม่งั้นเอฟเฟกต์จะค้างสะสมจนมือถือกระพริบ
   const removeTimersRef = useRef(new Set())
-  // กับดักแสดงกลางจอครั้งละใบ — ใบถัดไปรอในคิว (เก็บแค่ใบล่าสุด 1 ใบ ไม่ให้ค้างสะสม)
+  // กับดักและโชว์กลางจอแสดงครั้งละใบ — ใบถัดไปรอในคิว
   const [trapShow, setTrapShow] = useState(null)
   const trapQueueRef = useRef([])
   const trapBusyRef = useRef(false)
+  // จดจำชื่อการ์ดบอสที่เล่นฉากเต็มไปแล้วในเกมนี้ (เล่นฉากเต็มเฉพาะครั้งแรกของชื่อนั้น)
+  const seenBossNamesRef = useRef(new Set())
+  const activeStageTimerRef = useRef(null)
+  const activeArriveElRef = useRef(null)
+  const advanceStageRef = useRef(null)
+
+  const cleanupActiveStageDom = () => {
+    if (activeStageTimerRef.current) {
+      clearTimeout(activeStageTimerRef.current)
+      removeTimersRef.current.delete(activeStageTimerRef.current)
+      activeStageTimerRef.current = null
+    }
+    if (activeArriveElRef.current) {
+      activeArriveElRef.current.classList.remove('fx-dom-arrive')
+      delete activeArriveElRef.current.dataset.fxArrive
+      activeArriveElRef.current.style.removeProperty('--fx-arrive')
+      activeArriveElRef.current = null
+    }
+    const rootEl = document.querySelector('[data-battle-root]')
+    if (rootEl) {
+      rootEl.classList.remove('battle--boss-summon')
+      delete rootEl.dataset.bossOwner
+    }
+  }
 
   useEffect(() => {
     const timers = removeTimersRef.current
     return () => {
+      cleanupActiveStageDom()
       timers.forEach(clearTimeout)
       timers.clear()
     }
   }, [])
 
+  // แตะหรือคลิกที่ใดก็ได้ (หรือกดปุ่ม Space/Enter/Escape) เพื่อข้ามฉากอัญเชิญบอสทันที
+  // ชั้น .battle-fx-layer ยังคงเป็น pointer-events: none จึงไม่บังปุ่มใด ๆ บนกระดาน
   useEffect(() => {
+    if (trapShow?.stage !== 'boss') return undefined
+    let armed = false
+    const armTimer = setTimeout(() => {
+      armed = true
+    }, 80)
+    const handleSkip = () => {
+      if (!armed) return
+      advanceStageRef.current?.()
+    }
+    const handleKey = (e) => {
+      if (!armed) return
+      if (e.key === 'Escape' || e.key === ' ' || e.key === 'Enter') {
+        advanceStageRef.current?.()
+      }
+    }
+    window.addEventListener('pointerdown', handleSkip, { passive: true })
+    window.addEventListener('keydown', handleKey)
+    return () => {
+      clearTimeout(armTimer)
+      window.removeEventListener('pointerdown', handleSkip)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [trapShow])
+
+  // ตัวช่วยสำหรับนักพัฒนา/ทดสอบ: เรียก window.__previewBossSummon('th05-005' | 'th01-012' | 'th07-016') ได้ทันที
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    window.__previewBossSummon = (cardId = 'th05-005', opts = {}) => {
+      const root = document.querySelector('[data-battle-root]')
+      if (!root) return
+      const reduced =
+        opts.reduced ??
+        Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+      if (opts.resetSeen) seenBossNamesRef.current.clear()
+      fxKeyRef.current += 1
+      const key = `fx-boss-preview-${Date.now()}-${fxKeyRef.current}`
+      const card = getCardById(cardId)
+      const kind = card?.summonType === 'ritual' ? 'ritual' : 'fusion'
+      const defaultMats =
+        cardId === 'th01-012'
+          ? ['th01-009', 'th01-010']
+          : cardId === 'th07-016'
+          ? ['th07-001', 'th07-002', 'th07-003']
+          : ['th05-004']
+      const show = buildBossShow(
+        root,
+        { placed: [] },
+        {
+          player: opts.player || 'player',
+          cardId,
+          resultCardId: cardId,
+          kind,
+          materialCardIds: opts.materials ?? defaultMats,
+          forceFull: opts.forceFull,
+          forceShort: opts.forceShort,
+        },
+        reduced,
+        key,
+        seenBossNamesRef.current
+      )
+      trapQueueRef.current.push(show)
+      if (!trapBusyRef.current) advanceStageRef.current?.()
+    }
+    return () => {
+      delete window.__previewBossSummon
+    }
+  }, [])
+
+  useEffect(() => {
+    // เล่นโชว์กลางจอถัดไปในคิว (กับดัก + ผสาน/ขึ้นขี่/ลงหลัง/พิธี + ฉากอัญเชิญบอส) — ครั้งละชิ้น
+    // ตัวตั้งเวลาเก็บใน removeTimersRef (ไม่ผูกกับ cleanup ของ [game])
+    const playNextTrap = () => {
+      cleanupActiveStageDom()
+      const next = trapQueueRef.current.shift()
+      if (!next) {
+        trapBusyRef.current = false
+        setTrapShow(null)
+        return
+      }
+      trapBusyRef.current = true
+      setTrapShow(next)
+
+      // ซ่อนการ์ดจริงบนสนามไว้ก่อน แล้วค่อยโผล่ตอนการ์ดในโชว์ลงถึงช่อง (opacity อย่างเดียว)
+      if ((next.stage === 'showcase' || next.stage === 'boss') && next.resultUid && !next.reduced) {
+        const el = document.querySelector(`[data-battle-root] [data-uid="${next.resultUid}"]`)
+        if (el) {
+          el.style.setProperty('--fx-arrive', `${next.duration}ms`)
+          el.dataset.fxArrive = '1'
+          el.classList.add('fx-dom-arrive')
+          activeArriveElRef.current = el
+        }
+      }
+
+      // บนจอ PC/จอกว้าง: เอียงกระดานเล็กน้อยด้วย CSS perspective ระหว่างอัญเชิญบอส
+      if (next.stage === 'boss' && next.isWide && !next.reduced) {
+        const rootEl = document.querySelector('[data-battle-root]')
+        if (rootEl) {
+          rootEl.classList.add('battle--boss-summon')
+          rootEl.dataset.bossOwner = next.player || 'player'
+        }
+      }
+
+      const t = setTimeout(() => {
+        removeTimersRef.current.delete(t)
+        activeStageTimerRef.current = null
+        playNextTrap()
+      }, next.duration)
+      activeStageTimerRef.current = t
+      removeTimersRef.current.add(t)
+    }
+
+    advanceStageRef.current = playNextTrap
+
     if (!game?.log?.length) {
       lastLogIdRef.current = 0
+      seenBossNamesRef.current.clear()
       return
     }
     const latestId = game.log[game.log.length - 1].id
     if (lastLogIdRef.current === null || latestId < lastLogIdRef.current) {
       lastLogIdRef.current = latestId
+      seenBossNamesRef.current.clear()
+      for (const e of game.log) {
+        const resId = e.event?.showcase?.resultCardId
+        const c = resId ? getCardById(resId) : null
+        if (c && isBossCard(c)) seenBossNamesRef.current.add(c.name)
+      }
       return
     }
     if (latestId === lastLogIdRef.current) return
@@ -219,34 +464,14 @@ export default function BattleFx({ game }) {
       return `fx-${Date.now()}-${fxKeyRef.current}`
     }
 
-    // เล่นโชว์กลางจอถัดไปในคิว (กับดัก + ผสาน/ขึ้นขี่/ลงหลัง/พิธี) — ครั้งละชิ้น
-    // ตัวตั้งเวลาเก็บใน removeTimersRef (ไม่ผูกกับ cleanup ของ [game])
-    const playNextTrap = () => {
-      const next = trapQueueRef.current.shift()
-      if (!next) {
-        trapBusyRef.current = false
-        setTrapShow(null)
-        return
-      }
-      trapBusyRef.current = true
-      setTrapShow(next)
-      // ซ่อนการ์ดจริงบนสนามไว้ก่อน แล้วค่อยโผล่ตอนการ์ดในโชว์ลงถึงช่อง (opacity อย่างเดียว)
-      if (next.stage === 'showcase' && next.resultUid && !next.reduced) {
-        const el = document.querySelector(`[data-battle-root] [data-uid="${next.resultUid}"]`)
-        if (el) {
-          el.style.setProperty('--fx-arrive', `${next.duration}ms`)
-          triggerDomClass(el, 'fx-dom-arrive', next.duration + 50)
-        }
-      }
-      const t = setTimeout(() => {
-        removeTimersRef.current.delete(t)
-        playNextTrap()
-      }, next.duration)
-      removeTimersRef.current.add(t)
-    }
     const enqueueStage = (item) => {
       trapQueueRef.current.push(item)
-      trapQueueRef.current = trapQueueRef.current.slice(-2)
+      // รักษาฉากบอสและกับดักในคิวเสมอ ไม่ให้โชว์ย่อยมาเบียดตกคิวระหว่างที่ AI เล่นต่อเนื่อง
+      if (trapQueueRef.current.length > 2) {
+        const keep = trapQueueRef.current.filter((x) => x.stage === 'boss' || x.stage === 'trap')
+        trapQueueRef.current =
+          keep.length >= 2 ? keep.slice(-2) : trapQueueRef.current.slice(-2)
+      }
       trapQueued = true
     }
     let trapQueued = false
@@ -266,10 +491,19 @@ export default function BattleFx({ game }) {
           }
         }
       }
-      // 0b. ผสานร่าง / ขึ้นขี่ / ลงจากหลัง / พิธีอัญเชิญ
+      // 0b. ผสานร่าง / ขึ้นขี่ / ลงจากหลัง / พิธีอัญเชิญ (หรือฉากอัญเชิญบอสถ้าการ์ดผลลัพธ์เป็นบอส)
       const sc = entry.event?.showcase
       if (sc && (SHOWCASE_MS[sc.kind] || CAST_MS[sc.kind]) && !entry.event.trapActivated?.length) {
-        enqueueStage(buildShowcaseShow(root, entry.event, sc, prefersReducedMotion, nextKey()))
+        enqueueStage(
+          buildShowcaseShow(
+            root,
+            entry.event,
+            sc,
+            prefersReducedMotion,
+            nextKey(),
+            seenBossNamesRef.current
+          )
+        )
       }
       // กรณีประกาศโจมตีแล้วรอฝ่ายรับตัดสินใจเปิดกับดัก (kind === 'pending')
       if (entry.kind === 'pending' && game.pendingResponse) {
@@ -317,6 +551,28 @@ export default function BattleFx({ game }) {
 
         for (const placed of ev.placed || []) {
           const card = getCardById(placed.cardId)
+          // รองรับกรณีการ์ดบอสถูกอัญเชิญแบบปกติ/สังเวยโดยตรง (หงายหน้า)
+          if (!placed.faceDown && isBossCard(card) && !sc) {
+            enqueueStage(
+              buildBossShow(
+                root,
+                ev,
+                {
+                  player: placed.player,
+                  cardId: placed.cardId,
+                  resultCardId: placed.cardId,
+                  resultUid: placed.uid,
+                  kind: 'ritual',
+                  materialCardIds: (ev.destroyed || []).map((d) => d.cardId),
+                },
+                prefersReducedMotion,
+                nextKey(),
+                seenBossNamesRef.current
+              )
+            )
+            continue
+          }
+
           const elColor = ELEMENTS[card?.element]?.color || '#d9b24c'
           const cardEl = root.querySelector(`[data-uid="${placed.uid}"]`)
           const rect = findCardOrZoneRect(root, placed.player, placed.uid, placed.zone, 'monster')
@@ -422,8 +678,10 @@ export default function BattleFx({ game }) {
         }
 
         // มอนสเตอร์พิธีกรรมที่ถูกอัญเชิญลงสนาม (เช่น พระอินทร์ จอมอาสนี)
-        // ถ้ามีโชว์กลางจอ (ผสาน/พิธี) อยู่แล้ว ไม่ต้องเล่นเอฟเฟกต์เล็กซ้ำ
-        const hasBigShow = Boolean(SHOWCASE_MS[ev.showcase?.kind])
+        // ถ้ามีโชว์กลางจอ (ผสาน/พิธี/บอส) อยู่แล้ว ไม่ต้องเล่นเอฟเฟกต์เล็กซ้ำ
+        const hasBigShow =
+          Boolean(SHOWCASE_MS[ev.showcase?.kind]) ||
+          Boolean(ev.showcase?.resultCardId && isBossCard(getCardById(ev.showcase.resultCardId)))
         for (const placed of hasBigShow ? [] : ev.placed || []) {
           const card = getCardById(placed.cardId)
           const elColor = ELEMENTS[card?.element]?.color || '#f5dc84'
@@ -657,7 +915,9 @@ export default function BattleFx({ game }) {
   return (
     <div className="battle-fx-layer" aria-hidden="true">
       {trapShow &&
-        (trapShow.stage === 'showcase' ? (
+        (trapShow.stage === 'boss' ? (
+          <BossSummonStage key={trapShow.key} show={trapShow} />
+        ) : trapShow.stage === 'showcase' ? (
           <ShowcaseStage key={trapShow.key} show={trapShow} />
         ) : (
           <TrapShow key={trapShow.key} show={trapShow} />

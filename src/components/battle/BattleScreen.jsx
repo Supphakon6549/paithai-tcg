@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import MonsterCard from '../cards/MonsterCard'
+import CardZoom from '../cards/CardZoom'
 import { FieldActionSheet, HandActionSheet, TrapActionSheet } from './ActionSheets'
 import BattleLog from './BattleLog'
 import BoardSide, { PileViewer } from './BoardSide'
 import LpHud, { SideLp } from './LpHud'
 import MiniCard from './MiniCard'
+import { InspectContext } from './inspectContext'
 import PlayerBar from './PlayerBar'
 import {
   AI,
@@ -436,7 +438,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
     hint = `${atk.name} ของคู่ต่อสู้ประกาศโจมตี ${target} — จะตอบโต้ไหม?`
   } else if (mustChoose) hint = choice.prompt
   else if (choice) hint = `${PLAYER_NAMES[choice.player]}กำลังตัดสินใจ…`
-  else if (!isMyTurn) hint = `${PLAYER_NAMES[AI]}กำลังเล่น…`
+  else if (!isMyTurn) hint = `${PLAYER_NAMES[AI]}กำลังเล่น… (กดค้างที่การ์ดเพื่อดูเอฟเฟกต์)`
   else if (ritual) {
     const target = cardOf({ cardId: ritual.target })
     const total = ritualPick.selected.reduce((sum, uid) => {
@@ -503,7 +505,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
     hint = '🎖️ มีมอนสเตอร์เลื่อนยศได้ — แตะการ์ดที่มี ⭐ สีทองบนสนาม'
   } else if (summonable.size > 0) hint = 'แตะการ์ดในมือเพื่ออัญเชิญ หรือแตะมอนสเตอร์บนสนามเพื่อเปลี่ยนท่า/ใช้ความสามารถ'
   else if (!canAttackThisTurn(game)) hint = 'เทิร์นแรกของผู้เริ่มก่อน: โจมตีไม่ได้'
-  else hint = 'พร้อมเข้าเฟสต่อสู้หรือจบเทิร์น'
+  else hint = 'พร้อมเข้าเฟสต่อสู้หรือจบเทิร์น · กดค้างที่การ์ดใบไหนก็ได้เพื่อดูเอฟเฟกต์'
 
   // ---------- ปุ่มกลางกระดาน ----------
   let actions = null
@@ -739,6 +741,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
   }
 
   return (
+    <InspectContext.Provider value={setInspectCard}>
     <div
       className="battle"
       data-battle-root
@@ -961,14 +964,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
         />
       )}
 
-      {inspectCard && (
-        <div className="battle-modal" onClick={() => setInspectCard(null)} role="dialog" aria-label={inspectCard.name}>
-          <div className="battle-modal__card">
-            <MonsterCard card={inspectCard} />
-          </div>
-          <p className="battle-modal__hint">แตะที่ใดก็ได้เพื่อปิด</p>
-        </div>
-      )}
+      {inspectCard && <CardZoom card={inspectCard} onClose={() => setInspectCard(null)} />}
 
       <BattleFx game={game} />
 
@@ -991,6 +987,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
         </div>
       )}
     </div>
+    </InspectContext.Provider>
   )
 }
 
