@@ -1,0 +1,101 @@
+{
+  "tool": "built-in image_gen",
+  "cards": [
+    {
+      "id": "th07-001",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: A single ivory-gold Thai naga oath guardian, sculptural expressive face and tall elegant gold crest close to viewer, massive foreground coil protects a small serpent behind it. Peaceful ancient forest riverbank at sunrise, banyan roots, mist and warm rays; NOT underwater. Translucent amber protective arc. Powerful living character, gentle resolute eyes. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-001.png",
+      "gameImage": "public/cards/th07-001.jpg"
+    },
+    {
+      "id": "th07-002",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Deep teal Thai naga with a distinctive low swept-back golden crest embracing a glowing blue jewel between its coils, intimate three-quarter close portrait, caring watchful eyes. DRY cavern filled with amethyst and quartz crystals, reflected jewel glow, no water palace. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-002.png",
+      "gameImage": "public/cards/th07-002.jpg"
+    },
+    {
+      "id": "th07-003",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Silver white Thai naga arching its neck toward the viewer while coiling protectively around a smaller serpent; white gold crest and pearlescent scales, wind-swept fins. Old stone bridge over a river at sunset, one ribbon of water forming a return passage, not underwater. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-003.png",
+      "gameImage": "public/cards/th07-003.jpg"
+    },
+    {
+      "id": "th07-004",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Sapphire blue regal Thai naga with antique gold crest, dignified calm face, imposing frontal low-angle portrait above winding coils. DRY open-air palace terrace with Thai carved columns, evening peach sky and distant rivers, a quiet amber light circle, not underwater. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-004.png",
+      "gameImage": "public/cards/th07-004.jpg"
+    },
+    {
+      "id": "th07-005",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Midnight indigo Thai naga emerging from overgrown DRY palace ruins beneath an eclipse-like fictional ring of light, three suspended amber crystals, mysterious copper eyes and galaxy speckles in scales, close tilted face and foreground coil; violet dusk, no religious symbols or bowls. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-005.png",
+      "gameImage": "public/cards/th07-005.jpg"
+    },
+    {
+      "id": "th07-006",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Jade and bronze Thai naga with angular distinctive crest, guarded calculating face in close profile, huge curling foreground coil guarding three closed bronze stone seals, one leaking amber light. DRY forest shrine ruins under foggy green canopy, no deity statues, not underwater. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-006.png",
+      "gameImage": "public/cards/th07-006.jpg"
+    },
+    {
+      "id": "th07-007",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Ancient Thai carved stone underwater portal shaped as intertwined serpent coils, a radiant spiralling turquoise passage with one small naga silhouette passing through; portal dominates composition, magical spell artwork Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-007.png",
+      "gameImage": "public/cards/th07-007.jpg"
+    },
+    {
+      "id": "th07-008",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Small lithe indigo Thai naga with silver fins surging up through a bright circular wave alongside a distant companion, energetic diagonal composition and expressive alert face Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-008.png",
+      "gameImage": "public/cards/th07-008.jpg"
+    },
+    {
+      "id": "th07-009",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Young copper and turquoise Thai naga with a short leaf-shaped crest carrying a glowing pearl pendant, darting toward viewer between reeds on a shallow riverbank at dawn, small athletic body twisting, lively brave alert face. Warm apricot and teal, not a boss, no limbs. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-009.png",
+      "gameImage": "public/cards/th07-009.jpg"
+    },
+    {
+      "id": "th07-010",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Pearl white juvenile Thai naga with pink coral crest and curious jade eyes, curled protectively over a crystal lotus, broad near coil forming a shelter. Misty lotus pond at morning, soft rose and jade glow, close low angle, gentle resilient expression. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-010.png",
+      "gameImage": "public/cards/th07-010.jpg"
+    },
+    {
+      "id": "th07-011",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Slender violet and silver Thai naga with swept silver crest sounding an ornate floating conch with magic, alert face dominant, ribbon-like fins curling toward viewer. DRY high cliff pavilion above clouds at moonrise, luminous sound rings, not underwater, no human hands. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-011.png",
+      "gameImage": "public/cards/th07-011.jpg"
+    },
+    {
+      "id": "th07-012",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: One turquoise Thai naga partially disappearing into a silver curtain of water between two mossy Thai carved stone posts on a forest path; illusion of return, foremost coil close to viewer, portal light draws eye, spell action scene, not a palace. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-012.png",
+      "gameImage": "public/cards/th07-012.jpg"
+    },
+    {
+      "id": "th07-013",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: A curving jade river wave sweeps a small naga safely backward while an incoming dark spear of energy passes into empty space, clear trap activation scene on rocky riverbank under stormy skies, energetic foreground water sweep, no gore. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-013.png",
+      "gameImage": "public/cards/th07-013.jpg"
+    },
+    {
+      "id": "th07-014",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: A single ornate antique gold and pearl conch with ruby inlay in extreme foreground emits a precise silver sound pulse shattering an ominous magical jade talisman above it. DRY dark stone pavilion with Thai carvings, clear object-focused trap scene; no text or glyphs. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-014.png",
+      "gameImage": "public/cards/th07-014.jpg"
+    },
+    {
+      "id": "th07-015",
+      "prompt": "Use case: stylized-concept. One finished landscape 4:3 Thai fantasy TCG artwork, painterly premium digital illustration matching richly detailed Thai naga collectible cards. Dramatic cinematic lighting, rich deep contrast and shadows, glowing elemental aura particles, intense fantasy TCG digital painting style. Subject dominates 70–80% of frame, readable silhouette, intricate Thai flame motifs, detailed scales, limited background distraction. No text, letters, numbers, card border, watermark, blood, western dragon wings or legs, real religious figures. Subject: Three distinct ivory, violet and turquoise naga-shaped luminous currents spiral together around one exquisite Thai golden jewel crest above a DRY mountain lake terrace at twilight. Clear three-to-one visual convergence, foreground gold sparks and ribbons, fusion magic not a character portrait. Keep full crest visible with margin. Strong dramatic foreshortening: large foreground head or object and coils, smaller receding body, crisp silhouette and cast shadows. Art only: NO frame, no card typography, no UI, no stats. The image will be layered into a card preview separately.",
+      "original": "art-originals/TH07/th07-015.png",
+      "gameImage": "public/cards/th07-015.jpg"
+    },
+    {
+      "id": "th07-016",
+      "prompt": "Edit this approved naga concept into a landscape 4:3 ART-ONLY version for the game's illustration slot. Preserve exact SINGLE-headed naga identity, ruby eyes, sapphire teal scales, exquisite gold crest, ivory belly, coils and underwater palace, existing style and rich lighting. Remove gold card border and empty bottom panel entirely. Recompose into wider landscape with enlarged forward head on upper center-left, coils projecting toward viewer, palace recedes right. Keep entire crest and head visible with generous top margin, compelling living character, no text, no frame, no human body or limbs. Subject 75% of frame. This is the SAME sovereign already approved, not three heads.",
+      "original": "art-originals/TH07/th07-016.png",
+      "gameImage": "public/cards/th07-016.jpg"
+    }
+  ]
+}

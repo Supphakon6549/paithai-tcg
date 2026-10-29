@@ -1,0 +1,93 @@
+/* Match the approved 1086x1448 composition. Text occupies only its painted
+   plaques; no opaque HTML boxes cover the naga, coils, water or filigree. */
+.tc.naga-card {
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #080d10;
+  box-shadow: 0 12px 30px #0008;
+  transform: none;
+  isolation: isolate;
+  container-type: inline-size;
+}
+.naga-card__template {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; pointer-events: none;
+}
+.naga-card__namebar, .naga-card__identity, .naga-card__summon,
+.naga-card__stats, .naga-card__rules, .naga-card__flavor, .naga-card__footer {
+  position: absolute; z-index: 1; margin: 0;
+  background: transparent; border: 0;
+}
+.naga-card__namebar {
+  top: 55.5%; left: 21%; width: 58%; height: 5.05%;
+  display: grid; place-items: center;
+}
+.naga-card__namebar h2 {
+  margin: 0; color: #ffe5a5;
+  font-family: 'Noto Serif Thai', 'Sarabun', serif;
+  font-size: 16px; font-size: 4.1cqw; line-height: 1.25;
+  font-weight: 700; text-align: center;
+  text-shadow: 0 1px 2px #000, 0 0 3px #9f661e;
+}
+.naga-card__identity {
+  top: 61.55%; left: 29%; width: 42%; height: 2.4%;
+  display: flex; align-items: center; justify-content: center; gap: 1.4cqw;
+  font: 9px/1.2 'Sarabun', sans-serif; font-size: 2.8cqw;
+  white-space: nowrap; color: #f8ebd3;
+}
+.naga-card__summon {
+  top: 64.65%; left: 37%; width: 26%; height: 2%;
+  display: grid; place-items: center;
+  color: #f2d584; font: 9px/1.2 'Sarabun', sans-serif; font-size: 2.7cqw;
+  white-space: nowrap;
+}
+.naga-card__stats {
+  top: 67.6%; left: 22%; width: 56%; height: 4.3%;
+  display: flex; align-items: center; justify-content: space-between;
+  color: #ffe5a5; font-family: 'Noto Serif Thai', serif;
+  text-shadow: 0 1px 2px #000;
+}
+.naga-card__stats strong { font-size: 22px; font-size: 7.1cqw; line-height: 1; }
+.naga-card__stats small { font-size: 11px; font-size: 3.3cqw; }
+.naga-card__rules {
+  top: 73.2%; left: 18%; width: 64%; height: 15.1%;
+  color: #f7eedc; font: 9px/1.32 'Sarabun', sans-serif;
+  font-size: 3cqw; overflow: auto; scrollbar-width: thin;
+  scrollbar-color: #aa8743 transparent;
+}
+.naga-card__rules p { margin: 0; overflow-wrap: anywhere; }
+.naga-card__flavor {
+  top: 90%; left: 17%; width: 66%; height: 2.7%;
+  display: grid; place-items: center;
+  color: #e5c77d; font: italic 8px/1.2 'Sarabun', sans-serif;
+  font-size: 2.35cqw; text-align: center;
+}
+.naga-card__footer {
+  top: 93.55%; left: 17%; width: 66%; height: 2.3%;
+  display: flex; align-items: center; justify-content: space-between;
+  color: #e4ca8d; font: 8px/1.2 'Sarabun', sans-serif; font-size: 2.3cqw;
+}
+.naga-card__footer { gap: 1cqw; }
+.naga-card__footer span { flex-shrink: 0; }
+.naga-card__footer span:nth-child(2) { flex-shrink: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.naga-card__identity { left: 24%; width: 52%; gap: .8cqw; font-size: 2.5cqw; }
+.naga-card__flavor { overflow: hidden; }
+.naga-card__art, .naga-card__ambient { position: absolute; left: 9%; top: 7%; width: 82%; height: 50%; object-fit: contain; }
+.naga-card__ambient { object-fit: cover; filter: blur(8px) brightness(.55); }
+.naga-card__missing { position: absolute; inset: 20% 10% auto; text-align: center; color: #e4ca8d; }
+.naga-card__type-label { margin: auto; font-size: 4cqw; padding-inline: 1cqw; background: #06131e; }
+.naga-card--fallback { background: #051119; }
+.naga-card:focus-visible { outline: 2px solid #8ee9ef; outline-offset: 4px; }
+/* Larger reading view, while the gallery retains its existing card footprint. */
+.modal-card-preview:has(.naga-card) { min-width: 0; width: 100%; }
+.modal-card-preview .tc.naga-card {
+  --card-w: 460px;
+  width: min(460px, 100%);
+  max-width: 100%;
+  margin-inline: auto;
+  zoom: 1;
+}
+

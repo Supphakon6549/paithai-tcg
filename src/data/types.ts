@@ -66,7 +66,7 @@ export interface BaseCard {
   image: string;
   effectText: string;
   flavorText: string;
-  groupTag: 'xp-hunter' | 'ritual-faith' | 'himmapan-fusion' | 'warrior-beast' | 'spell-trap' | 'promo' | 'celestial-court' | 'asura-war' | 'thai-spirits' | 'wild-forest';
+  groupTag: 'xp-hunter' | 'ritual-faith' | 'himmapan-fusion' | 'warrior-beast' | 'spell-trap' | 'promo' | 'celestial-court' | 'asura-war' | 'thai-spirits' | 'wild-forest' | 'naga-court';
   evolution?: EvolutionInfo;
 }
 
