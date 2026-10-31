@@ -233,6 +233,20 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
     return () => clearTimeout(timer)
   }, [game, active])
 
+  // สู้ครบทุกตัวแล้ว → ไปเฟสหลัก 2 เองเพื่อถามว่าจะลงการ์ดเพิ่มไหม ก่อนจบเทิร์น
+  const battleDone = isMyTurn && game.phase === 'battle' && readyAttackers.size === 0
+  useEffect(() => {
+    if (!active || !battleDone) return
+    const timer = setTimeout(() => {
+      try {
+        setGame((g) => (g.phase === 'battle' ? applyAction(g, { type: 'endBattle', player: PLAYER }) : g))
+      } catch {
+        // จบเฟสไม่ได้ (สถานะเปลี่ยนไปแล้ว) — ให้ผู้เล่นกดปุ่มเอง
+      }
+    }, 900)
+    return () => clearTimeout(timer)
+  }, [battleDone, active])
+
   function restart() {
     const next = startGame(deckList, extraDeckList, aiDecks)
     setGame(next.game)
@@ -506,8 +520,13 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
       : 'ไม่มีมอนสเตอร์ที่โจมตีได้แล้ว'
   } else if (me.field.some((m) => m && !evolveBlocker(game, PLAYER, m.uid))) {
     hint = '🎖️ มีมอนสเตอร์เลื่อนยศได้ — แตะการ์ดที่มี ⭐ สีทองบนสนาม'
-  } else if (summonable.size > 0) hint = 'แตะการ์ดในมือเพื่ออัญเชิญ หรือแตะมอนสเตอร์บนสนามเพื่อเปลี่ยนท่า/ใช้ความสามารถ'
-  else if (!canAttackThisTurn(game)) hint = 'เทิร์นแรกของผู้เริ่มก่อน: โจมตีไม่ได้'
+  } else if (game.phase === 'main2') {
+    hint = 'สู้เสร็จแล้ว — จะลงการ์ดหรือวางกับดักเพิ่มไหม? ถ้าไม่มีแล้วกด "จบเทิร์น"'
+  } else if (summonable.size > 0) {
+    hint = canAttackThisTurn(game)
+      ? 'ลงการ์ดจากมือก่อน แล้วค่อยกด "เข้าเฟสต่อสู้"'
+      : 'ลงการ์ดจากมือ (เทิร์นแรกของผู้เริ่มก่อนโจมตีไม่ได้)'
+  } else if (!canAttackThisTurn(game)) hint = 'เทิร์นแรกของผู้เริ่มก่อน: โจมตีไม่ได้ — กด "จบเทิร์น"'
   else hint = 'พร้อมเข้าเฟสต่อสู้หรือจบเทิร์น · กดค้างที่การ์ดใบไหนก็ได้เพื่อดูเอฟเฟกต์'
 
   // ---------- ปุ่มกลางกระดาน ----------
@@ -707,11 +726,12 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
             {mountButtonLabel()}
           </button>
         )}
-        {game.phase === 'main1' && (
+        {/* ลำดับในเทิร์น: ลงการ์ด → เข้าเฟสต่อสู้ → (ลงเพิ่มในเฟสหลัก 2) → จบเทิร์น
+            ปุ่มเด่นเป็นขั้นถัดไป เฉพาะเมื่อไม่มีการ์ดให้ลงแล้ว */}
+        {game.phase === 'main1' && canAttackThisTurn(game) && (
           <button
             type="button"
-            className="btn btn--primary"
-            disabled={!canAttackThisTurn(game)}
+            className={summonable.size > 0 ? 'btn' : 'btn btn--primary'}
             onClick={() => play({ type: 'enterBattle' })}
           >
             ⚔️ เข้าเฟสต่อสู้
@@ -719,11 +739,17 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
         )}
         {game.phase === 'battle' && (
           <button type="button" className="btn" onClick={() => play({ type: 'endBattle' })}>
-            จบเฟสต่อสู้
+            สู้เสร็จแล้ว →
           </button>
         )}
-        {game.phase !== 'discard' && (
-          <button type="button" className="btn" onClick={() => play({ type: 'endTurn' })}>
+        {game.phase !== 'discard' && game.phase !== 'battle' && (
+          <button
+            type="button"
+            className={
+              game.phase === 'main2' || (!canAttackThisTurn(game) && summonable.size === 0) ? 'btn btn--primary' : 'btn'
+            }
+            onClick={() => play({ type: 'endTurn' })}
+          >
             จบเทิร์น ⏭
           </button>
         )}
