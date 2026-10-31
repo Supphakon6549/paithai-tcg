@@ -20,6 +20,8 @@
   width: 100%;
   max-width: 1100px;
   display: grid;
+  /* minmax(0, …): ห้ามเนื้อหาข้างในดันคอลัมน์ให้กว้างเกินจอมือถือ */
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   color: var(--text);
   font-family: 'Sarabun', sans-serif;
