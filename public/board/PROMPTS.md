@@ -18,16 +18,18 @@
 
 ---
 
-## 1. พื้นโต๊ะ (Table Surfaces)
+## 1. พื้นโต๊ะ (Table Surfaces — แผนที่ไตรภูมิไร้กรอบ / Borderless Traiphum Cosmic Map)
+
+> สำรองเวอร์ชันไม้ลงรักดำเดิมไว้ที่ `table-portrait-v1.webp` และ `table-landscape-v1.webp`
 
 ### 1.1 มือถือแนวตั้ง — `public/board/table-portrait.webp` (`1080×1920`, ≤ 250 KB)
 ```text
-Top-down view of an antique Thai black-lacquered teakwood duel table surface (ไม้ลงรักดำมีลายรดน้ำทองจาง ๆ ผิวมีรอยเก่า), aspect ratio 9:16 vertical portrait. The large central 75% area of the board MUST be very dark, smooth, uncluttered aged black lacquer with only ultra-faint wood grain and subtle weathered patina so cards placed on top are easy to read. Along the outer borders and corners only, paint intricate traditional Thai gold leaf Lai Rod Nam (Krajang and Kanok flame-vine filigree) in warm antique gold (#d4af37). Hand-painted Thai mythical digital painting style, NO text, NO letters, NO numbers, NO watermarks, NO Buddha statues, NO monks.
+Flat orthographic direct top-down view of a Thai mythology trading card game battle board playmat inspired by the ancient Traiphum Buddhist cosmic map. Strictly overhead bird's-eye view, perfectly flat tabletop game mat, no perspective angle, no tilt. CRITICAL REQUIREMENT: STRICTLY BORDERLESS, NO OUTER FRAME, NO GOLDEN BORDER, NO CARVED CORNERS, NO WOODEN ORNAMENTATION AROUND EDGES. The deep space, celestial waters, and stars MUST extend edge-to-edge smoothly to all four canvas boundaries without any framing line or border. At the exact geometric center: a small, refined gilded gold emblem representing Mount Meru (Khao Phra Sumen) seen from directly above as a delicate golden concentric mandala / stepped peak motif. Radiating from the center across the entire playmat: the seven cosmic oceans (Thale Sithandon) and seven ring mountains (Sattaboriphan), depicted as thin, faint, elegant gold concentric circular lines and subtle delicate ripple wave patterns. Bottom half (Heaven / Deva realm): deep cosmic midnight navy blue with delicate twinkling gold stars, faint soft golden celestial clouds and distant miniature golden palace spire silhouettes along the very bottom, warm golden ambient glow. Top half (Underworld / Badan / Naga realm): deep abyssal navy and indigo-teal ocean depths, faint dark coiling Naga serpent silhouettes and ethereal deep-sea mist along the top, cold teal bioluminescent ambient glow. Middle 60% of both halves: very dark, smooth, matte, clean, low-contrast, showing only faint delicate golden concentric rings. Strict restrictions: Absolutely NO text, NO letters, NO numbers, NO border frame, NO card slots, NO Buddha statues, NO monks.
 ```
 
 ### 1.2 จอกว้างแนวนอน — `public/board/table-landscape.webp` (`1920×1080`, ≤ 250 KB)
 ```text
-Top-down view of an antique Thai black-lacquered teakwood duel table surface (ไม้ลงรักดำมีลายรดน้ำทองจาง ๆ ผิวมีรอยเก่า), aspect ratio 16:9 horizontal landscape. The large central 75% area MUST be very dark, smooth, uncluttered aged black lacquer so cards are easy to read, while the outer perimeter and four corners feature rich traditional Thai gold leaf Lai Rod Nam (Kanok, Krajang, and Prajam Yam motifs) with aged patina. Hand-painted Thai mythical digital painting style, NO text, NO letters, NO numbers, NO watermarks, NO Buddha statues, NO monks.
+Flat orthographic direct top-down view of a Thai mythology trading card game battle board playmat in wide landscape 16:9 format, inspired by the ancient Traiphum Buddhist cosmic map. Strictly overhead bird's-eye view, perfectly flat tabletop game mat, no perspective angle, no tilt. CRITICAL REQUIREMENT: STRICTLY BORDERLESS, NO OUTER FRAME, NO GOLDEN BORDER, NO CARVED CORNERS, NO BORDER STRIPS AROUND EDGES. The deep midnight navy cosmos, waters, and stars MUST flow continuously to all four outer edges. At the exact geometric center: a small, refined gilded gold emblem depicting Mount Meru (Khao Phra Sumen) seen from above as a concentric stepped peak mandala. Radiating outward across the entire width of the battlefield: the seven concentric cosmic oceans (Thale Sithandon) and seven ring mountain chains (Sattaboriphan), rendered as thin, subtle gold concentric circular lines and delicate faint wave ripples extending across the landscape board. Bottom half (Player realm): deep midnight navy blue with faint sparkling golden stars, soft golden celestial clouds and distant miniature golden palace spire silhouettes along the bottom edge. Top half (Opponent realm): dark abyssal navy and indigo-teal deep aquatic expanse, subtle dark silhouette forms of coiling mythical Naga serpents along the top edge, cold deep-teal bioluminescent glow. Middle 60% play areas: very dark, clean, smooth, low-contrast, minimal starlight specks. Strict restrictions: Absolutely NO border, NO outer frame, NO text, NO letters, NO numbers, NO card slots, NO Buddha statues, NO monks.
 ```
 
 ---
@@ -67,11 +69,11 @@ Cohesive hand-painted 3D gilded Thai gold leaf on black lacquer style (สไต
 1. **กองการ์ด (`public/board/icons/deck.png`)**:
    `A stacked mystical deck of ancient Thai gilded plaques/cards bound with a golden Thai Kanok clasp and a glowing lotus seal on top, isolated on pure #000000 black.`
 2. **สุสาน (`public/board/icons/graveyard.png`)**:
-   `An ornate traditional Thai golden funerary urn/stupa reliquary (โกศ/เจดีย์ทองคำโบราณ) wreathed in subtle golden spirit flames on a lotus base, isolated on pure #000000 black.`
+   `A modern minimalist Thai sacred soul flame and spirit lotus emblem (สัญลักษณ์เปลววิญญาณและดอกบัวทิพย์) centered on a solid pure #000000 black background. Designed as a trading card game graveyard pile watermark. Elegant metallic antique gold and ethereal silver-white glowing spirit flame cradled in a stylized geometric lotus petal cup, with subtle floating spirit sparks. Sleek modern digital TCG icon, clean linework, high contrast against pure pitch-black background. Strictly NO text, NO letters, NO numbers, NO watermarks.`
 3. **กองพิเศษ (`public/board/icons/extra-deck.png`)**:
    `A radiant 8-pointed Thai celestial chakra-star and blooming golden lotus crest (ดาราจักรพุ่มข้าวบิณฑ์ทองคำ) with an emerald-and-ruby gem core, isolated on pure #000000 black.`
 4. **เวทสนาม (`public/board/icons/field-spell.png`)**:
-   `An ornate Thai royal temple gable arch emblem (ซุ้มหน้าบันปราสาททองคำ) with intricate Chofa and Kanok spires framing a glowing golden portal, isolated on pure #000000 black.`
+   `A glowing ethereal modern Thai magic circle seal (วงแหวนเวทย์มนตร์สไตล์ไทยเรขาคณิต) centered on a solid pure #000000 black background. Designed as a trading card game field spell zone watermark. Intricate yet clean thin geometric line art in luminous gold and cyan-teal bioluminescent energy: concentric thin rings, four-point Thai Prajam-yam diamond accents, sacred geometric unalom spirals, and delicate rune rays radiating outward. Modern e-sports TCG UI style, clean vectors, sharp glowing lines, transparentable black background. Strictly NO text, NO letters, NO numbers, NO watermarks, NO solid opaque shapes in center.`
 5. **LP หัวใจ/ดวงชะตา (`public/board/icons/lp.png`)**:
    `A sacred Thai heart-shaped Bodhi leaf and glowing crimson-gold soul gem (ดวงชะตาใบโพธิ์ทองคำประดับมณีแดง) cradled by twin golden Kanok flame wings, isolated on pure #000000 black.`
 6. **การ์ดในมือ (`public/board/icons/hand.png`)**:
@@ -83,11 +85,13 @@ Cohesive hand-painted 3D gilded Thai gold leaf on black lacquer style (สไต
 
 ---
 
-## 5. หลังการ์ด (Card Back)
+## 5. หลังการ์ด (Card Back — Geometric Prajam-yam)
 
-### `public/board/card-back.webp` (สัดส่วน 2:3 ขนาด `600×900`, ≤ 250 KB)
+> สำรองเวอร์ชันพุ่มข้าวบิณฑ์เดิมไว้ที่ `card-back-v1.webp`
+
+### `public/board/card-back.webp` (สัดส่วน 2:3 ขนาด `600×900`, ≤ 200 KB)
 ```text
-Ornate vertical TCG card back design in traditional Thai royal lacquer and gold leaf style (ลายไทยกลางใบ พุ่มข้าวบิณฑ์และธรรมจักรทองคำบนพื้นรักดำ-ชาด), aspect ratio 2:3. Features a symmetrical radiant golden Phum Khao Bin (lotus bud mandala) and celestial Dhammacakra wheel at the center, surrounded by intricate Thai Kanok flame scrollwork and an ornate double border of gold filigree on a deep obsidian-and-crimson lacquer background. No text or numbers, no watermarks.
+2:3 portrait card back, Modern Thai Minimal Sacred aesthetic. Dark obsidian blue/black textured matte card surface with subtle ambient depth. In the center: a modernized geometric 4-petal Thai Prajam-yam floral star/diamond emblem crafted with sharp, faceted gold crystal lines, enclosed inside a crisp thin circular gold ring with subtle four-point compass accents. Sleek, international modern TCG collectible vibe with distinct Thai geometry heritage. Clean generous negative space, sleek single-line gold border near the card edges. No text, no letters, no numbers, no watermarks, no Buddha statues, no monks, no photorealistic faces.
 ```
 
 ---

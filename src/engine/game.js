@@ -64,6 +64,17 @@ import {
   matchesFusion,
   isPlayableNonMonster,
   reduceBattleDamage,
+  getKala,
+  getNagaLotus,
+  getNagaRescue,
+  getNagaReturnDraw,
+  getNagaSummonSearch,
+  getSealedSecrets,
+  hasNagaFollow,
+  isContinuousSpell,
+  isNagaCard,
+  isNagaMonster,
+  isNagaVeil,
 } from './effects'
 import { createRng, shuffle } from './random'
 import {
@@ -336,7 +347,7 @@ export function canAttackDirectly(state, playerId, uid) {
   const m = state.players[playerId].field.find((x) => x?.uid === uid)
   if (!m) return false
   const card = cardOf(m)
-  if (hasNoDirectAttack(card)) return false
+  if (hasNoDirectAttack(card) || m.noDirectTurn === state.turn) return false
   const oppField = state.players[opponentOf(playerId)].field
   if (!oppField.some(Boolean)) return true
   return Boolean(getFlyOver(card)) && !oppField.some((x) => x && !x.faceDown)
@@ -357,7 +368,8 @@ function targetableEnemies(state, playerId) {
 function canDeclareAttack(state, playerId, m) {
   if (isAttackLocked(state, m)) return false
   // โจมตีตรงไม่ได้ + ศัตรูไม่มีมอนสเตอร์ = ไม่มีอะไรให้โจมตี
-  if (hasNoDirectAttack(cardOf(m)) && !state.players[opponentOf(playerId)].field.some(Boolean)) return false
+  const noDirect = hasNoDirectAttack(cardOf(m)) || m.noDirectTurn === state.turn
+  if (noDirect && !state.players[opponentOf(playerId)].field.some(Boolean)) return false
   return m.position !== 'defense' && attacksMade(m) < maxAttacks(state, playerId, m)
 }
 
@@ -386,15 +398,23 @@ const setForestLock = (state, playerId) => {
   state.players[playerId].forestLockTurn = state.turn
 }
 const FOREST_LOCK_TEXT = 'เทิร์นนี้ใช้คอมโบป่าแล้ว อัญเชิญพิเศษได้เฉพาะการ์ดไพรมหาวัน'
+const NAGA_LOCK_TEXT = 'เทิร์นนี้ใช้คอมโบนาคาแล้ว อัญเชิญพิเศษได้เฉพาะการ์ดราชสำนักนาคา'
+// ข้อจำกัดอัญเชิญพิเศษทั้งหมดของผู้เล่น (คอมโบป่า / คอมโบนาคา) — คืนเหตุผล หรือ null
+export function summonLockReason(state, playerId, card) {
+  if (forestLocked(state, playerId, card)) return FOREST_LOCK_TEXT
+  if (state.players[playerId].nagaLockTurn === state.turn && !isNagaCard(card)) return NAGA_LOCK_TEXT
+  return null
+}
 
 // ห้ามโจมตี: ระบุเทิร์นเดียว (cannotAttackTurn) หรือถึงเทิร์นที่กำหนด (cannotAttackUntil)
 export const isAttackLocked = (state, m) => m.cannotAttackTurn === state.turn || m.cannotAttackUntil >= state.turn
 
 // เป้าที่โจมตีได้: ถ้าศัตรูมีผีเฝ้าทาง (หงายท่าตั้งรับ) ต้องตีตัวนั้นก่อน
+// ตัวที่เราสงบศึกด้วย (นาคาธิบดี) โจมตีไม่ได้ — ตรวจหลัง taunt จึงอาจไม่มีเป้าเลย
 export function getAttackableTargets(state, playerId) {
   const all = getOpponentMonsters(state, playerId)
   const guards = all.filter((m) => !m.faceDown && m.position === 'defense' && getTaunt(cardOf(m)))
-  return guards.length ? guards : all
+  return (guards.length ? guards : all).filter((m) => !(m.pact?.by === playerId && m.pact.until >= state.turn))
 }
 
 // การ์ดมอนสเตอร์ตัวอื่นบนสนามของ playerId (ใช้เช็กเงื่อนไขเอฟเฟกต์)
@@ -411,6 +431,19 @@ function decayModifiers(m) {
   return [{ amount: -decay.penalties[step - 1], reason: `${decay.reason} (โจมตีแล้ว ${m.decayStep} ครั้ง)` }]
 }
 
+// นาคา: แต้มกาล (005) และการ์ดคว่ำฝ่ายเรา (006) — ทำงานเฉพาะตอนหงาย
+function nagaAtkModifiers(p, m) {
+  if (!m || m.faceDown) return []
+  const card = cardOf(m)
+  const kala = getKala(card)
+  if (kala && m.kala) return [{ amount: kala.atkPer * m.kala, reason: `แต้มกาล ${m.kala}` }]
+  const secrets = getSealedSecrets(card)
+  if (!secrets) return []
+  const hidden = [...p.field, ...p.spellTrap].filter((x) => x?.faceDown).length
+  const n = Math.min(secrets.max, hidden)
+  return n ? [{ amount: secrets.per * n, reason: `${secrets.reason}: การ์ดคว่ำ ${n} ใบ` }] : []
+}
+
 // ตัวปรับ ATK ที่ไม่ได้มาจากมอนสเตอร์ตัวอื่น: เวทสนามของเจ้าของ + ตัวปรับบนตัวมอนสเตอร์เอง
 function atkExtras(state, playerId, m) {
   const p = state.players[playerId]
@@ -419,6 +452,7 @@ function atkExtras(state, playerId, m) {
     temp: [
       ...(m?.tempAtk ?? []),
       ...decayModifiers(m),
+      ...nagaAtkModifiers(p, m),
       ...(m?.statMods ?? []).filter((x) => x.atk).map((x) => ({ amount: x.atk, reason: x.reason })),
     ],
     defTemp: (m?.statMods ?? []).filter((x) => x.def).map((x) => ({ amount: x.def, reason: x.reason })),
@@ -464,7 +498,17 @@ function effectDestroy(state, ownerId, uid, details) {
     details.push(`${guard.reason} → ${cardOf(m).name} ไม่ถูกทำลาย`)
     return false
   }
+  if (spendNagaShield(m, details)) return false
   destroyMonster(state, ownerId, uid, details)
+  return true
+}
+
+// เกราะนาคาผู้รักษาศีล (001): หนึ่ง charge ร่วมกันทั้งการต่อสู้และเอฟเฟกต์ศัตรู · คว่ำอยู่ = พักผล
+// (เกราะที่หมดอายุถูกล้างตอนเริ่มเทิร์น จึงมี nagaShield = ยังใช้ได้)
+function spendNagaShield(m, details) {
+  if (!m.nagaShield || m.faceDown) return false
+  delete m.nagaShield
+  details.push(`🐍 เกราะศีลแห่งลุ่มน้ำ: ${cardOf(m).name} รอดแทนการถูกทำลาย (เกราะหมดแล้ว)`)
   return true
 }
 
@@ -591,7 +635,198 @@ export function activationBlocker(state, playerId, uid) {
   if (activated.kind === 'searchTrap' && !p.deck.some((c) => cardOf(c).type === 'trap')) {
     return 'ไม่มีการ์ดกับดักเหลือในกอง'
   }
+  if (activated.kind === 'nagaShield' && nagaShieldTargets(state, playerId, uid).length === 0) {
+    return 'ต้องมีมอนสเตอร์นาคาหงายตัวอื่นที่ยังไม่มีเกราะ'
+  }
+  if (activated.kind === 'nagaPact' && nagaPactTargets(state, playerId).length === 0) {
+    return 'ไม่มีมอนสเตอร์ศัตรูหงายหน้าที่เลือกเป็นเป้าได้'
+  }
+  if (activated.kind === 'kalaDraw') {
+    if ((m.kala ?? 0) < activated.cost) return `ต้องมีแต้มกาล ${activated.cost} (ตอนนี้ ${m.kala ?? 0})`
+    if (p.deck.length === 0) return 'กองการ์ดหมดแล้ว'
+  }
+  if (activated.kind === 'nagaKing') {
+    if (returnableNagas(p, uid).length === 0) return 'ต้องมีมอนสเตอร์นาคาหงายตัวอื่นของเราที่คืนขึ้นมือได้'
+    if (targetableEnemies(state, playerId).length === 0) return 'ไม่มีมอนสเตอร์ศัตรูหงายหน้าที่เลือกเป็นเป้าได้'
+  }
   return null
+}
+
+// ---------- TH07 ราชสำนักนาคา: ตัวช่วย ----------
+const nameUsed = (state, p, cardId) => (p.usedEffects ?? {})[`name:${cardId}`] === state.turn
+const markName = (state, p, cardId) => {
+  p.usedEffects = { ...(p.usedEffects ?? {}), [`name:${cardId}`]: state.turn }
+}
+const isNagaInst = (inst) => isNagaMonster(cardOf(inst))
+const slotLabel = (p, inst) => `${cardOf(inst).name} (ช่องที่ ${p.field.indexOf(inst) + 1})`
+
+// นาคาหงายของเราที่คืนขึ้นมือได้จริง (ร่างผสานต้องกลับกองพิเศษ จึงไม่นับ)
+function returnableNagas(p, excludeUid = null) {
+  return p.field.filter(
+    (m) => m && !m.faceDown && m.uid !== excludeUid && isNagaInst(m) && cardOf(m).summonType !== 'fusion'
+  )
+}
+
+function nagaShieldTargets(state, playerId, sourceUid) {
+  return state.players[playerId].field.filter(
+    (m) => m && !m.faceDown && m.uid !== sourceUid && isNagaInst(m) && !m.nagaShield
+  )
+}
+
+function nagaPactTargets(state, playerId) {
+  return targetableEnemies(state, playerId).filter((t) => !(t.pact && t.pact.until >= state.turn))
+}
+
+/*
+ * คืนมอนสเตอร์จากสนามขึ้นมือเจ้าของด้วยเอฟเฟกต์ (ร่างผสานกลับกองพิเศษ)
+ * นาคาหงายที่กลับมือ = เหตุการณ์ "กลับมือ" ของชุดนาคา → รอทำงานหลังเอฟเฟกต์แม่แก้ครบ (processNagaReturns)
+ * การ์ดในมือได้ returnToken ใหม่ทุกครั้ง: ออกจากมือแล้วกลับมาใหม่ไม่ถือเป็นใบเดิมที่ 008 รอเรียก
+ */
+function returnToHand(state, ownerId, uid, details) {
+  const p = state.players[ownerId]
+  const zone = p.field.findIndex((m) => m?.uid === uid)
+  if (zone === -1) return false
+  const m = p.field[zone]
+  const card = cardOf(m)
+  p.field[zone] = null
+  if (card.summonType === 'fusion') {
+    p.extraDeck.push({ uid: m.uid, cardId: m.cardId })
+    details.push(`${card.name} กลับกองพิเศษของ${PLAYER_NAMES[ownerId]}`)
+    return true
+  }
+  state.entrySeq = (state.entrySeq ?? 0) + 1
+  const followers = p.hand.filter((h) => hasNagaFollow(cardOf(h))).map((h) => h.uid)
+  p.hand.push({ uid: m.uid, cardId: m.cardId, returnToken: state.entrySeq })
+  details.push(`${card.name} กลับขึ้นมือ${PLAYER_NAMES[ownerId]}`)
+  if (!m.faceDown && isNagaMonster(card)) {
+    state.nagaReturns = [
+      ...(state.nagaReturns ?? []),
+      { player: ownerId, uid: m.uid, cardId: m.cardId, token: state.entrySeq, followers },
+    ]
+  }
+  return true
+}
+
+// ทำลายเวท/กับดัก 1 ใบบนสนาม (ฝ่ายใดก็ได้) — คืนชื่อการ์ด หรือ null ถ้าไม่อยู่แล้ว
+function destroySpellTrap(state, uid) {
+  for (const pl of Object.values(state.players)) {
+    const zone = pl.spellTrap.findIndex((t) => t?.uid === uid)
+    if (zone !== -1) {
+      const t = pl.spellTrap[zone]
+      pl.spellTrap[zone] = null
+      pl.graveyard.push({ uid: t.uid, cardId: t.cardId })
+      return cardOf(t).name
+    }
+    if (pl.fieldSpell?.uid === uid) {
+      const t = pl.fieldSpell
+      pl.fieldSpell = null
+      pl.graveyard.push({ uid: t.uid, cardId: t.cardId })
+      return cardOf(t).name
+    }
+  }
+  return null
+}
+
+// เป้าของผนึกสังข์ (014): เวท/กับดักทุกใบบนสนามทั้งสองฝ่าย ยกเว้นตัวเอง · การ์ดคว่ำของศัตรูไม่เปิดชื่อ
+function sealTargets(state, playerId, selfUid) {
+  const out = []
+  for (const [id, pl] of Object.entries(state.players)) {
+    const mine = id === playerId
+    const zones = [...pl.spellTrap.map((t, i) => t && [t, `ช่องเวท/กับดักที่ ${i + 1}`]), pl.fieldSpell && [pl.fieldSpell, 'ช่องเวทสนาม']]
+    for (const [t, where] of zones.filter(Boolean)) {
+      if (t.uid === selfUid) continue
+      const name = t.faceDown && !mine ? 'การ์ดคว่ำ' : cardOf(t).name
+      out.push({ uid: t.uid, enemy: !mine, faceDown: Boolean(t.faceDown), label: `${mine ? 'ของเรา' : 'ของศัตรู'}: ${name} (${where})` })
+    }
+  }
+  return out
+}
+
+const hasFaceUpNaga = (p) => p.field.some((m) => m && !m.faceDown && isNagaInst(m))
+
+// อัญเชิญจากมือหงายท่าตั้งรับด้วยเอฟเฟกต์นาคา (โจมตีไม่ได้เทิร์นนี้) — คืน true ถ้าลงสนามได้
+function nagaSummonFromHand(state, playerId, uid, sourceName) {
+  const p = state.players[playerId]
+  const handIndex = p.hand.findIndex((h) => h.uid === uid)
+  const zone = p.field.indexOf(null)
+  if (handIndex === -1 || zone === -1) return false
+  const [inst] = p.hand.splice(handIndex, 1)
+  p.field[zone] = {
+    uid: inst.uid,
+    cardId: inst.cardId,
+    hasAttacked: false,
+    summonedTurn: state.turn,
+    position: 'defense',
+    faceDown: false,
+    positionChangedTurn: null,
+    cannotAttackTurn: state.turn,
+  }
+  addLog(state, playerId, 'summon', `🐍 ${sourceName}: ${PLAYER_NAMES[playerId]}อัญเชิญ ${cardOf(inst).name} จากมือ ลงช่องที่ ${zone + 1} ท่าตั้งรับ (โจมตีไม่ได้เทิร์นนี้)`)
+  onSummoned(state, playerId, cardOf(inst))
+  return true
+}
+
+/*
+ * เหตุการณ์นาคากลับมือที่รอไว้ ทำงานเมื่อเอฟเฟกต์แม่แก้ครบ (ไม่มีตัวเลือก/การตอบโต้ค้าง):
+ * - ประตูวังวนบาดาล (007) หงายอยู่ → จั่ว 1 ใบ (ชื่อละครั้ง/เทิร์น)
+ * - นาคาผู้ตามคลื่น (008) ที่อยู่ในมือก่อนเหตุการณ์ → ถามเจ้าของว่าจะอัญเชิญไหม (+ เรียกตัวที่กลับมือ 1 ตัว)
+ * คืนหลายตัวในเอฟเฟกต์เดียว = เหตุการณ์เดียว แต่ละชื่อทำงานครั้งเดียว
+ */
+function processNagaReturns(state) {
+  const events = state.nagaReturns ?? []
+  state.nagaReturns = []
+  for (const id of Object.keys(state.players)) {
+    const mine = events.filter((e) => e.player === id)
+    if (!mine.length) continue
+    const p = state.players[id]
+    const gate = p.spellTrap.find((t) => t && !t.faceDown && getNagaReturnDraw(cardOf(t)))
+    if (gate && !nameUsed(state, p, gate.cardId) && p.deck.length) {
+      markName(state, p, gate.cardId)
+      const draw = getNagaReturnDraw(cardOf(gate))
+      p.hand.push(...p.deck.splice(0, draw.draw))
+      addLog(state, id, 'effect', `🌀 ${draw.reason}`)
+    }
+    const follower = p.hand.find((h) => hasNagaFollow(cardOf(h)) && mine.some((e) => e.followers.includes(h.uid)))
+    if (!follower || nameUsed(state, p, follower.cardId) || !p.field.includes(null)) continue
+    if (summonLockReason(state, id, cardOf(follower))) continue
+    const friends = mine
+      .map((e) => p.hand.find((h) => h.uid === e.uid && h.returnToken === e.token))
+      .filter((h) => h && h.uid !== follower.uid && cardOf(h).level <= 4)
+    const twoZones = p.field.filter((x) => !x).length >= 2
+    const name = cardOf(follower).name
+    queueChoice(state, {
+      player: id,
+      kind: 'nagaFollow',
+      source: follower.uid,
+      friends: Object.fromEntries(friends.map((h) => [h.uid, h.returnToken])),
+      prompt: `${name}: นาคากลับขึ้นมือ — อัญเชิญ${name}ท่าตั้งรับไหม?${twoZones && friends.length ? ' (เรียกตัวที่กลับมือตามมาได้อีก 1 ตัว)' : ''}`,
+      options: [
+        ...(twoZones ? friends.map((h) => ({ id: h.uid, label: `อัญเชิญ + ${cardOf(h).name}` })) : []),
+        { id: 'only', label: `อัญเชิญ${name}อย่างเดียว` },
+        { id: 'skip', label: 'ไม่ใช้' },
+      ],
+    })
+  }
+}
+
+// อัญเชิญหงายจากมือ: นาคาผู้พิทักษ์มณีธาร (002) ค้นนาคา · นาคาผู้ขานเสียงสังข์ (011) ทิ้ง 1 ค้นเวท/กับดักนาคา
+function nagaOnSummon(state, playerId, card) {
+  const search = getNagaSummonSearch(card)
+  const p = state.players[playerId]
+  if (!search || nameUsed(state, p, card.id) || !p.deck.some((c) => search.matches(cardOf(c)))) return
+  if (search.discard) {
+    if (!p.hand.length) return
+    queueChoice(state, {
+      player: playerId,
+      kind: 'nagaDiscard',
+      source: card.id,
+      prompt: `${card.name}: ทิ้งการ์ด 1 ใบ เพื่อค้น${search.label} 1 ใบจากกองไหม?`,
+      options: [...p.hand.map((h) => ({ id: h.uid, label: `ทิ้ง ${cardOf(h).name}` })), { id: 'skip', label: 'ไม่ใช้' }],
+    })
+    return
+  }
+  markName(state, p, card.id)
+  startSearch(state, playerId, card, search.matches, search.label)
 }
 
 // ผู้ดูแลรัง: ชื่อที่เรียกได้ = คีย์ที่หงายบนสนาม (ต้นไทร/ฝูงต่อ) ที่ยังมีสำเนาในกองหรือมือ
@@ -687,7 +922,10 @@ export function fusionProblem(state, playerId, spellUid, fusionUid, materialUids
   if (chosen.length !== need) return `เลือกวัตถุดิบ ${need} ตัว`
   if (chosen.includes(undefined)) return 'วัตถุดิบต้องเป็นมอนสเตอร์ในมือหรือบนสนามของเรา'
   const target = cardOf(fusionInst)
-  if (forestLocked(state, playerId, target)) return FOREST_LOCK_TEXT
+  const only = getFusionSpell(cardOf(spell)).targets
+  if (only && !only.includes(target.id)) return `${cardOf(spell).name} ผสานได้เฉพาะ ${only.map((id) => getCardById(id).name).join(' / ')}`
+  const locked = summonLockReason(state, playerId, target)
+  if (locked) return locked
   if (!matchesFusion(target, chosen.map(cardOf))) {
     return `วัตถุดิบไม่ตรงสูตร: ${getFusionMaterials(target).map((m) => m.label).join(' + ')}`
   }
@@ -731,7 +969,7 @@ export function getReviveTargets(state, playerId, spellCard) {
       card.type === 'monster' &&
       !revive.excludeSummonTypes.includes(card.summonType) &&
       !getSummonOnlyBy(card) &&
-      !forestLocked(state, playerId, card)
+      !summonLockReason(state, playerId, card)
     )
   })
 }
@@ -776,7 +1014,7 @@ export function getMountOptions(state, playerId) {
       pick(0, [])
       return { fusionUid: c.uid, pairs }
     })
-    .filter((o) => o.pairs.length > 0 && !forestLocked(state, playerId, cardOf(p.extraDeck.find((c) => c.uid === o.fusionUid))))
+    .filter((o) => o.pairs.length > 0 && !summonLockReason(state, playerId, cardOf(p.extraDeck.find((c) => c.uid === o.fusionUid))))
 }
 
 export function mountBlocker(state, playerId) {
@@ -820,7 +1058,8 @@ export function specialSummonBlocker(state, playerId, uid) {
   const special = inst && getSpecialSummon(cardOf(inst))
   if (!special) return 'การ์ดใบนี้อัญเชิญพิเศษไม่ได้'
   if (!isPlayersOpenMain(state, playerId)) return 'อัญเชิญได้เฉพาะเฟสหลักในตาของเรา'
-  if (forestLocked(state, playerId, cardOf(inst))) return FOREST_LOCK_TEXT
+  const locked = summonLockReason(state, playerId, cardOf(inst))
+  if (locked) return locked
   if (special.requires) {
     if ((p.usedEffects ?? {})[`special:${inst.cardId}`] === state.turn) return 'ใช้ทางนี้ไปแล้วเทิร์นนี้'
     if (!p.field.includes(null)) return 'ไม่มีช่องมอนสเตอร์ว่าง'
@@ -841,8 +1080,19 @@ export function specialSummonBlocker(state, playerId, uid) {
 }
 
 // กับดักต่อเนื่องที่วางคว่ำ: เปิดหงายได้ในเฟสหลักของเรา ตั้งแต่เทิร์นหลังวาง
+// ผนึกสังข์ระงับมนต์ (014): เปิดในเฟสหลักเราได้ เมื่อมีนาคาหงายและมีเวท/กับดักอื่นบนสนาม
 export function trapActivationBlocker(state, playerId, uid) {
-  const t = state.players[playerId].spellTrap.find((x) => x?.uid === uid)
+  const p = state.players[playerId]
+  const t = p.spellTrap.find((x) => x?.uid === uid)
+  if (t && getTrapEffect(cardOf(t))?.mainPhase) {
+    if (!t.faceDown) return 'เปิดใช้อยู่แล้ว'
+    if (!isPlayersOpenMain(state, playerId)) return 'เปิดได้เฉพาะเฟสหลักในตาของเรา (หรือตอนศัตรูประกาศโจมตี)'
+    if (t.setTurn >= state.turn) return 'เพิ่งวางเทิร์นนี้ เปิดได้ตั้งแต่เทิร์นหน้า'
+    if (nameUsed(state, p, t.cardId)) return `ใช้ "${cardOf(t).name}" ไปแล้วเทิร์นนี้`
+    if (!hasFaceUpNaga(p)) return 'ต้องมีมอนสเตอร์นาคาหงายบนสนามเรา'
+    if (sealTargets(state, playerId, t.uid).length === 0) return 'ไม่มีเวท/กับดักใบอื่นบนสนาม'
+    return null
+  }
   if (!t || !getContinuousTrap(cardOf(t))) return 'ไม่ใช่กับดักต่อเนื่อง'
   if (!t.faceDown) return 'เปิดใช้อยู่แล้ว'
   if (!isPlayersOpenMain(state, playerId)) return 'เปิดได้เฉพาะเฟสหลักในตาของเรา'
@@ -860,6 +1110,12 @@ export function handCardBlocker(state, playerId, uid) {
   if (!isPlayableNonMonster(card)) return 'การ์ดใบนี้ยังใช้ไม่ได้ในเกมขั้นนี้'
   if (!isPlayersOpenMain(state, playerId)) return 'ใช้ได้เฉพาะเฟสหลักในตาของเรา'
   if (card.type === 'trap' && !p.spellTrap.includes(null)) return 'ช่องเวท/กับดักเต็มแล้ว'
+  if (isContinuousSpell(card) && !p.spellTrap.includes(null)) return 'ช่องเวท/กับดักเต็มแล้ว'
+  if (isNagaVeil(card)) {
+    if (nameUsed(state, p, card.id)) return `ใช้ "${card.name}" ไปแล้วเทิร์นนี้`
+    if (returnableNagas(p).length === 0) return 'ต้องมีมอนสเตอร์นาคาหงายของเรา (ไม่ใช่ร่างผสาน) ให้คืนขึ้นมือ'
+  }
+  if (getFusionSpell(card)?.oncePerName && nameUsed(state, p, card.id)) return `ใช้ "${card.name}" ไปแล้วเทิร์นนี้`
   if (getFusionSpell(card) && getFusionTargets(state, playerId, uid).length === 0) {
     return 'ยังไม่มีวัตถุดิบครบสำหรับมอนสเตอร์ผสานร่างในกองพิเศษ'
   }
@@ -873,6 +1129,7 @@ export function handCardBlocker(state, playerId, uid) {
   if (getBranchSpell(card)) {
     if ((p.usedEffects ?? {})[`name:${card.id}`] === state.turn) return `ใช้ "${card.name}" ไปแล้วเทิร์นนี้`
     if (p.forestLockTurn === state.turn) return FOREST_LOCK_TEXT
+    if (p.nagaLockTurn === state.turn) return NAGA_LOCK_TEXT
     if (getEquipTargets(state, playerId, card).length === 0) {
       return 'ต้องมีต้นสาย (พรานหนุ่ม/พระอาจารย์) หงายบนสนาม และร่างสายมืดที่คู่กันในมือ'
     }
@@ -887,7 +1144,8 @@ export function handCardBlocker(state, playerId, uid) {
   const ritual = getRitualInfo(card)
   if (ritual) {
     if (!p.hand.some((c) => c.cardId === ritual.target)) return `ต้องมี "${getCardById(ritual.target).name}" อยู่ในมือ`
-    if (forestLocked(state, playerId, getCardById(ritual.target))) return FOREST_LOCK_TEXT
+    const locked = summonLockReason(state, playerId, getCardById(ritual.target))
+    if (locked) return locked
     const pool = ritualTributePool(state, playerId, uid)
     const hasSubstitute = pool.some((c) => ritual.substitutes.includes(c.cardId))
     const total = pool.reduce((sum, c) => sum + getRitualLevel(cardOf(c), card), 0)
@@ -969,6 +1227,7 @@ export function applyAction(state, action) {
       throw new GameRuleError(`ไม่รู้จักแอ็กชัน ${action.type}`)
   }
   runTriggers(state, next)
+  if (next.nagaReturns?.length && !next.pendingChoice && !next.pendingResponse && !next.winner) processNagaReturns(next)
   attachEvent(state, next, action)
   return next
 }
@@ -1028,10 +1287,12 @@ function queueChoice(state, choice) {
 }
 
 // เอฟเฟกต์เมื่ออัญเชิญหงายสำเร็จ: ค้นการ์ด (002 ฯลฯ) · เรียกพวกจากมือ (ฝูงต่อ) · ดูบนกอง (นกเงือก)
-function onSummoned(state, playerId, card, { skipSearch = false } = {}) {
+// from = โซนที่ลงสนามมา (นาคา 002/011 ทำงานเฉพาะอัญเชิญจากมือ)
+function onSummoned(state, playerId, card, { skipSearch = false, from = 'hand' } = {}) {
   const p = state.players[playerId]
   const used = (key) => (p.usedEffects ?? {})[key] === state.turn
   if (!skipSearch) triggerSummonSearch(state, playerId, card)
+  if (from === 'hand') nagaOnSummon(state, playerId, card)
   const call = getOnSummonCall(card)
   if (call && !used(`name:${card.id}`) && p.field.includes(null)) {
     const from = call.from ?? ['hand']
@@ -1184,7 +1445,7 @@ function choose(state, playerId, optionId) {
     addLog(state, playerId, 'summon', `✨ ${source.name}: ${PLAYER_NAMES[playerId]}เรียก ${cardOf(inst).name} จาก${where} ลงช่องที่ ${zone + 1} ${position === 'attack' ? 'ท่าโจมตี' : 'ท่าตั้งรับ'}${noAttack ? ' (โจมตีไม่ได้เทิร์นนี้)' : ''}`, [
       choice.forestLock ? 'เทิร์นนี้อัญเชิญพิเศษได้เฉพาะการ์ดไพรมหาวัน' : null,
     ].filter(Boolean))
-    onSummoned(state, playerId, cardOf(inst))
+    onSummoned(state, playerId, cardOf(inst), { from: zoneOf === p.hand ? 'hand' : 'deck' })
     return
   }
   if (choice.kind === 'look') {
@@ -1233,6 +1494,10 @@ function choose(state, playerId, optionId) {
     addLog(state, playerId, 'effect', `🪦 ${source.name}: ${PLAYER_NAMES[playerId]}ส่ง ${cardOf(inst).name} จากกองลงสุสาน`)
     return
   }
+  if (choice.kind.startsWith('naga')) {
+    chooseNaga(state, playerId, choice, optionId)
+    return
+  }
   // คืนชีพ
   const inst = p.graveyard.find((c) => c.uid === choice.uid)
   const card = cardOf(inst)
@@ -1265,6 +1530,157 @@ function choose(state, playerId, optionId) {
   addLog(state, playerId, 'summon', `💧 ${PLAYER_NAMES[playerId]}คืนชีพ ${card.name} ท่าตั้งรับ ลงช่องที่ ${zone + 1}`, details)
 }
 
+// ตัวเลือกของเอฟเฟกต์นาคา — เป้าที่หายหรือเปลี่ยนสภาพก่อนแก้ผล = ไม่เกิดผล ไม่เลือกเป้าใหม่
+function chooseNaga(state, playerId, choice, optionId) {
+  const p = state.players[playerId]
+  const oppId = opponentOf(playerId)
+  const source = getCardById(choice.source) ?? cardOf(p.hand.find((h) => h.uid === choice.source) ?? { cardId: 'th07-008' })
+  const skip = optionId === 'skip'
+  const mine = (uid) => p.field.find((m) => m?.uid === uid && !m.faceDown)
+  switch (choice.kind) {
+    case 'nagaShield': {
+      if (skip) return
+      markName(state, p, choice.source)
+      const t = mine(optionId)
+      if (!t) {
+        addLog(state, playerId, 'effect', `${source.name}: เป้าไม่อยู่แล้ว เกราะไม่ติด`)
+        return
+      }
+      t.nagaShield = { until: state.turn + 1 }
+      addLog(state, playerId, 'effect', `🐍 ${source.name}: มอบเกราะให้ ${cardOf(t).name}`, [
+        `ครั้งแรกที่จะถูกทำลายจากการต่อสู้หรือเอฟเฟกต์ศัตรู ให้รอดแทน (ถึงจบเทิร์นถัดไปของ${PLAYER_NAMES[oppId]})`,
+      ])
+      return
+    }
+    case 'nagaPact': {
+      if (skip) return
+      markName(state, p, choice.source)
+      const t = state.players[oppId].field.find((m) => m?.uid === optionId && !m.faceDown)
+      if (!t) {
+        addLog(state, playerId, 'effect', `${source.name}: เป้าไม่อยู่แล้ว สงบศึกไม่สำเร็จ`)
+        return
+      }
+      state.entrySeq = (state.entrySeq ?? 0) + 1
+      const until = state.turn + 1
+      t.pact = { id: state.entrySeq, by: playerId, until }
+      t.cannotAttackUntil = Math.max(t.cannotAttackUntil ?? 0, until)
+      const src = p.field.find((m) => m?.uid === choice.sourceUid)
+      if (src) src.pactIds = [...(src.pactIds ?? []), state.entrySeq]
+      p.pacts = [...(p.pacts ?? []), { id: state.entrySeq, until, heal: getActivated(source).heal }]
+      addLog(state, playerId, 'effect', `🕊️ ${source.name}: สงบศึกกับ ${cardOf(t).name}`, [
+        `${cardOf(t).name} โจมตีไม่ได้ และ${PLAYER_NAMES[playerId]}เลือกโจมตีมันไม่ได้ ถึงจบเทิร์นถัดไปของ${PLAYER_NAMES[oppId]}`,
+        `ครบกำหนดแล้วทั้งสองยังหงายอยู่ฝ่ายเดิม → ฟื้น LP ${formatNumber(getActivated(source).heal)}`,
+      ])
+      return
+    }
+    case 'nagaKingAlly': {
+      if (skip) return
+      markName(state, p, choice.source)
+      const details = []
+      if (!mine(optionId) || !returnToHand(state, playerId, optionId, details)) {
+        addLog(state, playerId, 'effect', `${source.name}: คืนเพื่อนไม่สำเร็จ`)
+        return
+      }
+      const boss = p.field.find((m) => m?.uid === choice.sourceUid)
+      if (boss) boss.noDirectTurn = state.turn
+      details.push(`${source.name} โจมตีตรงไม่ได้เทิร์นนี้`)
+      addLog(state, playerId, 'effect', `🐉 ${source.name}: คืนนาคาเพื่อนขึ้นมือ`, details)
+      const opp = state.players[oppId]
+      const enemies = targetableEnemies(state, playerId)
+      if (enemies.length) {
+        queueChoice(state, {
+          player: playerId,
+          kind: 'nagaKingEnemy',
+          source: choice.source,
+          prompt: `${source.name}: คืนมอนสเตอร์หงายของศัตรู 1 ตัวขึ้นมือเจ้าของไหม?`,
+          options: [...enemies.map((t) => ({ id: t.uid, label: slotLabel(opp, t) })), { id: 'skip', label: 'ไม่คืน' }],
+        })
+      }
+      return
+    }
+    case 'nagaKingEnemy': {
+      if (skip) return
+      const t = state.players[oppId].field.find((m) => m?.uid === optionId && !m.faceDown)
+      const details = []
+      if (t && returnToHand(state, oppId, optionId, details)) {
+        addLog(state, playerId, 'effect', `🐉 ${source.name}: คืนศัตรูขึ้นมือ`, details)
+      } else addLog(state, playerId, 'effect', `${source.name}: เป้าศัตรูไม่อยู่แล้ว`)
+      return
+    }
+    case 'nagaFollow': {
+      const follower = p.hand.find((h) => h.uid === choice.source)
+      const name = cardOf(follower ?? { cardId: 'th07-008' }).name
+      if (skip) {
+        addLog(state, playerId, 'effect', `${name}: ${PLAYER_NAMES[playerId]}ไม่อัญเชิญ`)
+        return
+      }
+      markName(state, p, 'th07-008')
+      if (!follower || !nagaSummonFromHand(state, playerId, follower.uid, `${name} ตามคลื่นคืนฝั่ง`)) {
+        addLog(state, playerId, 'effect', `${name}: อัญเชิญไม่สำเร็จ`)
+        return
+      }
+      if (optionId === 'only') return
+      const friend = p.hand.find((h) => h.uid === optionId && h.returnToken === choice.friends[optionId])
+      if (!friend || !nagaSummonFromHand(state, playerId, friend.uid, name)) {
+        addLog(state, playerId, 'effect', `${name}: เรียกเพื่อนไม่สำเร็จ (เพื่อนไม่อยู่ในมือหรือไม่มีช่องว่าง)`)
+      }
+      return
+    }
+    case 'nagaDiscard': {
+      if (skip) {
+        addLog(state, playerId, 'effect', `${source.name}: ${PLAYER_NAMES[playerId]}ไม่ใช้`)
+        return
+      }
+      const handIndex = p.hand.findIndex((h) => h.uid === optionId)
+      if (handIndex === -1) return
+      markName(state, p, choice.source)
+      const [thrown] = p.hand.splice(handIndex, 1)
+      p.graveyard.push(thrown)
+      addLog(state, playerId, 'effect', `🐚 ${source.name}: ${PLAYER_NAMES[playerId]}ทิ้ง ${cardOf(thrown).name}`)
+      const search = getNagaSummonSearch(source)
+      startSearch(state, playerId, source, search.matches, search.label)
+      return
+    }
+    case 'nagaVeilReturn': {
+      const details = []
+      if (!mine(optionId) || !returnToHand(state, playerId, optionId, details)) {
+        addLog(state, playerId, 'effect', `${source.name}: คืนไม่สำเร็จ`)
+        return
+      }
+      addLog(state, playerId, 'effect', `🌊 ${source.name}: ม่านน้ำพานาคากลับวัง`, details)
+      const options = nagaHandCalls(state, playerId)
+      if (options.length && p.field.includes(null)) {
+        queueChoice(state, {
+          player: playerId,
+          kind: 'nagaVeilSummon',
+          source: choice.source,
+          prompt: `${source.name}: เรียกนาคาระดับ 1–4 จากมือ 1 ตัวท่าตั้งรับไหม? (โจมตีไม่ได้เทิร์นนี้)`,
+          options: [...options.map((h) => ({ id: h.uid, label: cardOf(h).name })), { id: 'skip', label: 'ไม่เรียก' }],
+        })
+      }
+      return
+    }
+    case 'nagaVeilSummon': {
+      if (skip) return
+      if (!nagaSummonFromHand(state, playerId, optionId, source.name)) addLog(state, playerId, 'effect', `${source.name}: เรียกไม่สำเร็จ`)
+      return
+    }
+    case 'nagaSeal': {
+      const name = destroySpellTrap(state, optionId)
+      addLog(state, playerId, 'effect', name ? `🐚 ${source.name}: ทำลาย ${name}` : `${source.name}: เป้าไม่อยู่แล้ว`)
+      return
+    }
+  }
+}
+
+// นาคาระดับ 1–4 ในมือที่เรียกลงสนามได้ตอนนี้ (ตรวจข้อจำกัดอัญเชิญพิเศษ)
+function nagaHandCalls(state, playerId) {
+  return state.players[playerId].hand.filter((h) => {
+    const c = cardOf(h)
+    return isNagaMonster(c) && c.level <= 4 && !summonLockReason(state, playerId, c)
+  })
+}
+
 function specialSummon(state, playerId, uid, position = 'attack') {
   const blocker = specialSummonBlocker(state, playerId, uid)
   if (blocker) throw new GameRuleError(blocker)
@@ -1278,8 +1694,10 @@ function specialSummon(state, playerId, uid, position = 'attack') {
     p.field[zone] = { ...inst, hasAttacked: false, summonedTurn: state.turn, position: special.position ?? position, faceDown: false, positionChangedTurn: null }
     p.usedEffects = { ...(p.usedEffects ?? {}), [`special:${card.id}`]: state.turn }
     if (special.forestLock) setForestLock(state, playerId)
+    if (special.nagaLock) p.nagaLockTurn = state.turn
     addLog(state, playerId, 'summon', `✨ ${PLAYER_NAMES[playerId]}อัญเชิญพิเศษ ${card.name} (ATK ${formatNumber(card.atk)} / DEF ${formatNumber(card.def)}) ลงช่องที่ ${zone + 1} ท่าตั้งรับ`, [
       special.forestLock ? 'เทิร์นนี้อัญเชิญพิเศษได้เฉพาะการ์ดไพรมหาวัน' : null,
+      special.nagaLock ? 'เทิร์นนี้อัญเชิญพิเศษได้เฉพาะการ์ดราชสำนักนาคา' : null,
     ].filter(Boolean))
     onSummoned(state, playerId, card)
     return
@@ -1339,7 +1757,18 @@ function specialSummon(state, playerId, uid, position = 'attack') {
 function activateContinuousTrap(state, playerId, uid) {
   const blocker = trapActivationBlocker(state, playerId, uid)
   if (blocker) throw new GameRuleError(blocker)
-  const t = state.players[playerId].spellTrap.find((x) => x?.uid === uid)
+  const p = state.players[playerId]
+  const t = p.spellTrap.find((x) => x?.uid === uid)
+  if (getTrapEffect(cardOf(t))?.mainPhase) {
+    const card = cardOf(t)
+    markName(state, p, card.id)
+    const options = sealTargets(state, playerId, t.uid).map((x) => ({ id: x.uid, label: x.label, enemy: x.enemy, faceDown: x.faceDown }))
+    p.spellTrap[p.spellTrap.indexOf(t)] = null
+    p.graveyard.push({ uid: t.uid, cardId: t.cardId })
+    addLog(state, playerId, 'trap', `🪤 ${PLAYER_NAMES[playerId]}เปิดกับดัก ${card.name}`, [`${card.name} ลงสุสาน`])
+    queueChoice(state, { player: playerId, kind: 'nagaSeal', source: card.id, prompt: `${card.name}: เลือกเวท/กับดัก 1 ใบที่จะทำลาย`, options })
+    return
+  }
   t.faceDown = false
   const aura = getContinuousTrap(cardOf(t)).aura
   addLog(state, playerId, 'trap', `🥁 ${PLAYER_NAMES[playerId]}เปิดกับดักต่อเนื่อง ${cardOf(t).name}`, [
@@ -1704,7 +2133,7 @@ function attack(state, playerId, attackerUid, targetUid) {
   if (!attacker) throw new GameRuleError('ไม่พบมอนสเตอร์ที่จะโจมตี')
   if (attacker.position === 'defense') throw new GameRuleError('มอนสเตอร์ท่าตั้งรับโจมตีไม่ได้')
   if (isAttackLocked(state, attacker)) throw new GameRuleError('มอนสเตอร์ตัวนี้ถูกห้ามโจมตีในเทิร์นนี้')
-  if (targetUid === null && hasNoDirectAttack(cardOf(attacker))) {
+  if (targetUid === null && (hasNoDirectAttack(cardOf(attacker)) || attacker.noDirectTurn === state.turn)) {
     throw new GameRuleError(`${cardOf(attacker).name} โจมตีตรงไม่ได้`)
   }
   if (!canDeclareAttack(state, playerId, attacker)) {
@@ -1724,8 +2153,11 @@ function attack(state, playerId, attackerUid, targetUid) {
     defender = opp.field.find((m) => m?.uid === targetUid)
     if (!defender) throw new GameRuleError('ไม่พบมอนสเตอร์เป้าหมาย')
     if (!getAttackableTargets(state, playerId).some((m) => m.uid === targetUid)) {
-      const guard = getAttackableTargets(state, playerId)[0]
-      throw new GameRuleError(`ต้องโจมตี ${cardOf(guard).name} ก่อน (${getTaunt(cardOf(guard)).reason.split(': ')[1] ?? 'เฝ้าทาง'})`)
+      if (defender.pact?.by === playerId && defender.pact.until >= state.turn) {
+        throw new GameRuleError(`สงบศึกกับ ${cardOf(defender).name} อยู่ เลือกโจมตีตัวนี้ไม่ได้`)
+      }
+      const guard = getAttackableTargets(state, playerId)[0] ?? defender
+      throw new GameRuleError(`ต้องโจมตี ${cardOf(guard).name} ก่อน (${getTaunt(cardOf(guard))?.reason.split(': ')[1] ?? 'เฝ้าทาง'})`)
     }
   }
 
@@ -1844,6 +2276,19 @@ function getTrapResponses(state, defenderId, attacker, target) {
             options.push({ id: `swap:${t.uid}:${h.uid}`, kind: 'swap', trapUid: t.uid, handUid: h.uid, label: `🪤 ${card.name}: ส่ง ${hc.name} แทน` })
           }
         }
+      } else if (fits && trap.effect === 'nagaTide') {
+        // คลื่นย้อนรอย: เลือกนาคาหงายของเรา 1 ตัวคืนมือ (ไม่จำเป็นต้องเป็นตัวที่ถูกโจมตี)
+        if (!nameUsed(state, p, card.id)) {
+          for (const m of returnableNagas(p)) {
+            options.push({ id: `tide:${t.uid}:${m.uid}`, kind: 'nagaTide', trapUid: t.uid, returnUid: m.uid, label: `🪤 ${card.name}: คืน ${slotLabel(p, m)} ยกเลิกการโจมตี` })
+          }
+        }
+      } else if (fits && trap.effect === 'nagaSeal') {
+        if (!nameUsed(state, p, card.id) && hasFaceUpNaga(p)) {
+          for (const x of sealTargets(state, defenderId, t.uid)) {
+            options.push({ id: `seal:${t.uid}:${x.uid}`, kind: 'nagaSeal', trapUid: t.uid, targetUid: x.uid, enemy: x.enemy, label: `🪤 ${card.name}: ทำลาย${x.label}` })
+          }
+        }
       } else if (fits) options.push({ id: t.uid, kind: trap.effect, trapUid: t.uid, label: `🪤 เปิด ${card.name}` })
     }
     const drum = getContinuousTrap(card)?.drumFusion
@@ -1887,6 +2332,29 @@ function getTrapResponses(state, defenderId, attacker, target) {
       options.push({ id: `guard:${g.uid}`, kind: 'guard', guardUid: g.uid, label: `🏠 ${cardOf(g).name} รับการโจมตีแทน` })
     }
   }
+  // นาคาผู้คุ้มครองสายสัมพันธ์ (003): ศัตรูตีนาคาหงายตัวอื่น → คืนเป้าขึ้นมือ ยกเลิกการโจมตี
+  if (target && !target.faceDown && returnableNagas(p).some((m) => m.uid === target.uid)) {
+    const rescuer = p.field.find((x) => x && !x.faceDown && x.uid !== target.uid && getNagaRescue(cardOf(x)))
+    if (rescuer && !nameUsed(state, p, rescuer.cardId)) {
+      options.push({ id: `rescue:${rescuer.uid}`, kind: 'nagaRescue', sourceUid: rescuer.uid, label: `🐍 ${cardOf(rescuer).name}: คืน ${cardOf(target).name} ขึ้นมือ ยกเลิกการโจมตี` })
+    }
+  }
+  // นาคาผู้ผนึกความลับ (006): ถูกตีขณะหงาย → ส่งการ์ดคว่ำฝ่ายเรา 1 ใบลงสุสาน ผู้โจมตี ATK −500 การต่อสู้นี้
+  const secrets = target && !target.faceDown && getSealedSecrets(cardOf(target))
+  if (secrets && !nameUsed(state, p, target.cardId)) {
+    const hidden = [
+      ...p.field.map((x, i) => x?.faceDown && [x, `มอนสเตอร์คว่ำช่องที่ ${i + 1}`]),
+      ...p.spellTrap.map((x, i) => x?.faceDown && [x, `ช่องเวท/กับดักที่ ${i + 1}`]),
+    ].filter(Boolean)
+    for (const [x, where] of hidden) {
+      options.push({
+        id: `secret:${x.uid}`,
+        kind: 'nagaSecret',
+        costUid: x.uid,
+        label: `🐍 ${cardOf(target).name}: ส่ง ${cardOf(x).name} (${where}) ลงสุสาน · ผู้โจมตี ATK ${formatNumber(secrets.cut)}`,
+      })
+    }
+  }
   return options
 }
 
@@ -1917,6 +2385,7 @@ function battleDestroy(state, ownerId, monster, details) {
     details.push(`🌳 ${hasRootShield(cardOf(monster)).reason} (เหลือ ${monster.growth} แต้ม)`)
     return false
   }
+  if (spendNagaShield(monster, details)) return false
   destroyMonster(state, ownerId, monster.uid, details)
   return true
 }
@@ -1972,13 +2441,14 @@ function onBattleWin(state, ownerId, monster, details) {
 }
 
 const fallText = (card, inst) =>
-  survivesBattle(inst) || rootSaves(inst) ? `${card.name} ไม่ถูกทำลาย (กันการทำลายจากการต่อสู้)` : `${card.name} ถูกทำลาย`
+  survivesBattle(inst) || rootSaves(inst) || (inst.nagaShield && !inst.faceDown) ?`${card.name} ไม่ถูกทำลาย (กันการทำลายจากการต่อสู้)` : `${card.name} ถูกทำลาย`
 
 function resolveMonsterAttack(state, playerId, attacker, defender, details) {
   const oppId = opponentOf(playerId)
   const attackerCard = cardOf(attacker)
   const defenderCard = cardOf(defender)
 
+  const wasFaceDown = defender.faceDown
   // เปิดการ์ดคว่ำก่อนคำนวณ เอฟเฟกต์ของการ์ดที่เพิ่งเปิดจึงมีผลในการต่อสู้นี้
   if (defender.faceDown) {
     defender.faceDown = false
@@ -1986,12 +2456,25 @@ function resolveMonsterAttack(state, playerId, attacker, defender, details) {
     tryAmbushFlip(state, playerId, attacker, defender, details)
   }
   // เกราะป่า: ใช้ครั้งแรกที่เข้าเงื่อนไขต่อใบต่อเทิร์น — รอดการต่อสู้นี้และฝ่ายรับไม่เสีย LP
-  const ward = wardFor(state, oppId, defender)
+  let ward = wardFor(state, oppId, defender)
   if (ward) {
     const owner = state.players[oppId]
     owner.usedEffects = { ...(owner.usedEffects ?? {}), [`ward:${defender.uid}`]: state.turn }
     defender.wardShield = true
     details.push(`🛡️ ${ward}: ${defenderCard.name} รอดการต่อสู้นี้ และ${PLAYER_NAMES[oppId]}ไม่เสีย LP`)
+  }
+  // นาคาอารักขาบัวแก้ว (010): ถูกตีขณะหงายและมีนาคาเพื่อนหงาย → รอด + ไม่เสีย LP (ชื่อละครั้ง/เทิร์น)
+  // ใช้ให้อัตโนมัติเฉพาะเมื่อจะถูกทำลายหรือเสีย LP — ไม่เผาสิทธิ์ทิ้งตอนชนะอยู่แล้ว
+  const lotus = !ward && !wasFaceDown && getNagaLotus(defenderCard)
+  const owner = state.players[oppId]
+  if (lotus && !nameUsed(state, owner, defenderCard.id) && owner.field.some((x) => x && !x.faceDown && x.uid !== defender.uid && isNagaInst(x))) {
+    const outcome = previewBattle(state, playerId, attacker.uid, defender.uid).outcome
+    if (outcome === 'attacker' || (outcome === 'tie' && defender.position === 'attack')) {
+      markName(state, owner, defenderCard.id)
+      defender.wardShield = true
+      ward = lotus.reason
+      details.push(`🪷 ${lotus.reason}: ${defenderCard.name} รอดการต่อสู้นี้ และ${PLAYER_NAMES[oppId]}ไม่เสีย LP`)
+    }
   }
   const inDefense = defender.position === 'defense'
   const result = previewBattle(state, playerId, attacker.uid, defender.uid)
@@ -2131,6 +2614,37 @@ function respond(state, playerId, optionId) {
     addLog(state, attackerOwner, 'battle', `⚔️ ${cardOf(attacker).name} โจมตี ${cardOf(defender).name} — ถูกยกเลิก (เมตตา)`, details)
     return
   }
+  if (option.kind === 'nagaRescue') {
+    const rescuer = p.field.find((m) => m?.uid === option.sourceUid) ?? { cardId: 'th07-003' }
+    markName(state, p, rescuer.cardId)
+    const ok = defender && !defender.faceDown && returnToHand(state, playerId, defender.uid, details)
+    if (!ok) {
+      details.push(`${cardOf(rescuer).name}: คืนเป้าไม่สำเร็จ → การโจมตีดำเนินต่อ`)
+      continueAttack()
+      return
+    }
+    details.push(`🐍 ${PLAYER_NAMES[playerId]}ใช้ ${getNagaRescue(cardOf(rescuer)).reason} → ยกเลิกการโจมตี`)
+    applyAttackDecay(state, attackerOwner, pending.attackerUid, details)
+    addLog(state, attackerOwner, 'battle', `⚔️ ${cardOf(attacker).name} โจมตี ${cardOf(defender).name} — ถูกยกเลิก (นาคาคุ้มครอง)`, details)
+    return
+  }
+  if (option.kind === 'nagaSecret') {
+    markName(state, p, defender.cardId)
+    const secrets = getSealedSecrets(cardOf(defender))
+    const fieldZone = p.field.findIndex((m) => m?.uid === option.costUid)
+    const stZone = p.spellTrap.findIndex((t) => t?.uid === option.costUid)
+    const cost = fieldZone !== -1 ? p.field[fieldZone] : p.spellTrap[stZone]
+    if (fieldZone !== -1) p.field[fieldZone] = null
+    else p.spellTrap[stZone] = null
+    p.graveyard.push({ uid: cost.uid, cardId: cost.cardId })
+    details.push(`🐍 ${PLAYER_NAMES[playerId]}ใช้ ${cardOf(defender).name}: ส่ง ${cardOf(cost).name} (คว่ำ) ลงสุสาน`)
+    if (attacker) {
+      attacker.tempAtk = [...(attacker.tempAtk ?? []), { amount: secrets.cut, reason: `${secrets.reason}: ความลับรั่วไหล`, battleOnly: true }]
+      details.push(`${cardOf(attacker).name} ATK ${formatNumber(secrets.cut)} เฉพาะการต่อสู้นี้`)
+    }
+    continueAttack()
+    return
+  }
   if (option.kind === 'guard') {
     const guard = p.field.find((m) => m?.uid === option.guardUid)
     p.usedEffects = { ...(p.usedEffects ?? {}), [`card:${guard.uid}`]: state.turn }
@@ -2190,6 +2704,29 @@ function respond(state, playerId, optionId) {
     applyAttackDecay(state, attackerOwner, pending.attackerUid, details)
     addLog(state, attackerOwner, 'battle', `⚔️ ${attackerName} โจมตี ${targetName} — ถูกยกเลิก (สับแนว)`, details)
     onSummoned(state, playerId, cardOf(inst))
+    return
+  }
+
+  if (option.kind === 'nagaTide') {
+    markName(state, p, trapCard.id)
+    details.push(`🪤 ${PLAYER_NAMES[playerId]}เปิดกับดัก ${trapCard.name}! · ${trapCard.name} ลงสุสาน`)
+    const back = p.field.find((m) => m?.uid === option.returnUid && !m.faceDown)
+    if (!back || !returnToHand(state, playerId, back.uid, details)) {
+      details.push('คืนนาคาไม่สำเร็จ → การโจมตีดำเนินต่อ')
+      continueAttack()
+      return
+    }
+    applyAttackDecay(state, attackerOwner, pending.attackerUid, details)
+    addLog(state, attackerOwner, 'battle', `⚔️ ${attackerName} โจมตี ${targetName} — ถูกยกเลิก (คลื่นย้อนรอย)`, details)
+    return
+  }
+
+  if (option.kind === 'nagaSeal') {
+    markName(state, p, trapCard.id)
+    details.push(`🪤 ${PLAYER_NAMES[playerId]}เปิดกับดัก ${trapCard.name}! · ${trapCard.name} ลงสุสาน`)
+    const name = hasFaceUpNaga(p) ? destroySpellTrap(state, option.targetUid) : null
+    details.push(name ? `${getTrapEffect(trapCard).reason}: ${name} ถูกทำลาย · การโจมตีดำเนินต่อ` : 'ไม่เกิดผล · การโจมตีดำเนินต่อ')
+    continueAttack()
     return
   }
 
@@ -2318,6 +2855,59 @@ function activate(state, playerId, uid, discardUid, targetUid) {
   const card = cardOf(m)
   const activated = getActivated(card)
   const name = PLAYER_NAMES[playerId]
+
+  // นาคาที่ต้องเลือกเป้า: เปิดตัวเลือก แล้วนับโควต้าชื่อเมื่อยืนยัน (ยกเลิกได้ ไม่เสียสิทธิ์)
+  if (activated.kind === 'nagaShield') {
+    queueChoice(state, {
+      player: playerId,
+      kind: 'nagaShield',
+      source: card.id,
+      prompt: `${card.name}: เลือกนาคาหงายตัวอื่น 1 ตัวรับเกราะ (รอดการถูกทำลายครั้งแรก ถึงจบเทิร์นถัดไปของศัตรู)`,
+      options: [
+        ...nagaShieldTargets(state, playerId, uid).map((t) => ({ id: t.uid, label: slotLabel(p, t) })),
+        { id: 'skip', label: 'ยกเลิก' },
+      ],
+    })
+    return
+  }
+  if (activated.kind === 'nagaPact') {
+    const opp = state.players[opponentOf(playerId)]
+    queueChoice(state, {
+      player: playerId,
+      kind: 'nagaPact',
+      source: card.id,
+      sourceUid: uid,
+      prompt: `${card.name}: เลือกศัตรู 1 ตัวสงบศึก (ตัวนั้นโจมตีไม่ได้ และเราโจมตีมันไม่ได้ ถึงจบเทิร์นถัดไปของศัตรู)`,
+      options: [
+        ...nagaPactTargets(state, playerId).map((t) => ({ id: t.uid, label: slotLabel(opp, t) })),
+        { id: 'skip', label: 'ยกเลิก' },
+      ],
+    })
+    return
+  }
+  if (activated.kind === 'nagaKing') {
+    queueChoice(state, {
+      player: playerId,
+      kind: 'nagaKingAlly',
+      source: card.id,
+      sourceUid: uid,
+      prompt: `${card.name}: เลือกนาคาเพื่อนที่จะคืนขึ้นมือ (จากนั้นคืนศัตรูได้ 1 ตัว · บอสโจมตีตรงไม่ได้เทิร์นนี้)`,
+      options: [
+        ...returnableNagas(p, uid).map((t) => ({ id: t.uid, label: slotLabel(p, t) })),
+        { id: 'skip', label: 'ยกเลิก' },
+      ],
+    })
+    return
+  }
+  if (activated.kind === 'kalaDraw') {
+    const before = getFieldAtk(state, playerId, uid)
+    m.kala -= activated.cost
+    const drawn = p.deck.splice(0, activated.draw)
+    p.hand.push(...drawn)
+    addLog(state, playerId, 'effect', `⏳ ${card.name}: ถอนกาล ${activated.cost} → จั่ว ${drawn.length} ใบ`, [
+      `ATK ${formatNumber(before)} → ${formatNumber(getFieldAtk(state, playerId, uid))} (เหลือกาล ${m.kala})`,
+    ])
+  }
 
   if (activated.kind === 'heal') {
     const before = p.lp
@@ -2536,7 +3126,29 @@ function playSpell(state, playerId, uid, tributeUids = [], fusionTarget = null, 
       `${card.name} ลงสุสาน`,
     ])
     if (getOnSummonSearch(cardOf(target))?.alsoOnRevive) triggerSummonSearch(state, playerId, cardOf(target))
-    else onSummoned(state, playerId, cardOf(target), { skipSearch: true })
+    else onSummoned(state, playerId, cardOf(target), { skipSearch: true, from: 'graveyard' })
+    return
+  }
+
+  if (isContinuousSpell(card)) {
+    const [inst] = p.hand.splice(handIndex, 1)
+    const zone = p.spellTrap.indexOf(null)
+    p.spellTrap[zone] = { uid: inst.uid, cardId: inst.cardId, faceDown: false }
+    addLog(state, playerId, 'spell', `🌀 ${name}ใช้เวทต่อเนื่อง ${card.name} ลงช่องเวท/กับดักที่ ${zone + 1}`)
+    return
+  }
+
+  if (isNagaVeil(card)) {
+    p.graveyard.push(p.hand.splice(handIndex, 1)[0])
+    markName(state, p, card.id)
+    addLog(state, playerId, 'spell', `🌊 ${name}ใช้ ${card.name}`, [`${card.name} ลงสุสาน`])
+    queueChoice(state, {
+      player: playerId,
+      kind: 'nagaVeilReturn',
+      source: card.id,
+      prompt: `${card.name}: เลือกนาคาหงายของเรา 1 ตัวคืนขึ้นมือ`,
+      options: returnableNagas(p).map((m) => ({ id: m.uid, label: slotLabel(p, m) })),
+    })
     return
   }
 
@@ -2625,6 +3237,11 @@ function playSpell(state, playerId, uid, tributeUids = [], fusionTarget = null, 
       materials: [...new Set(tributeUids)],
     }
     const details = [`วัตถุดิบ: ${materialText.join(' + ')}`, `${card.name} ลงสุสาน`]
+    if (fusionSpell.oncePerName) markName(state, p, card.id)
+    if (fusionSpell.nagaLock) {
+      p.nagaLockTurn = state.turn
+      details.push('เทิร์นนี้อัญเชิญพิเศษได้เฉพาะการ์ดราชสำนักนาคา')
+    }
     const bonus = fusionSpell.bonusDraw
     if (bonus?.forFusion === target.id) {
       const drawn = p.deck.splice(0, bonus.count)
@@ -2791,6 +3408,30 @@ function startNextTurn(state, endingPlayerId) {
     ])
   }
 
+  // นาคาผู้ตื่นแห่งกาลกัป: จบเทิร์นของฝ่ายใดก็ตาม ตัวที่หงายสะสมกาล +1 (สูงสุด cap)
+  for (const [id, pl] of Object.entries(state.players)) {
+    for (const m of pl.field) {
+      const kala = m && !m.faceDown && getKala(cardOf(m))
+      if (!kala || (m.kala ?? 0) >= kala.cap) continue
+      m.kala = (m.kala ?? 0) + 1
+      addLog(state, id, 'effect', `⏳ ${cardOf(m).name} สะสมกาล ${m.kala}/${kala.cap} (ATK +${formatNumber(kala.atkPer * m.kala)})`)
+    }
+  }
+  // สงบศึก (นาคาธิบดี): ครบกำหนดตอนจบเทิร์นนี้ → ฟื้น LP เมื่อทั้งสองตัวเดิมยังหงายอยู่ฝ่ายเดิม (ตรวจครั้งเดียว)
+  for (const [id, pl] of Object.entries(state.players)) {
+    for (const pact of (pl.pacts ?? []).filter((x) => x.until <= state.turn)) {
+      const source = pl.field.find((m) => m?.pactIds?.includes(pact.id) && !m.faceDown)
+      const target = state.players[opponentOf(id)].field.find((m) => m?.pact?.id === pact.id && !m.faceDown)
+      if (pact.until !== state.turn || !source || !target) continue
+      const before = pl.lp
+      pl.lp += pact.heal
+      addLog(state, id, 'effect', `🕊️ ${cardOf(source).name}: รักษาสัญญาสงบศึกกับ ${cardOf(target).name} ครบกำหนด`, [
+        `LP ${formatNumber(before)} + ${formatNumber(pact.heal)} = ${formatNumber(pl.lp)}`,
+      ])
+    }
+    if (pl.pacts) pl.pacts = pl.pacts.filter((x) => x.until > state.turn)
+  }
+
   // ตัวปรับ "จนจบเทิร์นนี้" หมดอายุ
   for (const pl of Object.values(state.players)) {
     for (const m of pl.field) if (m?.tempAtk) delete m.tempAtk
@@ -2798,9 +3439,10 @@ function startNextTurn(state, endingPlayerId) {
 
   state.turn += 1
   state.activePlayer = nextId
-  // ตัวปรับ "ถึงจบเทิร์นถัดไปของศัตรู" หมดอายุ
+  // ตัวปรับ "ถึงจบเทิร์นถัดไปของศัตรู" หมดอายุ (รวมเกราะนาคาผู้รักษาศีล)
   for (const pl of Object.values(state.players)) {
     for (const m of pl.field) if (m?.statMods) m.statMods = m.statMods.filter((x) => x.until >= state.turn)
+    for (const m of pl.field) if (m?.nagaShield && m.nagaShield.until < state.turn) delete m.nagaShield
   }
   state.phase = 'main1'
   next.hasNormalSummoned = false

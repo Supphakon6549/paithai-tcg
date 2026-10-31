@@ -158,7 +158,7 @@ export function TrapActionSheet({ card, blocker, onActivate, onInspect, onClose 
       </div>
       <SheetButtons onInspect={onInspect} onClose={onClose}>
         <button type="button" className="btn btn--primary" disabled={Boolean(blocker)} onClick={onActivate}>
-          🥁 เปิดหงาย
+          {card.trapSubtype === 'continuous' ? '🥁 เปิดหงาย' : '🪤 เปิดใช้'}
         </button>
       </SheetButtons>
     </div>

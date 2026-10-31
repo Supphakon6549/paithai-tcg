@@ -115,6 +115,9 @@ const isForestAnimal = (c) => isForestCard(c) && c.type === 'monster' && animalS
 // คนเป็น ๆ สำหรับขึ้นขี่: มีเผ่ามนุษย์ที่กำหนด และไม่มีเผ่าผี/อสูรติดอยู่ (ปอบ กระสือ พรานไสยเวท ขี่ไม่ได้)
 const livingHuman = (tribe) => (c) => hasTribe(tribe)(c) && !hasTribe('ghost')(c) && !hasTribe('demon')(c)
 const hasGhostAlly = ({ allies }) => allies.some(isGhost)
+// การ์ดชุดราชสำนักนาคา (TH07) — นับนาคาจาก groupTag เท่านั้น ไม่ใช่เผ่าสัตว์เลื้อยคลานทั้งหมด
+export const isNagaCard = (c) => c?.groupTag === 'naga-court'
+export const isNagaMonster = (c) => isNagaCard(c) && c.type === 'monster'
 const isHolyWater = (c) => c.id === 'th01-014' || (c.spellSubtypeName ?? '').includes('น้ำมนต์')
 
 export const CARD_EFFECTS = {
@@ -595,6 +598,92 @@ export const CARD_EFFECTS = {
     dismount: true,
     activated: { kind: 'scout', label: 'ดูกับดักคว่ำศัตรู 1 ใบ', oncePer: 'name' },
   },
+  // ---------- TH07 ราชสำนักนาคา (docs/TH07-DESIGN.md) ----------
+  // นาคาผู้รักษาศีลแห่งลุ่มน้ำ
+  'th07-001': {
+    activated: { kind: 'nagaShield', label: 'มอบเกราะให้นาคาตัวอื่น 1 ตัว', oncePer: 'name' },
+  },
+  // นาคาผู้พิทักษ์มณีธาร
+  'th07-002': {
+    nagaSummonSearch: {
+      label: 'มอนสเตอร์นาคาระดับ 1–4 ชื่ออื่น',
+      matches: (c) => isNagaMonster(c) && c.level <= 4 && c.id !== 'th07-002',
+    },
+  },
+  // นาคาผู้คุ้มครองสายสัมพันธ์
+  'th07-003': {
+    nagaRescue: { reason: 'นาคาผู้คุ้มครองสายสัมพันธ์: คืนเพื่อนขึ้นมือ' },
+  },
+  // นาคาธิบดีแห่งวังสันติ
+  'th07-004': {
+    activated: { kind: 'nagaPact', label: 'สงบศึกกับศัตรู 1 ตัว', oncePer: 'name', heal: 500 },
+  },
+  // นาคาผู้ตื่นแห่งกาลกัป (แต้มกาลแยกจากแต้มเติบโต)
+  'th07-005': {
+    kala: { cap: 3, atkPer: 200 },
+    activated: { kind: 'kalaDraw', label: 'ถอนกาล 3 · จั่ว 2 ใบ', oncePer: 'name', cost: 3, draw: 2 },
+  },
+  // นาคาผู้ผนึกความลับ
+  'th07-006': {
+    sealedSecrets: { per: 300, max: 3, cut: -500, reason: 'นาคาผู้ผนึกความลับ' },
+  },
+  // ประตูวังวนบาดาล (เวทต่อเนื่อง)
+  'th07-007': {
+    continuousSpell: true,
+    nagaReturnDraw: { draw: 1, reason: 'ประตูวังวนบาดาล: นาคากลับมือ จั่ว 1 ใบ' },
+  },
+  // นาคาผู้ตามคลื่นคืนฝั่ง (ทำงานจากมือ)
+  'th07-008': {
+    nagaFollow: true,
+  },
+  // นาคาน้อยนำกระแส
+  'th07-009': {
+    specialSummon: {
+      requires: (cards) => cards.some((c) => isNagaMonster(c) && c.id !== 'th07-009'),
+      requiresText: 'ต้องมีมอนสเตอร์นาคาชื่ออื่นหงายบนสนามเรา',
+      position: 'defense',
+      nagaLock: true,
+      label: 'มีนาคาชื่ออื่นหงาย · อัญเชิญจากมือท่าตั้งรับ',
+    },
+  },
+  // นาคาอารักขาบัวแก้ว
+  'th07-010': {
+    nagaLotus: { reason: 'นาคาอารักขาบัวแก้ว: บัวแก้วคุ้มกัน' },
+  },
+  // นาคาผู้ขานเสียงสังข์
+  'th07-011': {
+    nagaSummonSearch: {
+      discard: true,
+      label: 'เวทหรือกับดักนาคา',
+      matches: (c) => isNagaCard(c) && (c.type === 'spell' || c.type === 'trap'),
+    },
+  },
+  // ม่านน้ำคืนวัง
+  'th07-012': {
+    nagaVeil: true,
+  },
+  // คลื่นย้อนรอย (กับดัก)
+  'th07-013': {
+    trap: { trigger: 'enemyAttacks', effect: 'nagaTide', reason: 'คลื่นย้อนรอย: คืนนาคาขึ้นมือ ยกเลิกการโจมตี' },
+  },
+  // ผนึกสังข์ระงับมนต์ (กับดัก — เปิดในเฟสหลักเราได้ด้วย)
+  'th07-014': {
+    trap: { trigger: 'enemyAttacks', effect: 'nagaSeal', mainPhase: true, reason: 'ผนึกสังข์ระงับมนต์: ทำลายเวท/กับดัก' },
+  },
+  // สายธารประสานนาคา (เวทผสาน — เฉพาะพญานาคราชมณีบาดาล)
+  'th07-015': {
+    fusionSpell: { targets: ['th07-016'], nagaLock: true, oncePerName: true },
+  },
+  // พญานาคราชมณีบาดาล (ผสานนาคาชื่อต่างกัน 3 ตัว)
+  'th07-016': {
+    fusionMaterials: [
+      { label: 'มอนสเตอร์นาคา', matches: isNagaMonster },
+      { label: 'มอนสเตอร์นาคา', matches: isNagaMonster },
+      { label: 'มอนสเตอร์นาคา (ชื่อต่างกันทั้ง 3)', matches: isNagaMonster },
+    ],
+    fusionDistinct: true,
+    activated: { kind: 'nagaKing', label: 'คืนนาคาเพื่อน แล้วคืนศัตรู 1 ตัวขึ้นมือ', oncePer: 'name' },
+  },
   // ช้างศึกไอยรา
   'th01-020': {
     noTributeIf: { reason: 'มีมอนสเตอร์เผ่าทหารหาญบนสนาม', isActive: ({ allies }) => allies.some(isWarrior) },
@@ -844,6 +933,17 @@ export const getMountVerb = (card) => effectOf(card).mountVerb ?? 'ขึ้น�
 export const getGrowthSpell = (card) => effectOf(card).growthSpell ?? null
 export const isPlantCard = isPlant
 export const hasDiverseAnimalTeam = hasDiverseAnimals
+export const getNagaSummonSearch = (card) => effectOf(card).nagaSummonSearch ?? null
+export const getNagaRescue = (card) => effectOf(card).nagaRescue ?? null
+export const getKala = (card) => effectOf(card).kala ?? null
+export const getSealedSecrets = (card) => effectOf(card).sealedSecrets ?? null
+export const isContinuousSpell = (card) => effectOf(card).continuousSpell === true
+export const getNagaReturnDraw = (card) => effectOf(card).nagaReturnDraw ?? null
+export const hasNagaFollow = (card) => effectOf(card).nagaFollow === true
+export const getNagaLotus = (card) => effectOf(card).nagaLotus ?? null
+export const isNagaVeil = (card) => effectOf(card).nagaVeil === true
+// กับดักที่เปิดในเฟสหลักของเราได้ (กับดักต่อเนื่อง หรือกับดักที่ระบุ mainPhase)
+export const isMainPhaseTrap = (card) => Boolean(getContinuousTrap(card) || getTrapEffect(card)?.mainPhase)
 
 export function getBranchSpell(card) {
   return effectOf(card).branchSpell ?? null
@@ -859,7 +959,9 @@ export function isPlayableNonMonster(card) {
           getEquip(card) ||
           getBuffSpell(card) ||
           getBranchSpell(card) ||
-          getGrowthSpell(card)
+          getGrowthSpell(card) ||
+          isContinuousSpell(card) ||
+          isNagaVeil(card)
       )
     )
   }
@@ -906,6 +1008,8 @@ export function assignFusionSlots(recipe, materialCards) {
 }
 
 export function matchesFusion(fusionCard, materialCards) {
+  // สูตรชื่อต่างกัน (พญานาคราช): ห้ามใช้การ์ดชื่อซ้ำเป็นวัตถุดิบ
+  if (effectOf(fusionCard).fusionDistinct && new Set(materialCards.map((c) => c.id)).size !== materialCards.length) return false
   return assignFusionSlots(getFusionMaterials(fusionCard), materialCards) !== null
 }
 

@@ -6,11 +6,15 @@ import {
   getEquip,
   getFusionSpell,
   getGrowthSpell,
+  getKala,
+  getNagaSummonSearch,
   getOnSummonCall,
   getOnSummonLook,
   getOnSummonSearch,
   getReviveSpell,
   getRitualInfo,
+  isContinuousSpell,
+  isNagaVeil,
   isPlayableNonMonster,
 } from './effects'
 import {
@@ -73,6 +77,10 @@ export function getAiAction(state, playerId = AI) {
   if (state.pendingResponse) {
     // เปิดกับดักเสมอ (กับดักยกเลิกการโจมตีก่อน ถ้าไม่มีค่อยใช้กลองศึกผสานร่าง)
     const options = state.pendingResponse.options ?? state.pendingResponse.trapUids.map((id) => ({ id }))
+    // ตัวเลือกนาคามีต้นทุน (คืนตัวขึ้นมือ / ทิ้งการ์ดคว่ำ) → จำลองผลแต่ละทางแล้วเลือกทางที่ดีที่สุด
+    if (options.some((o) => NAGA_RESPONSES.includes(o.kind))) {
+      return { type: 'respond', player: playerId, trapUid: bestResponse(state, playerId, options) }
+    }
     const best = options.find((o) => o.kind !== 'drum') ?? options[0]
     return { type: 'respond', player: playerId, trapUid: best.id }
   }
@@ -92,7 +100,10 @@ export function getAiAction(state, playerId = AI) {
         chooseRitual(state, playerId)
       if (spell) return spell
       const special =
-        chooseBranchSpell(state, playerId) ?? chooseSpecialSummon(state, playerId) ?? chooseReviveSpell(state, playerId)
+        chooseBranchSpell(state, playerId) ??
+        chooseSpecialSummon(state, playerId) ??
+        chooseReviveSpell(state, playerId) ??
+        chooseNagaSpell(state, playerId)
       if (special) return special
       const summon = chooseSummon(state, playerId)
       if (summon) return summon
@@ -138,7 +149,7 @@ function summonScore(state, playerId, inst) {
     atk = getFieldAtk(probe, playerId, inst.uid)
   }
   let bonus = 0
-  if (getOnSummonSearch(card) || getOnSummonCall(card) || getOnSummonLook(card)) bonus += 400
+  if (getOnSummonSearch(card) || getOnSummonCall(card) || getOnSummonLook(card) || getNagaSummonSearch(card)) bonus += 400
   // ต้นสายของสายมืด: มีคำสาปพันธะเงา + ร่างสายมืดคู่กันในมือ
   const branch = p.hand.map((h) => getBranchSpell(cardOf(h))).find(Boolean)
   if (branch?.pairs.some((pair) => pair.from === card.id && p.hand.some((h) => h.cardId === pair.to))) bonus += 900
@@ -172,11 +183,13 @@ function chooseSummon(state, playerId) {
     }
   }
   if (!bestNormal) return null
+  // นาคาที่ค้นการ์ดตอนอัญเชิญต้องลงหงาย (วางคว่ำไม่เกิดเอฟเฟกต์)
+  const searcher = getNagaSummonSearch(cardOf(bestNormal)) && !nagaNameUsed(state, playerId, bestNormal.cardId)
   return {
     type: 'summon',
     player: playerId,
     uid: bestNormal.uid,
-    position: positionFor(state, playerId, score.get(bestNormal.uid).atk),
+    position: searcher ? 'attack' : positionFor(state, playerId, score.get(bestNormal.uid).atk),
   }
 }
 
@@ -197,6 +210,7 @@ function chooseOption(state, playerId) {
     return [...p.hand, ...p.deck, ...p.graveyard].find((c) => c.uid === uid)
   }
   if (choice.kind === 'mill' || choice.kind === 'scout') return choice.options[0].id
+  if (choice.kind.startsWith('naga')) return chooseNagaOption(state, playerId, choice)
   // เรียกพวก / ดูบนกอง / ลงจากหลัง → เลือกใบที่มีค่ามากสุด
   if (['summonFromHand', 'look', 'dismount'].includes(choice.kind)) {
     const best = [...realOptions].sort((a, b) => cardValue(inHandOrDeck(b.id)) - cardValue(inHandOrDeck(a.id)))[0]
@@ -273,9 +287,12 @@ function chooseBuffSpell(state, playerId) {
 }
 
 // กับดักต่อเนื่องที่วางไว้: เปิดหงายเมื่อเปิดได้
+// ผนึกสังข์ (เปิดในเฟสหลักได้): ใช้เฉพาะเมื่อศัตรูมีเวท/กับดักหงายอยู่ (ไม่งั้นเก็บไว้ตอบโต้การโจมตี)
 function chooseContinuousTrap(state, playerId) {
+  const opp = state.players[opponentOf(playerId)]
+  const enemyFaceUp = Boolean(opp.fieldSpell) || opp.spellTrap.some((t) => t && !t.faceDown)
   const trap = state.players[playerId].spellTrap.find(
-    (t) => t && getContinuousTrap(cardOf(t)) && !trapActivationBlocker(state, playerId, t.uid)
+    (t) => t && !trapActivationBlocker(state, playerId, t.uid) && (getContinuousTrap(cardOf(t)) || enemyFaceUp)
   )
   return trap ? { type: 'activateTrap', player: playerId, uid: trap.uid } : null
 }
@@ -347,6 +364,15 @@ function chooseActivation(state, playerId) {
       return { type: 'activate', player: playerId, uid: m.uid }
     }
     if (activated.kind === 'forestCall' || activated.kind === 'nestCall') return { type: 'activate', player: playerId, uid: m.uid }
+    if (['nagaShield', 'kalaDraw', 'nagaKing'].includes(activated.kind)) return { type: 'activate', player: playerId, uid: m.uid }
+    if (activated.kind === 'nagaPact') {
+      // สงบศึกกับศัตรูที่แรงกว่าตัวที่แรงที่สุดของเรา (ตีไม่ชนะอยู่แล้ว)
+      const oppId = opponentOf(playerId)
+      const ourBest = Math.max(0, ...state.players[playerId].field.filter(Boolean).map((x) => getFieldAtk(state, playerId, x.uid)))
+      if (state.players[oppId].field.some((x) => x && !x.faceDown && getFieldAtk(state, oppId, x.uid) > ourBest)) {
+        return { type: 'activate', player: playerId, uid: m.uid }
+      }
+    }
     if (activated.kind === 'scout' && canAttackThisTurn(state)) return { type: 'activate', player: playerId, uid: m.uid }
     if (['bind', 'drain', 'curse'].includes(activated.kind)) {
       // เลือกศัตรูที่ ATK สูงสุด (ภัยใหญ่สุด) · ดูดพลังใช้เฉพาะเทิร์นที่โจมตีได้
@@ -465,4 +491,95 @@ export function runAiTurn(state, playerId = AI) {
     current = applyAction(current, action)
   }
   throw new Error('AI วนลูปไม่จบเทิร์น')
+}
+
+// ---------- TH07 ราชสำนักนาคา ----------
+const NAGA_RESPONSES = ['nagaRescue', 'nagaSecret', 'nagaTide', 'nagaSeal']
+const nagaNameUsed = (state, playerId, cardId) =>
+  (state.players[playerId].usedEffects ?? {})[`name:${cardId}`] === state.turn
+
+// คะแนนกระดานแบบหยาบ: LP + มอนสเตอร์บนสนาม + การ์ดในมือ + เวท/กับดัก (ของเราลบของศัตรู)
+function boardScore(state, playerId) {
+  if (state.winner) return state.winner === playerId ? 1e6 : -1e6
+  const side = (pl) =>
+    pl.lp + 1000 * pl.field.filter(Boolean).length + 300 * pl.hand.length + 250 * pl.spellTrap.filter(Boolean).length
+  return side(state.players[playerId]) - side(state.players[opponentOf(playerId)])
+}
+
+// เลือกการตอบโต้ที่ได้กระดานดีที่สุด (เสมอกัน = ไม่ใช้ เก็บทรัพยากรไว้)
+function bestResponse(state, playerId, options) {
+  let best = { id: null, score: -Infinity }
+  for (const id of [null, ...options.map((o) => o.id)]) {
+    try {
+      const score = boardScore(applyAction(state, { type: 'respond', player: playerId, trapUid: id }), playerId)
+      if (score > best.score) best = { id, score }
+    } catch {
+      // ตัวเลือกที่ใช้ไม่ได้ข้ามไป
+    }
+  }
+  return best.id
+}
+
+// เวทนาคา: ประตูวังวน (ลงเมื่อยังไม่มี) · ม่านน้ำคืนวัง (คืนตัวค้นการ์ดแล้วเรียกกลับมาค้นซ้ำ)
+function chooseNagaSpell(state, playerId) {
+  const p = state.players[playerId]
+  const gateUp = p.spellTrap.some((t) => t && !t.faceDown && isContinuousSpell(cardOf(t)))
+  const gate = !gateUp && playable(state, playerId, (c) => isContinuousSpell(c))[0]
+  if (gate) return { type: 'playSpell', player: playerId, uid: gate.uid }
+  const veil = playable(state, playerId, (c) => isNagaVeil(c))[0]
+  if (veil && p.field.some((m) => m && !m.faceDown && recastValue(state, playerId, m) > 0)) {
+    return { type: 'playSpell', player: playerId, uid: veil.uid }
+  }
+  return null
+}
+
+// ค่าของการคืนนาคาตัวนี้ขึ้นมือแล้วลงใหม่: ตัวค้นการ์ดที่ยังไม่ใช้สิทธิ์เทิร์นนี้ = คุ้ม · ตัวที่สะสมกาลอยู่ = ไม่คุ้ม
+function recastValue(state, playerId, m) {
+  const card = cardOf(m)
+  if (card.summonType === 'fusion' || card.groupTag !== 'naga-court') return -Infinity
+  if (getKala(card) && m.kala) return -1000 * m.kala
+  const search = getNagaSummonSearch(card)
+  if (search && !nagaNameUsed(state, playerId, card.id)) {
+    if (state.players[playerId].deck.some((c) => search.matches(cardOf(c)))) return 1000
+  }
+  return -card.atk / 10
+}
+
+const fieldInst = (state, uid) =>
+  Object.values(state.players)
+    .flatMap((pl) => pl.field)
+    .find((m) => m?.uid === uid)
+
+function chooseNagaOption(state, playerId, choice) {
+  const real = choice.options.filter((o) => o.id !== 'skip')
+  const oppId = opponentOf(playerId)
+  const atkOf = (uid) => {
+    const m = fieldInst(state, uid)
+    if (!m) return 0
+    return getFieldAtk(state, state.players[playerId].field.includes(m) ? playerId : oppId, uid)
+  }
+  const hand = state.players[playerId].hand
+  const best = (score) => [...real].sort((a, b) => score(b) - score(a))[0]?.id ?? 'skip'
+  switch (choice.kind) {
+    case 'nagaShield':
+    case 'nagaPact':
+    case 'nagaKingEnemy':
+      return best((o) => atkOf(o.id))
+    case 'nagaKingAlly':
+    case 'nagaVeilReturn':
+      return best((o) => recastValue(state, playerId, fieldInst(state, o.id)))
+    case 'nagaVeilSummon':
+      return best((o) => {
+        const card = cardOf(hand.find((h) => h.uid === o.id))
+        return (getNagaSummonSearch(card) && !nagaNameUsed(state, playerId, card.id) ? 2000 : 0) + card.def
+      })
+    case 'nagaFollow':
+      return real.find((o) => o.id !== 'only')?.id ?? 'only'
+    case 'nagaDiscard':
+      return best((o) => -cardValue(hand.find((h) => h.uid === o.id)))
+    case 'nagaSeal':
+      return (real.find((o) => o.enemy && !o.faceDown) ?? real.find((o) => o.enemy) ?? real[0]).id
+    default:
+      return real[0]?.id ?? 'skip'
+  }
 }

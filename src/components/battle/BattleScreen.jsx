@@ -31,7 +31,7 @@ import {
   getAiAction,
   getBranchSpell,
   getBuffSpell,
-  getContinuousTrap,
+  isMainPhaseTrap,
   getEquip,
   getEquipTargets,
   getEvolve,
@@ -412,6 +412,9 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
     if (m.curse?.until >= game.turn) return { tone: 'lose', text: 'ต้องสาป' }
     if (m.cannotAttackTurn >= game.turn || m.cannotAttackUntil >= game.turn) return { tone: 'lose', text: 'ห้ามโจมตี' }
     if (m.growth > 0 && !m.faceDown) return { tone: 'win', text: `🌱 ${m.growth}` }
+    if (m.kala > 0 && !m.faceDown) return { tone: 'win', text: `⏳ ${m.kala}` }
+    if (m.nagaShield && !m.faceDown) return { tone: 'win', text: '🛡️ เกราะ' }
+    if (m.pact?.until >= game.turn) return { tone: 'tie', text: '🕊️ สงบศึก' }
     return null
   }
 
@@ -799,7 +802,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
         player={me}
         lpBadge={<SideLp player={me} isActive={game.activePlayer === PLAYER} />}
         onSpellTrapTap={(t) => {
-          if (t.faceDown && getContinuousTrap(cardOf(t)) && isMyTurn) {
+          if (t.faceDown && isMainPhaseTrap(cardOf(t)) && isMyTurn) {
             setSelectedHandUid(null)
             setSelectedFieldUid(null)
             setSelectedTrapUid((uid) => (uid === t.uid ? null : t.uid))
