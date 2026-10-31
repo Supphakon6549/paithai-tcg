@@ -738,6 +738,28 @@ button.pile:hover {
   .battle { --field-zoom: 0.2; --st-zoom: 0.15; }
 }
 
+/* มือถือ: ขนาดการ์ดตามความกว้างจอ ให้แถวมอนสเตอร์ 5 ช่องเหลือที่ว่างข้างละนิด ไม่ชนขอบกระดาน
+   (ตัวเลือกเจาะจงกว่าธีม เพื่อทับค่ามือถือใน BattleTheme.css) */
+.battle[data-battle-root] { --field-zoom: 0.14; --st-zoom: 0.115; --hand-zoom: 0.24; }
+@media (min-width: 345px) {
+  .battle[data-battle-root] { --field-zoom: 0.158; --st-zoom: 0.125; --hand-zoom: 0.25; }
+}
+@media (min-width: 370px) {
+  .battle[data-battle-root] { --field-zoom: 0.17; --st-zoom: 0.133; --hand-zoom: 0.26; }
+}
+@media (min-width: 400px) {
+  .battle[data-battle-root] { --field-zoom: 0.185; --st-zoom: 0.143; --hand-zoom: 0.27; }
+}
+@media (min-width: 440px) {
+  .battle[data-battle-root] { --field-zoom: 0.2; --st-zoom: 0.155; --hand-zoom: 0.28; }
+}
+@media (min-width: 520px) {
+  .battle[data-battle-root] { --field-zoom: 0.25; --st-zoom: 0.19; --hand-zoom: 0.32; }
+}
+@media (min-width: 720px) {
+  .battle[data-battle-root] { --field-zoom: 0.215; --st-zoom: 0.17; --hand-zoom: 0.285; }
+}
+
 @media (min-width: 520px) {
   .battle { --field-zoom: 0.25; --st-zoom: 0.19; --hand-zoom: 0.32; }
   .mini-card__atk { font-size: 12px; }
