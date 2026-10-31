@@ -904,7 +904,7 @@ export default function BattleScreen({ active = true, deckList, extraDeckList, a
             onClose={() => setSelectedHandUid(null)}
           />
         )}
-        <div className="hand__row">
+        <div className="hand__row" style={{ '--hand-n': Math.max(1, me.hand.length) }}>
           {me.hand.map((inst) => {
             const card = cardOf(inst)
             const picking = ritualPick || effectPick || fusionPick || revivePick || equipPick || mountPick

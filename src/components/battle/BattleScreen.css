@@ -572,6 +572,19 @@ button.pile:hover {
 
 .hand__row > .mini-card { scroll-snap-align: start; }
 
+/* พัดการ์ดในมือ (ธีมวางกลางและปิดการเลื่อน): ยิ่งการ์ดเยอะยิ่งซ้อนกันมาก ให้ทั้งพัดอยู่ในจอเสมอ
+   ช่วงพัด = n × กว้างการ์ด + (n − 1) × (gap + 2 × ระยะซ้อน) ต้องไม่เกินแถว (หักขอบที่การ์ดเอียงยื่นออก)
+   ระยะซ้อนไม่น้อยกว่าค่าเดิมของธีม (−12px) และยังเห็นการ์ดแต่ละใบอย่างน้อย ~20% */
+.hand { container-type: inline-size; }
+.battle .hand__row > .mini-card {
+  --hand-card-w: calc(316px * var(--hand-zoom));
+  margin-inline: clamp(
+    calc(var(--hand-card-w) * -0.4),
+    calc((100cqw - 48px - var(--hand-n) * var(--hand-card-w) - (var(--hand-n) - 1) * 8px) / (2 * max(1, var(--hand-n) - 1))),
+    -12px
+  ) !important;
+}
+
 .hand__empty {
   margin: 0;
   color: var(--text-dim);
