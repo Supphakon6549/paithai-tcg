@@ -7,6 +7,14 @@ import './NagaShowcaseCard.css'
 
 // Shared across sets. Bespoke artwork may integrate the subject with the frame.
 const TEMPLATES = {
+  'th05-001': '/cards/showcase/th05-001-template-v1.webp',
+  'th05-002': '/cards/showcase/th05-002-template-v1.webp',
+  'th05-006': '/cards/showcase/th05-006-template-v1.webp',
+  'th05-007': '/cards/showcase/th05-007-template-v1.webp',
+  'th05-008': '/cards/showcase/th05-008-template-v1.webp',
+  'th05-005': '/cards/showcase/th05-005-template-v4.webp',
+  'th05-003': '/cards/showcase/th05-003-template-v2.webp',
+  'th05-004': '/cards/showcase/th05-004-template-v4.webp',
   'th04-001': '/cards/showcase/th04-001-template-v1.webp',
   'th04-002': '/cards/showcase/th04-002-template-v2.webp',
   'th04-003': '/cards/showcase/th04-003-template-v1.webp',
