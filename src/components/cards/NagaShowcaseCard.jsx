@@ -7,6 +7,21 @@ import './NagaShowcaseCard.css'
 
 // Shared across sets. Bespoke artwork may integrate the subject with the frame.
 const TEMPLATES = {
+  'th08-001': '/cards/showcase/th08-001-template-v6.webp',
+  'th08-002': '/cards/showcase/th08-002-template-v3.webp',
+  'th08-003': '/cards/showcase/th08-003-template-v3.webp',
+  'th08-004': '/cards/showcase/th08-004-template-v2.webp',
+  'th08-005': '/cards/showcase/th08-005-template-v2.webp',
+  'th08-006': '/cards/showcase/th08-006-template-v2.webp',
+  'th08-007': '/cards/showcase/th08-007-template-v2.webp',
+  'th08-008': '/cards/showcase/th08-008-template-v3.webp',
+  'th08-009': '/cards/showcase/th08-009-template-v2.webp',
+  'th08-010': '/cards/showcase/th08-010-template-v2.webp',
+  'th08-011': '/cards/showcase/th08-011-template-v2.webp',
+  'th08-012': '/cards/showcase/th08-012-template-v6.webp',
+  'th08-013': '/cards/showcase/th08-013-template-v3.webp',
+  'th08-014': '/cards/showcase/th08-014-template-v3.webp',
+  'th08-015': '/cards/showcase/th08-015-template-v2.webp',
   'th05-001': '/cards/showcase/th05-001-template-v1.webp',
   'th05-002': '/cards/showcase/th05-002-template-v1.webp',
   'th05-006': '/cards/showcase/th05-006-template-v1.webp',

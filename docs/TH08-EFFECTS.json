@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "status": "design-specification-not-runtime",
+  "reviewDate": "2026-11-07",
+  "cards": [
+    {
+      "id": "th08-001",
+      "name": "ยันต์เสริมดวง",
+      "kind": "revealTopAddThenDrawIfMonster",
+      "status": "new",
+      "rules": {
+        "revealCount": 1,
+        "addTo": "hand",
+        "bonusDraw": 1,
+        "conditionType": "monster"
+      },
+      "notes": "เปิดใบบนสุดให้ทั้งสองฝ่ายเห็น แล้วนำขึ้นมือ ไม่ใช่เลือกหรือค้น; โบนัสดูประเภทจริงของใบที่เปิด ถ้ากองเหลือใบเดียวรับใบนั้นและไม่จั่วเพิ่ม กองว่างห้ามใช้ ไม่สร้างแพ้เพราะจั่วโบนัสที่ไม่มีใบ; ไม่เพิ่มข้อจำกัดค้นหรือโควต้าเอง",
+      "tests": "มอนสเตอร์/เวท/กับดัก/พิธีกรรม; กอง 0/1/2 ใบ; เปิดแล้วนำขึ้นมือก่อนจั่ว; AI ไม่รู้กองล่วงหน้า"
+    },
+    {
+      "id": "th08-002",
+      "name": "วิปัสสนากรรมฐาน",
+      "kind": "lookTopChooseOneRestBottom",
+      "status": "adapt",
+      "rules": {
+        "lookCount": 3,
+        "chooseCount": 1,
+        "remainder": "deckBottom",
+        "remainderOrder": "playerChoice",
+        "shuffle": false
+      },
+      "notes": "ดูแบบส่วนตัว ไม่เปิดให้ศัตรูเห็น เลือกได้ทุกประเภท กองเหลือ 1–2 ใบดูเท่าที่เหลือ วางที่เหลือใต้กองตามลำดับที่เราเลือก ห้ามใช้ถ้ากองว่าง; ต่อจาก onSummonLook ของป่า แต่ต้องเพิ่มทางใช้เป็นเวท ไม่ใช่ scout",
+      "tests": "กอง 0/1/2/3/4 ใบ; เลือกได้หนึ่งจริง; ใต้กองไม่หายและไม่สับ; ข้อมูลส่วนตัว"
+    },
+    {
+      "id": "th08-003",
+      "name": "นิมิตเรียกคู่หู",
+      "kind": "revealMountSearchMaterial",
+      "status": "new",
+      "rules": {
+        "source": "deck",
+        "maxPrintedLevel": 4,
+        "recipeSource": "canonicalMountRecipe",
+        "revealRecipe": true,
+        "revealResult": true,
+        "shuffle": true
+      },
+      "notes": "เผยร่างที่ขึ้นขี่ได้จริงในกองพิเศษ แล้วเลือกมอนสเตอร์ระดับพิมพ์ 1–4 ในกองที่ตรงวัตถุดิบอย่างน้อยหนึ่งช่องของสูตรจริง ไม่ใช่ทุก fusion; สูตรอาจระบุชื่อหรือ predicate เผ่า ต้องใช้ matches เดียวกับ engine ห้ามเดาจาก flavorText/ชื่อ หรือเปิดให้สูตรที่ยังไม่มี; ไม่เรียกลงสนาม ไม่ลดต้นทุน ไม่ต้องมีวัสดุครบทุกช่องก่อนค้น เลือกแสดงเฉพาะร่างที่มีผลค้นถูกกฎอย่างน้อยหนึ่งใบ",
+      "tests": "สูตรชื่อเฉพาะ/เผ่ากว้าง/ไม่มีสูตร; ระดับพิมพ์ 4/5; เผ่ารองและเผ่าหลักตาม matcher เดิม; ไม่มีผลค้น; เปิดสูตรและผลให้คู่ต่อสู้รู้; สับครั้งเดียว"
+    },
+    {
+      "id": "th08-004",
+      "name": "เมตตามหานิยม",
+      "kind": "lockEnemyAttack",
+      "status": "adapt",
+      "rules": {
+        "count": 1,
+        "faceUp": true,
+        "expires": "endOfTargetsControllersNextTurn"
+      },
+      "notes": "เลือกศัตรูหงายหน้า 1 ตัวในเฟสหลักเรา ห้ามประกาศโจมตีจนจบเทิร์นถัดไปของผู้ควบคุมตอนถูกเลือก ไม่ปิดความสามารถ ไม่ยกเลิกการโจมตีที่เกิดแล้ว ผูกกับ instance ออกสนามแล้วหมดผล ไม่ยืดระยะถ้าเปลี่ยนฝ่าย ใช้ lockAttack เป็นฐาน ไม่เพิ่มเงื่อนไขเราโจมตีแล้วปลดล็อกตามร่างเก่า",
+      "tests": "ห้ามโจมตีเทิร์นศัตรูถัดไปแล้วหมด; ไม่ปิดสกิล; ออกกลับ/ย้ายฝ่าย; กดซ้ำไม่ทบระยะ"
+    },
+    {
+      "id": "th08-005",
+      "name": "ข้าวสารเสก",
+      "kind": "temporaryEnemyAtkReduction",
+      "status": "adapt",
+      "rules": {
+        "amount": 500,
+        "count": 1,
+        "faceUp": true,
+        "expires": "endOfCurrentTurn",
+        "discardCost": false
+      },
+      "notes": "ลดเฉพาะ ATK หงายศัตรูหนึ่งตัวจนจบเทิร์นเรา ไม่ปิดความสามารถ ไม่ต้องทิ้งการ์ด ใช้กฎค่าต่ำสุดเดิม ต้องเพิ่มเวทเรียกผล debuff",
+      "tests": "ATK ต่ำกว่า500; จบเทิร์นหมดผล; เป้าคว่ำไม่ถูกเลือก; ไม่มี discard"
+    },
+    {
+      "id": "th08-006",
+      "name": "เสื้อยันต์",
+      "kind": "humanEquipStats",
+      "status": "adapt",
+      "rules": {
+        "atk": 300,
+        "def": 300,
+        "tribeGroup": "human"
+      },
+      "notes": "สวมเฉพาะมอนสเตอร์หงายที่นับเป็นมนุษย์ตามตัวกรองปัจจุบัน ตรวจ HUMAN_TRIBES และกฎ livingHuman เดิม ไม่ใช่ใครมีหน้าคนก็ได้ หากเป็นเผ่ารองให้ใช้กฎมนุษย์เดียวกับสูตรขึ้นขี่; เพิ่ม DEF จาก equip เพราะ registry เดิมที่อ่านระบุ ATK/ธาตุ/XP ไม่ยืนยันรองรับ DEF แล้ว ไม่เพิ่มเผ่าใหม่",
+      "tests": "มนุษย์ทุกเผ่าปัจจุบัน; ผี/อสูร/เทวดาไม่ผ่านเพียงเพราะรูปร่างคน; +300 ทั้งสองค่า; ถอดแล้วคืนค่า; stackตามกฎสวมเดิม"
+    },
+    {
+      "id": "th08-007",
+      "name": "บายศรีสู่ขวัญ",
+      "kind": "healSpell",
+      "status": "adapt",
+      "rules": {
+        "amount": 800
+      },
+      "notes": "ฟื้น LP เรา 800 ไม่เพิ่มเพดาน ถ้าเกมมีเพดานให้ใช้ของเดิม เป็นเวทใช้ครั้งเดียว ไม่ใช่ activated บนสนามหลายครั้ง",
+      "tests": "LP ปกติ/ใกล้เพดาน; ไม่ได้ฟื้นซ้ำ; ไม่มีค่าร่ายทิ้งการ์ด"
+    },
+    {
+      "id": "th08-008",
+      "name": "ประทีปคืนขวัญ",
+      "kind": "reviveSpell",
+      "status": "adapt",
+      "rules": {
+        "from": "ownGraveyard",
+        "position": "attack",
+        "darkImmune": false,
+        "excludeSummonTypes": [
+          "fusion",
+          "ritual"
+        ],
+        "respectSummonOnlyBy": true
+      },
+      "notes": "ชื่อออกแบบใหม่ ประทีปคืนขวัญ ใช้ฐาน reviveSpell เดิม ไม่กำหนดระดับสูงสุดเพิ่มเอง; เรียกหนึ่งตัวที่คืนชีพได้ตามกฎอัญเชิญเดิม ไม่ข้าม fusion/ritual/summonOnlyBy หรือลักลอบได้ภูมิคุ้มกันธาตุมืดของน้ำมนต์เดิม; ต้องมีช่องว่าง ไม่ใช้อัญเชิญปกติเพิ่ม เมื่อเป็นวัสดุขึ้นขี่ใช้กฎเดิม",
+      "tests": "ช่องเต็ม/ว่าง; มอนสเตอร์ธรรมดา/สังเวย; fusion/ritual/onlyBy ถูกกรอง; ไม่ติด darkImmune; สุสานว่าง"
+    },
+    {
+      "id": "th08-009",
+      "name": "เบี้ยแก้",
+      "kind": "equipEnemySpellTrapTargetProtection",
+      "status": "new",
+      "rules": {
+        "protectedFrom": [
+          "enemySpellTarget",
+          "enemyTrapTarget"
+        ],
+        "nonTargetingEffectsBypass": true
+      },
+      "notes": "ป้องกันเฉพาะการเลือกผู้สวมเป็นเป้าของเวทและกับดักศัตรู ยังโจมตีได้ มอนสเตอร์ศัตรูใช้สกิลเลือกได้ เวทของเรายังเลือกได้ ผลไม่เลือกเป้า/ล้างสนามยังโดน ไม่คุ้มครองตัวเบี้ยแก้เองและไม่ยกเลิกผลเก่าที่ติดแล้ว ต้องต่อกรองทุก UI/action validation ไม่ใช้ shroud เดิมตรง ๆ ที่กว้างเป็นความสามารถ",
+      "tests": "เวท/กับดักเลือกเป้าถูกกัน; monster skill/โจมตี/ล้างสนามไม่กัน; ทำลายตัวเบี้ยได้; หลังถอดเลือกผู้สวมได้ทันที; AI เคารพเป้า"
+    },
+    {
+      "id": "th08-010",
+      "name": "ตะกรุดคู่ชีวิต",
+      "kind": "equipDestructionReplacement",
+      "status": "new",
+      "rules": {
+        "replacement": "sendThisEquipToOwnersGraveyard",
+        "covers": [
+          "battleDestruction",
+          "effectDestruction"
+        ],
+        "optional": true
+      },
+      "notes": "ก่อนผู้สวมจะถูกทำลายจากต่อสู้หรือเอฟเฟกต์ ผู้ควบคุมเลือกส่งตะกรุดแทนได้ครั้งนั้น ไม่กัน LP ไม่กันคืนมือ/สังเวย/วัตถุดิบ/ส่งสุสานที่ไม่ใช่ทำลาย การส่งตะกรุดเป็นการแทนที่ไม่ใช่ทำลายตะกรุด หากหลายตะกรุดใช้ใบเดียวต่อเหตุการณ์ หากผู้สวมและตะกรุดจะถูกทำลายพร้อมกัน ห้ามใช้ตะกรุดในชุดทำลายเดียวกันมาป้องกัน; ข้อความไม่ต้องเพิ่มผูกเพื่อนตามร่างเก่า",
+      "tests": "ต่อสู้/เอฟเฟกต์; ยังเสียLP; ไม่กันคืนมือหรือสังเวย; หลายใบ; ล้างสนามทั้งเครื่องรางและตัว; ไม่วนทริกเกอร์ทำลาย"
+    },
+    {
+      "id": "th08-011",
+      "name": "มนต์สะกดวิญญาณ",
+      "kind": "summonFromEnemyGraveWithOwnerRouting",
+      "status": "new",
+      "deckLimit": 1,
+      "rules": {
+        "from": "opponentGraveyard",
+        "minPrintedLevel": 1,
+        "maxPrintedLevel": 4,
+        "position": "attack",
+        "duration": "untilLeavesField",
+        "cannotTribute": true,
+        "cannotBeMaterial": true,
+        "leavesFieldDestination": "originalOwnersGraveyard",
+        "respectSummoningRestrictions": true
+      },
+      "notes": "ไม่จำกัดหนึ่งเทิร์นและไม่คืนตอนจบเทิร์น ไม่มีโควต้าชื่อต่อเทิร์นเพิ่มนอกรีวิว; ownerId เดิมไม่เปลี่ยน controllerId เป็นเรา ย้าย physical instance จริง ห้าม copy ใช้สกิลและโจมตีตามกฎอัญเชิญเดิมได้; ทุกเส้นทางออกสนามต้อง route ไปสุสานเจ้าของเดิม: ทำลาย ส่ง คืนมือ คืนกอง ขับออก ฯลฯ และไม่ปล่อยเอฟเฟกต์ 'คืนสำเร็จ' ทั้งที่ไม่ได้คืนจริง; ห้ามสังเวยทุกชนิดและวัสดุ ritual/fusion/mount/evolution หรือจ่ายต้นทุนที่เทียบเท่า ห้ามเลี่ยงด้วย UI อื่น ข้อห้ามติดตัวที่ยืมจนออกสนาม; ใช้ original owner คงที่ใน save/replay/grave bookkeeping, equip ของเราออกไปสุสานเจ้าของเครื่องราง ไม่ไปตามมอนสเตอร์",
+      "tests": "ระดับ1/4/5; ช่องเต็ม; summonOnlyBy; ทุกทางออกสนาม/ต้นทุน/มาสก์AI; 1สำเนาต่อสำรับทุกช่องทาง; owner/controller/save/replay; สุสานผู้เล่นถูกต้อง; death triggers ครั้งเดียว ไม่เกิด return-hand trigger ปลอม"
+    },
+    {
+      "id": "th08-012",
+      "name": "แคล้วคลาด",
+      "kind": "attackCancelThenDefenseTrap",
+      "status": "adapt",
+      "rules": {
+        "trigger": "enemyDeclaresAttackOnOwnMonster",
+        "cancelAttack": true,
+        "defenderPosition": "defense",
+        "consumesAttackerAttack": true
+      },
+      "notes": "เลือกได้เมื่อถูกโจมตีทั้งหงายและคว่ำ ไม่โจมตีตรง; ยกเลิกครั้งนั้นแล้วเปลี่ยนผู้ถูกโจมตีเป็นป้องกัน หงายอยู่คงหงาย คว่ำอยู่คงคว่ำ ไม่เปิด flip โดยไม่จำเป็น ไม่ฟื้นสิทธิ์โจมตีผู้โจมตี ต้องผ่านเทิร์นตั้งกับดักตามกฎเดิม",
+      "tests": "หงายโจมตี/หงายป้องกัน/คว่ำ; โจมตีตรงไม่ขึ้น; ไม่พลิกคว่ำ; ผู้โจมตีใช้สิทธิ์แล้ว"
+    },
+    {
+      "id": "th08-013",
+      "name": "นะจังงัง",
+      "kind": "battleOnlyAttackerAtkDownTrap",
+      "status": "adapt",
+      "rules": {
+        "trigger": "enemyDeclaresAttack",
+        "amount": 500,
+        "expires": "endOfThatBattle"
+      },
+      "notes": "ลด ATK ผู้โจมตี500 เฉพาะการต่อสู้ครั้งนี้ รวมการโจมตีตรง ถ้ายกเลิกการโจมตีก็หมดผล ไม่ติดถึงโจมตีเพิ่ม ไม่ปิดความสามารถ ตัดผลปิดความสามารถจากแนวคิดเก่าออก",
+      "tests": "โจมตีตรง/มอนสเตอร์; ATKต่ำ; การโจมตีถูกยกเลิก; ตีซ้ำไม่ติดลด; ไม่ปิดสกิล"
+    },
+    {
+      "id": "th08-014",
+      "name": "มหาอุตม์",
+      "kind": "oneBattleInvulnerabilityTrap",
+      "status": "adapt",
+      "rules": {
+        "trigger": "enemyDeclaresAttackOnOwnMonster",
+        "preventBattleDestruction": true,
+        "preventControllerBattleDamage": true,
+        "expires": "endOfThatBattle"
+      },
+      "notes": "เฉพาะมอนสเตอร์เราที่ถูกโจมตีและLPที่เกิดจากการต่อสู้นั้น ไม่ยกเลิกการโจมตี ไม่กันเอฟเฟกต์หรือทั้งเทิร์น ใช้แนวคิด wardShield เดิมเป็นฐานแต่ต้องเรียกจากกับดักและหมดผลหลัง battle; ผู้ถูกโจมตีคว่ำเปิดตามขั้นต่อสู้ปกติ",
+      "tests": "ATKแพ้/เสมอ/ตั้งรับ; ไม่เสียLP; ไม่กันเอฟเฟกต์หลังต่อสู้; ไม่มีเกราะค้าง; โจมตีตรงเปิดไม่ได้"
+    },
+    {
+      "id": "th08-015",
+      "name": "มนต์ถอนอาคม",
+      "kind": "destroyOneSpellOrTrap",
+      "status": "adapt",
+      "rules": {
+        "count": 1,
+        "controller": "either",
+        "zones": [
+          "spellTrap",
+          "fieldSpell"
+        ],
+        "faceDownAllowed": true
+      },
+      "notes": "เฟสหลักเรา เลือกเวทหรือกับดักบนสนามหนึ่งใบ รวมสวมใส่/ต่อเนื่อง/สนาม/คว่ำ และของตนได้ ไม่เปิดดูคว่ำเพื่อเลือกก่อนใช้ ไม่เลือกเวทใบนี้ที่กำลังแก้ผล ไม่ใช่ destroySpellsTraps เดิมที่กวาดทั้งหมด ต้องเพิ่มตัวเลือกหนึ่งใบ ไม่ทำลายมอนสเตอร์",
+      "tests": "เวทสนาม/สวม/ต่อเนื่อง/กับดัก/คว่ำ; 1ใบจริง; ของตน; ไม่ดูคว่ำล่วงหน้า; ถอดบัฟถูกต้อง"
+    }
+  ]
+}
+

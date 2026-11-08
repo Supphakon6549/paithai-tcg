@@ -4,10 +4,11 @@ import asuraCards from './asura-cards.json'
 import spiritCards from './spirit-cards.json'
 import forestCards from './forest-cards.json'
 import nagaCards from './naga-cards.json'
+import th08Cards from './th08-cards.json'
 import { ELEMENTS, ELEMENT_ADVANTAGE_BONUS } from './elements'
 import { TRIBES, TRIBE_ADVANTAGE_BONUS } from './tribes'
 
-export const CARDS = [...cardsData, ...celestialCards, ...asuraCards, ...spiritCards, ...forestCards, ...nagaCards]
+export const CARDS = [...cardsData, ...celestialCards, ...asuraCards, ...spiritCards, ...forestCards, ...nagaCards, ...th08Cards]
 
 export const CARD_TYPES = {
   monster: { id: 'monster', symbol: '⚔️', name: 'มอนสเตอร์', nameEn: 'Monster' },

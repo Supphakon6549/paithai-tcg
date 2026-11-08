@@ -115,6 +115,8 @@ const isForestAnimal = (c) => isForestCard(c) && c.type === 'monster' && animalS
 // คนเป็น ๆ สำหรับขึ้นขี่: มีเผ่ามนุษย์ที่กำหนด และไม่มีเผ่าผี/อสูรติดอยู่ (ปอบ กระสือ พรานไสยเวท ขี่ไม่ได้)
 const livingHuman = (tribe) => (c) => hasTribe(tribe)(c) && !hasTribe('ghost')(c) && !hasTribe('demon')(c)
 const hasGhostAlly = ({ allies }) => allies.some(isGhost)
+// มนุษย์เป็น ๆ ทุกเผ่า (กลุ่มมนุษย์ ไม่มีเผ่าผี/อสูรติด) — เสื้อยันต์ (th08-006)
+const isLivingHumanAny = (c) => inTribeGroup('human')(c) && !isGhost(c) && !isDemon(c)
 // การ์ดชุดราชสำนักนาคา (TH07) — นับนาคาจาก groupTag เท่านั้น ไม่ใช่เผ่าสัตว์เลื้อยคลานทั้งหมด
 export const isNagaCard = (c) => c?.groupTag === 'naga-court'
 export const isNagaMonster = (c) => isNagaCard(c) && c.type === 'monster'
@@ -726,6 +728,44 @@ export const CARD_EFFECTS = {
       oncePer: 'card',
     },
   },
+
+  // ---------- TH08 มนตราแห่งชะตา — เวท/กับดักกลาง ใช้ได้ทุกสำรับ (docs/TH08-DESIGN.md) ----------
+  // ยันต์เสริมดวง: เปิดบนกองขึ้นมือ · เป็นมอนสเตอร์ → จั่วเพิ่ม 1
+  'th08-001': { fortuneDraw: { bonusIfMonster: 1 } },
+  // วิปัสสนากรรมฐาน: ดูบน 3 เลือก 1 ขึ้นมือ ที่เหลือใต้กอง
+  'th08-002': { lookSpell: { count: 3, picks: 1, label: 'การ์ด', matches: () => true } },
+  // นิมิตเรียกคู่หู: ค้นวัตถุดิบระดับ 1–4 ของร่างขึ้นขี่ในกองพิเศษ แล้วสับกอง
+  'th08-003': { partnerSearch: { maxLevel: 4 } },
+  // เมตตามหานิยม: ศัตรูหงาย 1 ตัวโจมตีไม่ได้ในเทิร์นถัดไปของศัตรู
+  'th08-004': { targetSpell: { kind: 'lockAttack', label: 'มอนสเตอร์ศัตรูหงายหน้า', reason: 'เมตตามหานิยม' } },
+  // ข้าวสารเสก: ศัตรูหงาย 1 ตัว ATK −500 จนจบเทิร์น
+  'th08-005': { targetSpell: { kind: 'debuff', amount: -500, label: 'มอนสเตอร์ศัตรูหงายหน้า', reason: 'ข้าวสารเสก' } },
+  // เสื้อยันต์: สวมมนุษย์ ATK/DEF +300
+  'th08-006': { equip: { appliesTo: (c) => isLivingHumanAny(c), atk: 300, def: 300, reason: 'เสื้อยันต์' } },
+  // บายศรีสู่ขวัญ: ฟื้น LP 800
+  'th08-007': { healSpell: { amount: 800 } },
+  // ประทีปคืนขวัญ: คืนชีพท่าโจมตี (ไม่แถมภูมิคุ้มกันธาตุมืดแบบน้ำมนต์)
+  'th08-008': { reviveSpell: { position: 'attack', excludeSummonTypes: ['fusion', 'ritual'] } },
+  // เบี้ยแก้: ผู้สวมไม่ถูกเลือกเป็นเป้าของเวท/กับดักศัตรู
+  'th08-009': { equip: { appliesTo: () => true, atk: 0, guardTargets: true, reason: 'เบี้ยแก้' } },
+  // ตะกรุดคู่ชีวิต: ผู้สวมจะถูกทำลาย → ส่งตะกรุดลงสุสานแทน
+  'th08-010': { equip: { appliesTo: () => true, atk: 0, destroyReplace: true, reason: 'ตะกรุดคู่ชีวิต' } },
+  // มนต์สะกดวิญญาณ: ยืมมอนสเตอร์ระดับ 1–4 จากสุสานศัตรู (ออกจากสนาม → กลับสุสานเจ้าของ) · 1 ใบต่อสำรับ
+  'th08-011': { stealSpell: { maxLevel: 4 }, deckLimit: 1 },
+  // แคล้วคลาด: มอนสเตอร์เราถูกโจมตี → ยกเลิก แล้วเปลี่ยนเป็นท่าป้องกัน
+  'th08-012': {
+    trap: { trigger: 'enemyAttacksMonster', effect: 'evade', reason: 'แคล้วคลาด: ยกเลิกการโจมตี ตัวที่ถูกโจมตีเปลี่ยนเป็นท่าป้องกัน' },
+  },
+  // นะจังงัง: ผู้โจมตี ATK −500 เฉพาะการต่อสู้นี้ (รวมโจมตีตรง)
+  'th08-013': {
+    trap: { trigger: 'enemyAttacks', effect: 'weaken', amount: -500, battleOnly: true, reason: 'นะจังงัง: ผู้โจมตี ATK −500 เฉพาะการต่อสู้นี้' },
+  },
+  // มหาอุตม์: มอนสเตอร์เราที่ถูกโจมตีไม่ถูกทำลาย และเราไม่เสีย LP จากการต่อสู้นี้
+  'th08-014': {
+    trap: { trigger: 'enemyAttacksMonster', effect: 'invulnerable', reason: 'มหาอุตม์' },
+  },
+  // มนต์ถอนอาคม: ทำลายเวท/กับดักบนสนาม 1 ใบ
+  'th08-015': { removeSpellTrap: true },
 }
 
 const effectOf = (card) => CARD_EFFECTS[card?.id] ?? {}
@@ -767,7 +807,7 @@ export function getAtkBoosts(card, allies = [], enemies = [], extras = {}) {
     growth?.atkPer && extras.growth ? [{ amount: growth.atkPer * extras.growth, reason: `แต้มเติบโต ${extras.growth}` }] : []
   const fromEquips = (extras.equips ?? [])
     .map((e) => effectOf(e).equip)
-    .filter((eq) => eq?.appliesTo(card))
+    .filter((eq) => eq?.appliesTo(card) && eq.atk)
     .map((eq) => ({ amount: eq.atk, reason: eq.reason }))
   const gy = effectOf(card).graveyardBoost
   const gyCount = gy ? (extras.graveyard ?? []).filter((c) => c.type === 'monster' && gy.matches(c)).length : 0
@@ -792,7 +832,11 @@ export function getDefBoosts(card, extras = {}) {
   const growth = effectOf(card).growth
   const fromGrowth =
     growth?.defPer && extras.growth ? [{ amount: growth.defPer * extras.growth, reason: `แต้มเติบโต ${extras.growth}` }] : []
-  return [...continuousAuras(card, extras), ...fromGrowth, ...(extras.defTemp ?? [])].map(toModifier)
+  const fromEquips = (extras.equips ?? [])
+    .map((e) => effectOf(e).equip)
+    .filter((eq) => eq?.appliesTo(card) && eq.def)
+    .map((eq) => ({ amount: eq.def, reason: eq.reason }))
+  return [...continuousAuras(card, extras), ...fromGrowth, ...fromEquips, ...(extras.defTemp ?? [])].map(toModifier)
 }
 
 // ธาตุที่ได้เพิ่มจากเวทสวมใส่
@@ -942,6 +986,16 @@ export const getNagaReturnDraw = (card) => effectOf(card).nagaReturnDraw ?? null
 export const hasNagaFollow = (card) => effectOf(card).nagaFollow === true
 export const getNagaLotus = (card) => effectOf(card).nagaLotus ?? null
 export const isNagaVeil = (card) => effectOf(card).nagaVeil === true
+// TH08 เวทกลาง
+export const getFortuneDraw = (card) => effectOf(card).fortuneDraw ?? null
+export const getLookSpell = (card) => effectOf(card).lookSpell ?? null
+export const getPartnerSearch = (card) => effectOf(card).partnerSearch ?? null
+export const getTargetSpell = (card) => effectOf(card).targetSpell ?? null
+export const getHealSpell = (card) => effectOf(card).healSpell ?? null
+export const getStealSpell = (card) => effectOf(card).stealSpell ?? null
+export const isRemoveSpellTrap = (card) => effectOf(card).removeSpellTrap === true
+// จำนวนสูงสุดต่อสำรับ (null = ใช้กติกาปกติ)
+export const getDeckLimit = (card) => effectOf(card).deckLimit ?? null
 // กับดักที่เปิดในเฟสหลักของเราได้ (กับดักต่อเนื่อง หรือกับดักที่ระบุ mainPhase)
 export const isMainPhaseTrap = (card) => Boolean(getContinuousTrap(card) || getTrapEffect(card)?.mainPhase)
 
@@ -961,7 +1015,14 @@ export function isPlayableNonMonster(card) {
           getBranchSpell(card) ||
           getGrowthSpell(card) ||
           isContinuousSpell(card) ||
-          isNagaVeil(card)
+          isNagaVeil(card) ||
+          getFortuneDraw(card) ||
+          getLookSpell(card) ||
+          getPartnerSearch(card) ||
+          getTargetSpell(card) ||
+          getHealSpell(card) ||
+          getStealSpell(card) ||
+          isRemoveSpellTrap(card)
       )
     )
   }

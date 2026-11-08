@@ -16,6 +16,13 @@ import {
   isContinuousSpell,
   isNagaVeil,
   isPlayableNonMonster,
+  getFortuneDraw,
+  getHealSpell,
+  getLookSpell,
+  getPartnerSearch,
+  getStealSpell,
+  getTargetSpell,
+  isRemoveSpellTrap,
 } from './effects'
 import {
   activationBlocker,
@@ -48,6 +55,8 @@ import {
   isNormalSummonable,
   positionChangeBlocker,
   previewBattle,
+  isBorrowed,
+  spellTargetableEnemies,
 } from './game'
 import { AI, opponentOf } from './rules'
 
@@ -103,7 +112,8 @@ export function getAiAction(state, playerId = AI) {
         chooseBranchSpell(state, playerId) ??
         chooseSpecialSummon(state, playerId) ??
         chooseReviveSpell(state, playerId) ??
-        chooseNagaSpell(state, playerId)
+        chooseNagaSpell(state, playerId) ??
+        chooseTh08Draw(state, playerId)
       if (special) return special
       const summon = chooseSummon(state, playerId)
       if (summon) return summon
@@ -112,6 +122,7 @@ export function getAiAction(state, playerId = AI) {
         chooseBuffSpell(state, playerId) ??
         playable(state, playerId, (c) => Boolean(getGrowthSpell(c))).map((spell) => ({ type: 'playSpell', player: playerId, uid: spell.uid }))[0] ??
         chooseActivation(state, playerId) ??
+        chooseTh08Effect(state, playerId) ??
         chooseTrapSet(state, playerId) ??
         chooseContinuousTrap(state, playerId)
       if (effect) return effect
@@ -167,7 +178,7 @@ function chooseSummon(state, playerId) {
   if (bestTribute) {
     const card = cardOf(bestTribute)
     const fodder = state.players[playerId].field
-      .filter(Boolean)
+      .filter((m) => m && !isBorrowed(m))
       .sort((a, b) => getFieldAtk(state, playerId, a.uid) - getFieldAtk(state, playerId, b.uid))
       .slice(0, costOf(bestTribute))
     const beatsNormal = !bestNormal || card.atk > score.get(bestNormal.uid).value
@@ -210,6 +221,7 @@ function chooseOption(state, playerId) {
     return [...p.hand, ...p.deck, ...p.graveyard].find((c) => c.uid === uid)
   }
   if (choice.kind === 'mill' || choice.kind === 'scout') return choice.options[0].id
+  if (['partnerSearch', 'spellTarget', 'steal', 'removeSpellTrap'].includes(choice.kind)) return chooseTh08Option(state, playerId, choice)
   if (choice.kind.startsWith('naga')) return chooseNagaOption(state, playerId, choice)
   // เรียกพวก / ดูบนกอง / ลงจากหลัง → เลือกใบที่มีค่ามากสุด
   if (['summonFromHand', 'look', 'dismount'].includes(choice.kind)) {
@@ -582,4 +594,68 @@ function chooseNagaOption(state, playerId, choice) {
     default:
       return real[0]?.id ?? 'skip'
   }
+}
+
+// ---------- TH08 เวทกลาง ----------
+
+// จั่ว/ค้น/ยืม: ใช้ก่อนอัญเชิญ (หาตัวลงสนาม) · ไม่จั่วเมื่อกองใกล้หมดหรือมือเต็ม
+function chooseTh08Draw(state, playerId) {
+  const p = state.players[playerId]
+  const steal = playable(state, playerId, (c) => Boolean(getStealSpell(c)))[0]
+  if (steal) return { type: 'playSpell', player: playerId, uid: steal.uid }
+  const partner = playable(state, playerId, (c) => Boolean(getPartnerSearch(c)))[0]
+  if (partner) return { type: 'playSpell', player: playerId, uid: partner.uid }
+  if (p.deck.length > 5 && p.hand.length < 6) {
+    const draw = playable(state, playerId, (c) => Boolean(getFortuneDraw(c) || getLookSpell(c)))[0]
+    if (draw) return { type: 'playSpell', player: playerId, uid: draw.uid }
+  }
+  return null
+}
+
+// เวทเป้าศัตรู / ฟื้น LP / ทำลายเวท-กับดัก
+function chooseTh08Effect(state, playerId) {
+  const p = state.players[playerId]
+  const oppId = opponentOf(playerId)
+  const opp = state.players[oppId]
+  const heal = playable(state, playerId, (c) => Boolean(getHealSpell(c)))[0]
+  if (heal && p.lp <= 6500) return { type: 'playSpell', player: playerId, uid: heal.uid }
+  // ทำลายเวท/กับดัก: เฉพาะเมื่อศัตรูมีเวท/กับดักบนสนาม
+  const remove = playable(state, playerId, (c) => isRemoveSpellTrap(c))[0]
+  if (remove && (opp.fieldSpell || opp.spellTrap.some(Boolean))) return { type: 'playSpell', player: playerId, uid: remove.uid }
+  const ourBest = Math.max(0, ...p.field.filter((x) => x && x.position === 'attack').map((x) => getFieldAtk(state, playerId, x.uid)))
+  const targets = spellTargetableEnemies(state, playerId).map((m) => getFieldAtk(state, oppId, m.uid))
+  for (const spell of playable(state, playerId, (c) => Boolean(getTargetSpell(c)))) {
+    const effect = getTargetSpell(cardOf(spell))
+    // ห้ามโจมตี: ศัตรูมีตัวท่าโจมตีที่แรงกว่าตัวที่แรงสุดของเรา
+    if (effect.kind === 'lockAttack' && targets.some((atk) => atk > ourBest)) return { type: 'playSpell', player: playerId, uid: spell.uid }
+    // ลด ATK: ทำให้ตีชนะได้ในเทิร์นที่โจมตีได้
+    if (effect.kind === 'debuff' && canAttackThisTurn(state) && targets.some((atk) => atk >= ourBest && atk + effect.amount < ourBest)) {
+      return { type: 'playSpell', player: playerId, uid: spell.uid }
+    }
+  }
+  return null
+}
+
+function chooseTh08Option(state, playerId, choice) {
+  const oppId = opponentOf(playerId)
+  if (choice.kind === 'partnerSearch') {
+    return [...choice.options].sort((a, b) => cardValue({ cardId: b.id }) - cardValue({ cardId: a.id }))[0].id
+  }
+  if (choice.kind === 'steal') {
+    const g = state.players[oppId].graveyard
+    return [...choice.options].sort((a, b) => cardValue(g.find((c) => c.uid === b.id)) - cardValue(g.find((c) => c.uid === a.id)))[0].id
+  }
+  if (choice.kind === 'spellTarget') {
+    const atk = (id) => getFieldAtk(state, oppId, id)
+    const ourBest = Math.max(0, ...state.players[playerId].field.filter((x) => x && x.position === 'attack').map((x) => getFieldAtk(state, playerId, x.uid)))
+    const effect = getTargetSpell({ id: choice.source })
+    const ordered = [...choice.options].sort((a, b) => atk(b.id) - atk(a.id))
+    if (effect?.kind === 'debuff') {
+      return (ordered.find((o) => atk(o.id) >= ourBest && atk(o.id) + effect.amount < ourBest) ?? ordered[0]).id
+    }
+    return ordered[0].id
+  }
+  // ทำลายเวท/กับดัก: ของศัตรูที่หงาย (เวทสนาม/ต่อเนื่อง/สวมใส่) ก่อน แล้วค่อยการ์ดคว่ำ · ไม่ทำลายของตัวเองถ้าเลี่ยงได้
+  const enemy = choice.options.filter((o) => o.enemy)
+  return ([...enemy].sort((a, b) => Number(a.faceDown) - Number(b.faceDown))[0] ?? choice.options[0]).id
 }
