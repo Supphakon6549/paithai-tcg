@@ -8,7 +8,21 @@ import { EXTRA_DECK_LIST, STARTER_DECK_LIST } from '../engine/rules'
  */
 
 const presetModules = import.meta.glob('./preset-decks.json', { eager: true, import: 'default' })
-export const PRESET_DECKS = (Object.values(presetModules)[0] ?? []).map((deck) => ({ ...deck, preset: true }))
+// ภาพปกสำรับสำเร็จรูป = การ์ดตัวเอกของสำรับ (ใช้แทนไอคอนอีโมจิ)
+const PRESET_COVERS = {
+  'hunter-beast': 'th03-013',
+  'warrior-war-beasts': 'th01-022',
+  'faith-celestial': 'th05-005',
+  'asura-war': 'th04-006',
+  'thai-spirits': 'th06-006',
+  'wild-forest': 'th03-017',
+  'naga-court': 'th07-016',
+}
+export const PRESET_DECKS = (Object.values(presetModules)[0] ?? []).map((deck) => ({
+  ...deck,
+  cover: deck.cover ?? PRESET_COVERS[deck.id] ?? null,
+  preset: true,
+}))
 
 export const TEST_DECK = {
   id: 'test-all',

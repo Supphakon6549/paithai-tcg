@@ -128,9 +128,13 @@ export default function DeckBuilder({ store, onChange, onPlay }) {
             {PRESET_DECKS.map((d) => (
               <article key={d.id} className={`deck-preset${selectedId === d.id ? ' deck-preset--selected' : ''}`}>
                 <button type="button" className="deck-preset__head" onClick={() => setSelectedId(d.id)}>
-                  <span className="deck-preset__icon" aria-hidden="true">
-                    {d.icon}
-                  </span>
+                  {d.cover ? (
+                    <img className="deck-preset__cover" src={`/cards/${d.cover}.jpg`} alt="" loading="lazy" draggable="false" />
+                  ) : (
+                    <span className="deck-preset__icon" aria-hidden="true">
+                      {d.icon}
+                    </span>
+                  )}
                   <strong>{d.name}</strong>
                   {d.difficulty && <span className="deck-preset__level">ความยาก: {d.difficulty}</span>}
                 </button>
@@ -154,7 +158,7 @@ export default function DeckBuilder({ store, onChange, onPlay }) {
           <optgroup label="สำรับสำเร็จรูป">
             {allDecks({ decks: [] }).map((d) => (
               <option key={d.id} value={d.id}>
-                {d.icon ?? '🗂️'} {d.name}
+                {d.name}
               </option>
             ))}
           </optgroup>
@@ -194,7 +198,8 @@ export default function DeckBuilder({ store, onChange, onPlay }) {
           />
         ) : (
           <h2 className="deck-summary__title">
-            {deck.icon ?? '🗂️'} {deck.name}
+            {deck.cover && <img className="deck-summary__cover" src={`/cards/${deck.cover}.jpg`} alt="" draggable="false" />}
+            {deck.name}
           </h2>
         )}
         {deck.description && <p className="deck-summary__desc">{deck.description}</p>}
