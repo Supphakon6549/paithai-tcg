@@ -39,24 +39,24 @@ const BOSS_PROFILES = {
   },
   'th01-012': {
     theme: 'krut-naga',
-    kicker: '🔥💧 มหาเทพประสานจุติ',
+    kicker: 'มหาเทพประสานจุติ',
     epithet: 'อัคนีเวหาและวารีบาดาลหลอมรวมเป็นหนึ่ง',
     primary: '#ff7847',
-    secondary: '#38bdf8',
-    accent: '#ffe680',
-    glow: 'rgba(255, 138, 76, 0.68)',
-    veilTint: 'rgba(26, 10, 36, 0.88)',
+    secondary: '#0b3a5c',
+    accent: '#38bdf8',
+    glow: 'rgba(255, 120, 71, 0.72)',
+    veilTint: 'rgba(10, 14, 28, 0.94)',
     hasDedicatedLayers: false,
   },
   'th07-016': {
     theme: 'naga',
-    kicker: '🐍 จ้าวบาดาลจุติ',
+    kicker: 'จ้าวบาดาลจุติ',
     epithet: 'มณีบาดาลเปล่งแสงเหนือวังวนพิภพนาคา',
     primary: '#38e8df',
-    secondary: '#ff4d8d',
-    accent: '#fae094',
-    glow: 'rgba(56, 232, 223, 0.7)',
-    veilTint: 'rgba(4, 24, 38, 0.9)',
+    secondary: '#0a4c6a',
+    accent: '#7ee8fa',
+    glow: 'rgba(14, 116, 144, 0.72)',
+    veilTint: 'rgba(2, 12, 22, 0.96)',
     hasDedicatedLayers: true,
     bgImage: '/cards/showcase/th07-016-background.webp',
     fgImage: '/cards/showcase/th07-016-foreground.webp',
@@ -126,9 +126,17 @@ export default function BossSummonStage({ show }) {
   if (isReduced) {
     return (
       <div className={cls} style={rootStyle}>
-        <div className="fx-boss__Anchor">
+        <div className="fx-boss__anchor">
           <BossTitleBanner card={card} profile={profile} show={show} />
         </div>
+        <BossBoardImpact
+          theme={profile.theme}
+          slotX={show.slotX}
+          slotY={show.slotY}
+          isShort={isShort}
+          isReduced={true}
+          duration={show.duration}
+        />
       </div>
     )
   }
@@ -199,6 +207,16 @@ export default function BossSummonStage({ show }) {
         {/* ป้ายบอกข้ามฉาก */}
         {!isShort && <span className="fx-boss__skip-hint">แตะที่ใดก็ได้เพื่อข้าม ⏭</span>}
       </div>
+
+      {/* ผลกระทบลงกระดานตอนจบฉาก (0.8–1.2s สำหรับฉากเต็ม / ~0.5s สำหรับฉากสั้น) */}
+      <BossBoardImpact
+        theme={profile.theme}
+        slotX={show.slotX}
+        slotY={show.slotY}
+        isShort={isShort}
+        isReduced={isReduced}
+        duration={show.duration}
+      />
     </div>
   )
 }
@@ -261,13 +279,16 @@ function BossCard25D({ card, profile }) {
           <div className="fx-boss__dual-orbs">
             <span className="fx-boss__orb-fire" />
             <span className="fx-boss__orb-water" />
+            <span className="fx-boss__dual-spiral-ring" />
           </div>
         )}
         {profile.theme === 'naga' && (
-          <div className="fx-boss__mani-gems">
-            <span className="fx-boss__mani-flare fx-boss__mani-flare--crown" />
-            <span className="fx-boss__mani-flare fx-boss__mani-flare--heart" />
+          <div className="fx-boss__naga-fx">
+            <span className="fx-boss__naga-bubble fx-boss__naga-bubble--1" />
+            <span className="fx-boss__naga-bubble fx-boss__naga-bubble--2" />
+            <span className="fx-boss__naga-bubble fx-boss__naga-bubble--3" />
             <span className="fx-boss__whirlpool-ring" />
+            <span className="fx-boss__caustics" />
           </div>
         )}
         <span className="fx-boss__card-sheen" />
@@ -326,10 +347,22 @@ function BossAtmosphere({ theme }) {
   if (theme === 'krut-naga') {
     return (
       <div className="fx-boss__atmos fx-boss__atmos--krut-naga">
-        <span className="fx-boss__element-wing fx-boss__element-wing--fire" />
-        <span className="fx-boss__element-wing fx-boss__element-wing--water" />
-        <span className="fx-boss__spiral-stream fx-boss__spiral-stream--fire" />
-        <span className="fx-boss__spiral-stream fx-boss__spiral-stream--water" />
+        {/* ครึ่งบน: ฟ้าครุฑสุริยะ ท่าโฉบ ขนนกไฟปลิว (ไม่มีท่ากางปีกตรงหน้า) */}
+        <div className="fx-boss__split-sky">
+          <span className="fx-boss__sky-glow" />
+          <span className="fx-boss__fire-feather fx-boss__fire-feather--1" />
+          <span className="fx-boss__fire-feather fx-boss__fire-feather--2" />
+          <span className="fx-boss__fire-feather fx-boss__fire-feather--3" />
+        </div>
+        {/* ครึ่งล่าง: บาดาลนาคราช น้ำวนเข้มลึก */}
+        <div className="fx-boss__split-abyss">
+          <span className="fx-boss__abyss-glow" />
+          <span className="fx-boss__water-current" />
+        </div>
+        {/* เกลียวคู่ปะทะกลางจอ หลอมรวมเป็นหนึ่ง */}
+        <span className="fx-boss__dual-spiral" />
+        <span className="fx-boss__fusion-ring fx-boss__fusion-ring--gold" />
+        <span className="fx-boss__fusion-ring fx-boss__fusion-ring--blue" />
       </div>
     )
   }
@@ -339,6 +372,8 @@ function BossAtmosphere({ theme }) {
       <span className="fx-boss__vortex fx-boss__vortex--outer" />
       <span className="fx-boss__vortex fx-boss__vortex--inner" />
       <span className="fx-boss__mani-burst" />
+      <span className="fx-boss__abyss-depth" />
+      <span className="fx-boss__water-current" />
     </div>
   )
 }
@@ -468,23 +503,23 @@ function BossParticleCanvas({ theme, duration, isWide, isShort, cardW }) {
           phase: Math.random() * Math.PI * 2,
         })
       } else {
-        // พญานาคราช: น้ำวนบาดาล (vortex) + แสงมณีแดงทับทิม/ฟ้า (mani)
-        const isMani = i % 3 === 0
+        // พญานาคราช: ฟองอากาศมรกตใต้น้ำลึก (bubble) + เกลียวน้ำวนบาดาล (vortex) - ตัดสีชมพูออกหมด
+        const isBubble = i % 3 === 0
         particles.push({
-          kind: isMani ? 'mani' : 'vortex',
+          kind: isBubble ? 'bubble' : 'vortex',
           angle,
-          radius: isMani ? radius * 0.75 : radius,
-          speed: (isMani ? 1.1 : 2.35) * (0.8 + Math.random() * 0.45),
-          radialSpeed: isMani ? -8 : -22 - Math.random() * 18,
-          size: isMani ? 4.2 + Math.random() * 4.5 : 2.4 + Math.random() * 3.6,
-          color: isMani
+          radius: isBubble ? radius * 0.75 : radius,
+          speed: (isBubble ? 1.05 : 2.2) * (0.8 + Math.random() * 0.45),
+          radialSpeed: isBubble ? -6 : -20 - Math.random() * 16,
+          size: isBubble ? 3.6 + Math.random() * 4.4 : 2.2 + Math.random() * 3.4,
+          color: isBubble
             ? i % 2 === 0
-              ? '#ff4d8d'
-              : '#ffe680'
+              ? '#7ee8fa'
+              : '#a5f3fc'
             : i % 2 === 0
-            ? '#38e8df'
-            : '#67e8f9',
-          alpha: 0.72 + Math.random() * 0.28,
+            ? '#14b8a6'
+            : '#0284c7',
+          alpha: 0.68 + Math.random() * 0.32,
           phase: Math.random() * Math.PI * 2,
         })
       }
@@ -590,7 +625,16 @@ function BossParticleCanvas({ theme, duration, isWide, isShort, cardW }) {
         ctx.fillStyle = p.color
         ctx.globalAlpha = p.alpha * envAlpha * (0.7 + 0.3 * Math.sin(elapsed * 0.014 + p.phase))
 
-        if (p.kind === 'mani') {
+        if (p.kind === 'bubble') {
+          // ฟองอากาศโปร่งแสงทรงกลม พร้อมประกายสะท้อนแสงสีขาว
+          ctx.beginPath()
+          ctx.arc(x, y, p.size, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = `rgba(255, 255, 255, ${0.72 * envAlpha})`
+          ctx.beginPath()
+          ctx.arc(x - p.size * 0.32, y - p.size * 0.32, Math.max(0.8, p.size * 0.26), 0, Math.PI * 2)
+          ctx.fill()
+        } else if (p.kind === 'mani') {
           drawDiamond(x, y, p.size)
         } else {
           ctx.beginPath()
@@ -625,4 +669,121 @@ function BossParticleCanvas({ theme, duration, isWide, isShort, cardW }) {
   }, [theme, duration, isWide, isShort, cardW])
 
   return <canvas ref={canvasRef} className="fx-boss__canvas" />
+}
+
+/*
+ * ผลกระทบของบอสลงบนกระดานจริงตอนจบฉาก (0.8–1.2 วินาที สำหรับฉากเต็ม / ~0.5 วินาที สำหรับฉากสั้น)
+ * - พระอินทร์ (th05-005): ฟ้าแลบทั้งกระดาน + สายฟ้าฟาดลงช่อง + ประกายไฟแตกกระจาย + รอยไหม้เรืองแสง + จอสั่นสั้น ๆ
+ * - พญานาคราช (th07-016): น้ำน้ำเงินเข้มซัดจากช่องท่วมกระดาน + การ์ดเหมือนจมใต้น้ำ + แสงระลอกน้ำ + น้ำไหลกลับเข้าช่อง
+ * - ครุฑนาคา (th01-012): ฝั่งศัตรูลมปีกครุฑพาขนนกไฟปลิว + ฝั่งเรามีคลื่นน้ำวน + หมุนวนประสานที่ช่อง
+ * - reduced-motion: แสงนุ่มนวลสั้น ๆ ตรงช่อง ไม่สั่น ไม่วาบทั้งจอ
+ */
+function BossBoardImpact({ theme, slotX, slotY, isShort, isReduced, duration }) {
+  if (isReduced) {
+    return (
+      <div
+        className="fx-boss-impact fx-boss-impact--reduced"
+        style={{ '--slot-x': `${slotX}px`, '--slot-y': `${slotY}px` }}
+      >
+        <span className="fx-boss-impact__soft-pulse" />
+      </div>
+    )
+  }
+
+  const cls = `fx-boss-impact fx-boss-impact--${theme}${isShort ? ' fx-boss-impact--short' : ''}`
+
+  return (
+    <div
+      className={cls}
+      style={{
+        '--slot-x': `${slotX}px`,
+        '--slot-y': `${slotY}px`,
+        '--dur': `${duration}ms`,
+      }}
+    >
+      {theme === 'indra' && (
+        <>
+          <div className="fx-boss-impact__flash" />
+          <div className="fx-boss-impact__ground">
+            <svg className="fx-boss-impact__bolt-svg" viewBox="0 0 160 360">
+              <path
+                className="fx-boss-impact__bolt-main"
+                d="M80,0 L65,75 L95,85 L50,195 L88,205 L60,295 L80,360"
+              />
+              <path
+                className="fx-boss-impact__bolt-fork fx-boss-impact__bolt-fork--1"
+                d="M65,75 L25,125 L45,135 L15,190"
+              />
+              <path
+                className="fx-boss-impact__bolt-fork fx-boss-impact__bolt-fork--2"
+                d="M88,205 L130,250 L115,260 L145,315"
+              />
+            </svg>
+            <span className="fx-boss-impact__scorch" />
+            <div className="fx-boss-impact__sparks">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <span
+                  key={i}
+                  className={`fx-boss-impact__spark fx-boss-impact__spark--${i}`}
+                  style={{ '--ang': `${i * 45}deg` }}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {theme === 'naga' && (
+        <>
+          <div className="fx-boss-impact__flood-overlay">
+            <span className="fx-boss-impact__caustics-wash" />
+          </div>
+          <div className="fx-boss-impact__ground">
+            <svg className="fx-boss-impact__wave-svg" viewBox="0 0 240 240">
+              <path
+                className="fx-boss-impact__crest fx-boss-impact__crest--1"
+                d="M 120,40 C 160,36 200,75 200,120 C 200,165 160,204 120,200 C 80,196 40,165 40,120 C 40,75 80,44 120,40 Z"
+              />
+              <path
+                className="fx-boss-impact__crest fx-boss-impact__crest--2"
+                d="M 120,20 C 175,15 220,65 220,120 C 220,175 175,225 120,220 C 65,215 20,175 20,120 C 20,65 65,25 120,20 Z"
+              />
+            </svg>
+            <span className="fx-boss-impact__wave fx-boss-impact__wave--outer" />
+            <span className="fx-boss-impact__wave fx-boss-impact__wave--inner" />
+            <span className="fx-boss-impact__water-drain" />
+          </div>
+        </>
+      )}
+
+      {theme === 'krut-naga' && (
+        <>
+          <div className="fx-boss-impact__enemy-storm">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <span
+                key={i}
+                className={`fx-boss-impact__storm-feather fx-boss-impact__storm-feather--${i}`}
+              />
+            ))}
+          </div>
+          <div className="fx-boss-impact__player-surge" />
+          <div className="fx-boss-impact__ground">
+            <div className="fx-boss-impact__converge-dual">
+              <svg className="fx-boss-impact__converge-svg" viewBox="0 0 160 160">
+                <path
+                  className="fx-boss-impact__converge-line fx-boss-impact__converge-line--fire"
+                  d="M 80,18 A 62,62 0 0,1 142,80 A 62,62 0 0,1 80,142 A 48,48 0 0,1 32,80 A 34,34 0 0,1 80,46 A 22,22 0 0,1 102,80 A 12,12 0 0,1 80,92"
+                />
+                <path
+                  className="fx-boss-impact__converge-line fx-boss-impact__converge-line--water"
+                  d="M 80,142 A 62,62 0 0,1 18,80 A 62,62 0 0,1 80,18 A 48,48 0 0,1 128,80 A 34,34 0 0,1 80,114 A 22,22 0 0,1 58,80 A 12,12 0 0,1 80,68"
+                />
+              </svg>
+              <span className="fx-boss-impact__converge-core" />
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
 }

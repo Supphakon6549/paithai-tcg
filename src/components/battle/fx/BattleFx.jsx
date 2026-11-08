@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { getCardById } from '../../../data/cards'
 import { ELEMENTS } from '../../../data/elements'
+import { getMountVerb } from '../../../engine'
 import BossSummonStage from './BossSummonStage'
 
 const BOSS_FULL_MS = 3600
@@ -160,7 +161,7 @@ function buildBossShow(root, ev, sc, reduced, key, seenBossNames) {
   }
 }
 
-function buildShowcaseShow(root, ev, sc, reduced, key, seenBossNames) {
+function buildShowcaseShow(root, ev, sc, reduced, key, seenBossNames, seenMountCards) {
   // ถ้าการ์ดผลลัพธ์จาก ritual / fusion / mount (หรือการอัญเชิญลงสนาม) เป็นบอส ให้เล่นฉากบอสแทน
   const bossCandidateId =
     sc.kind !== 'dismount' &&
@@ -174,11 +175,15 @@ function buildShowcaseShow(root, ev, sc, reduced, key, seenBossNames) {
 
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const cardW = Math.round(Math.min(vw * 0.36, 170) * (sc.kind === 'effect' ? 0.8 : 1))
+  const isMount = sc.kind === 'mount'
+  const cardW = Math.round(
+    Math.min(vw * (isMount ? 0.42 : 0.36), isMount ? 186 : 170) *
+      (sc.kind === 'effect' ? 0.8 : 1)
+  )
   const center = { x: vw / 2, y: Math.min(vh * 0.44, vh / 2 - 40) }
   // เวท/ความสามารถ: ชื่อที่โชว์คือการ์ดที่ใช้ · อัญเชิญพิเศษ/เลื่อนยศ: ชื่อร่างที่ได้
   const resultId = CAST_MS[sc.kind] && !['special', 'evolve'].includes(sc.kind) ? null : sc.resultCardId ?? null
-  const mine = (ev.placed || []).filter((p) => p.player === sc.player)
+  const mine = (ev?.placed || []).filter((p) => p.player === sc.player)
   const placed = mine.find((p) => p.cardId === resultId) || mine[0] || null
   const placedUid = sc.resultUid ?? placed?.uid ?? null
   const endRect =
@@ -187,9 +192,66 @@ function buildShowcaseShow(root, ev, sc, reduced, key, seenBossNames) {
       : null
   const clamp = (v) => Math.max(0.12, Math.min(1, v))
   const materials = (sc.materialCardIds || []).slice(0, 4)
+
+  // ข้อมูลเฉพาะฉากขึ้นขี่ ("คู่หูในตำนาน")
+  let mountVerb = 'ขึ้นขี่'
+  let prevAtk = 0
+  let newAtk = 0
+  let atkDiff = 0
+  let isShortMount = false
+  let r0x = -cardW * 0.85
+  let r0y = cardW * 0.75
+  let r1x = cardW * 0.85
+  let r1y = cardW * 0.75
+
+  if (isMount) {
+    const resultCard = getCardById(resultId || sc.cardId)
+    mountVerb = getMountVerb(resultCard)
+    const riderId = materials[0]
+    const riderCard = getCardById(riderId)
+    prevAtk = riderCard?.atk ?? 0
+    newAtk = resultCard?.atk ?? 0
+    atkDiff = Math.max(0, newAtk - prevAtk)
+
+    const mountKey = resultCard?.name || resultId || sc.cardId
+    const alreadySeen = Boolean(seenMountCards && seenMountCards.has(mountKey))
+    if (!sc.forceFull && (sc.player === 'ai' || alreadySeen || sc.forceShort)) {
+      isShortMount = true
+    } else if (seenMountCards && !sc.forceShort) {
+      seenMountCards.add(mountKey)
+    }
+
+    // ตำแหน่งเดิมของคน (m0) และสัตว์ (m1) จาก ev.destroyed
+    const destroyed = (ev?.destroyed || []).filter((d) => d.player === sc.player)
+    const riderDestroyed = destroyed.find((d) => d.cardId === riderId) || destroyed[0]
+    const animalDestroyed = destroyed.find((d) => d.cardId === materials[1]) || destroyed[1]
+
+    const r0Rect = riderDestroyed
+      ? findCardOrZoneRect(root, riderDestroyed.player, riderDestroyed.uid, riderDestroyed.zone, 'monster')
+      : null
+    const r1Rect = animalDestroyed
+      ? findCardOrZoneRect(root, animalDestroyed.player, animalDestroyed.uid, animalDestroyed.zone, 'monster')
+      : null
+
+    if (r0Rect) {
+      r0x = Math.round(r0Rect.x - center.x)
+      r0y = Math.round(r0Rect.y - center.y)
+    }
+    if (r1Rect) {
+      r1x = Math.round(r1Rect.x - center.x)
+      r1y = Math.round(r1Rect.y - center.y)
+    }
+  }
+
+  const duration = reduced
+    ? SHOWCASE_REDUCED_MS
+    : isMount
+    ? (isShortMount ? 1200 : 2400)
+    : SHOWCASE_MS[sc.kind] ?? CAST_MS[sc.kind]
+
   return {
     stage: 'showcase',
-    duration: reduced ? SHOWCASE_REDUCED_MS : SHOWCASE_MS[sc.kind] ?? CAST_MS[sc.kind],
+    duration,
     key,
     reduced,
     kind: sc.kind,
@@ -206,6 +268,15 @@ function buildShowcaseShow(root, ev, sc, reduced, key, seenBossNames) {
     ex: endRect ? endRect.x - center.x : 0,
     ey: endRect ? endRect.y - center.y : sc.player === 'player' ? vh * 0.3 : -vh * 0.3,
     s1: clamp(endRect ? endRect.w / cardW : 0.3),
+    mountVerb,
+    prevAtk,
+    newAtk,
+    atkDiff,
+    isShortMount,
+    r0x,
+    r0y,
+    r1x,
+    r1y,
   }
 }
 
@@ -279,6 +350,8 @@ export default function BattleFx({ game }) {
   const trapBusyRef = useRef(false)
   // จดจำชื่อการ์ดบอสที่เล่นฉากเต็มไปแล้วในเกมนี้ (เล่นฉากเต็มเฉพาะครั้งแรกของชื่อนั้น)
   const seenBossNamesRef = useRef(new Set())
+  // จดจำการ์ดขึ้นขี่ที่เล่นฉากเต็มไปแล้วในเกมนี้ (เล่นฉากเต็มเฉพาะครั้งแรกของร่างนั้น)
+  const seenMountCardsRef = useRef(new Set())
   const activeStageTimerRef = useRef(null)
   const activeArriveElRef = useRef(null)
   const advanceStageRef = useRef(null)
@@ -311,10 +384,10 @@ export default function BattleFx({ game }) {
     }
   }, [])
 
-  // แตะหรือคลิกที่ใดก็ได้ (หรือกดปุ่ม Space/Enter/Escape) เพื่อข้ามฉากอัญเชิญบอสทันที
+  // แตะหรือคลิกที่ใดก็ได้ (หรือกดปุ่ม Space/Enter/Escape) เพื่อข้ามฉากอัญเชิญบอสหรือฉากขึ้นขี่ทันที
   // ชั้น .battle-fx-layer ยังคงเป็น pointer-events: none จึงไม่บังปุ่มใด ๆ บนกระดาน
   useEffect(() => {
-    if (trapShow?.stage !== 'boss') return undefined
+    if (trapShow?.stage !== 'boss' && trapShow?.kind !== 'mount') return undefined
     let armed = false
     const armTimer = setTimeout(() => {
       armed = true
@@ -338,7 +411,7 @@ export default function BattleFx({ game }) {
     }
   }, [trapShow])
 
-  // ตัวช่วยสำหรับนักพัฒนา/ทดสอบ: เรียก window.__previewBossSummon('th05-005' | 'th01-012' | 'th07-016') ได้ทันที
+  // ตัวช่วยสำหรับนักพัฒนา/ทดสอบ: เรียก window.__previewBossSummon และ window.__previewMount ได้ทันที
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
     window.__previewBossSummon = (cardId = 'th05-005', opts = {}) => {
@@ -377,8 +450,48 @@ export default function BattleFx({ game }) {
       trapQueueRef.current.push(show)
       if (!trapBusyRef.current) advanceStageRef.current?.()
     }
+
+    window.__previewMount = (cardId = 'th03-013', opts = {}) => {
+      const root = document.querySelector('[data-battle-root]')
+      if (!root) return
+      const reduced =
+        opts.reduced ??
+        Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+      if (opts.resetSeen) seenMountCardsRef.current.clear()
+      fxKeyRef.current += 1
+      const key = `fx-mount-preview-${Date.now()}-${fxKeyRef.current}`
+      const card = getCardById(cardId)
+      const defaultMats =
+        cardId === 'th03-017'
+          ? ['th01-006', 'th02-005']
+          : cardId === 'th03-019'
+          ? ['th03-004', 'th03-007']
+          : ['th01-001', 'th01-019']
+      const show = buildShowcaseShow(
+        root,
+        { placed: [], destroyed: [] },
+        {
+          player: opts.player || 'player',
+          cardId,
+          resultCardId: cardId,
+          kind: 'mount',
+          label: card?.name ? `🐎 ${getMountVerb(card)}!` : '🐎 ขึ้นขี่!',
+          materialCardIds: opts.materials ?? defaultMats,
+          forceFull: opts.forceFull,
+          forceShort: opts.forceShort,
+        },
+        reduced,
+        key,
+        seenBossNamesRef.current,
+        seenMountCardsRef.current
+      )
+      trapQueueRef.current.push(show)
+      if (!trapBusyRef.current) advanceStageRef.current?.()
+    }
+
     return () => {
       delete window.__previewBossSummon
+      delete window.__previewMount
     }
   }, [])
 
@@ -430,16 +543,21 @@ export default function BattleFx({ game }) {
     if (!game?.log?.length) {
       lastLogIdRef.current = 0
       seenBossNamesRef.current.clear()
+      seenMountCardsRef.current.clear()
       return
     }
     const latestId = game.log[game.log.length - 1].id
     if (lastLogIdRef.current === null || latestId < lastLogIdRef.current) {
       lastLogIdRef.current = latestId
       seenBossNamesRef.current.clear()
+      seenMountCardsRef.current.clear()
       for (const e of game.log) {
         const resId = e.event?.showcase?.resultCardId
         const c = resId ? getCardById(resId) : null
         if (c && isBossCard(c)) seenBossNamesRef.current.add(c.name)
+        if (e.event?.showcase?.kind === 'mount' && c) {
+          seenMountCardsRef.current.add(c.name || c.id)
+        }
       }
       return
     }
@@ -501,7 +619,8 @@ export default function BattleFx({ game }) {
             sc,
             prefersReducedMotion,
             nextKey(),
-            seenBossNamesRef.current
+            seenBossNamesRef.current,
+            seenMountCardsRef.current
           )
         )
       }
@@ -1191,6 +1310,7 @@ function ScCard({ id, className = '', style }) {
 }
 
 function ShowcaseStage({ show }) {
+  const isMount = show.kind === 'mount'
   const style = {
     left: `${show.x}px`,
     top: `${show.y}px`,
@@ -1199,12 +1319,34 @@ function ShowcaseStage({ show }) {
     '--ex': `${show.ex}px`,
     '--ey': `${show.ey}px`,
     '--s1': show.s1,
+    '--r0x': `${show.r0x || -60}px`,
+    '--r0y': `${show.r0y || 90}px`,
+    '--r1x': `${show.r1x || 60}px`,
+    '--r1y': `${show.r1y || 90}px`,
   }
-  const cls = `fx-sc fx-sc--${show.kind}${show.reduced ? ' fx-sc--reduced' : ''}`
+  const cls = `fx-sc fx-sc--${show.kind}${show.reduced ? ' fx-sc--reduced' : ''}${
+    show.isShortMount ? ' fx-sc--mount-short' : ''
+  }`
   const title = (
-    <div className="fx-sc__title">
-      <span className="fx-sc__kicker">{show.label}</span>
+    <div className={`fx-sc__title${isMount ? ' fx-sc__title--mount' : ''}`}>
+      <span className="fx-sc__kicker">
+        {isMount
+          ? show.mountVerb === 'รวมร่าง'
+            ? '🌿 รวมร่างศักดิ์สิทธิ์'
+            : '🐎 คู่หูในตำนาน ขึ้นขี่'
+          : show.label}
+      </span>
       {show.name && <strong className="fx-sc__name">{show.name}</strong>}
+      {isMount && (
+        <div className="fx-sc__stat-upgrade">
+          <span className="fx-sc__stat-prev">ATK {show.prevAtk.toLocaleString('en-US')}</span>
+          <span className="fx-sc__stat-arrow">➔</span>
+          <strong className="fx-sc__stat-new">ATK {show.newAtk.toLocaleString('en-US')}</strong>
+          {show.atkDiff > 0 && (
+            <span className="fx-sc__stat-diff">▲ +{show.atkDiff.toLocaleString('en-US')}</span>
+          )}
+        </div>
+      )}
     </div>
   )
 
@@ -1239,12 +1381,33 @@ function ShowcaseStage({ show }) {
     // materialCardIds = [คน, สัตว์]
     body = (
       <>
-        <div className="fx-sc__stack">
-          <ScCard id={m1 ?? show.resultCardId} className="fx-sc__animal" />
-          {m0 && <ScCard id={m0} className="fx-sc__rider" />}
+        {/* แสงรัศมีและแฟลชจังหวะขึ้นขี่ (hit-stop) */}
+        <span className="fx-sc__mount-aura" />
+        <span className="fx-sc__flash fx-sc__flash--mount" />
+
+        {/* คนและสัตว์ลอยจากตำแหน่งเดิมบนกระดาน */}
+        <div
+          className={`fx-sc__mount-duo fx-sc__mount-duo--${
+            show.mountVerb === 'รวมร่าง' ? 'merge' : 'ride'
+          }`}
+        >
+          <ScCard
+            id={m0 ?? show.cardId}
+            className="fx-sc__mat fx-sc__mat--rider"
+            style={{ '--rx': `${show.r0x || -60}px`, '--ry': `${show.r0y || 90}px` }}
+          />
+          <ScCard
+            id={m1 ?? show.resultCardId}
+            className="fx-sc__mat fx-sc__mat--animal"
+            style={{ '--rx': `${show.r1x || 60}px`, '--ry': `${show.r1y || 90}px` }}
+          />
         </div>
+
+        {/* ฐานฝุ่น ร่างขี่ขนาดใหญ่ และการวิ่งลงช่อง */}
         <div className="fx-sc__base">{dust()}</div>
-        <ScCard id={show.resultCardId} className="fx-sc__result fx-sc__result--flip" />
+        <ScCard id={show.resultCardId} className="fx-sc__result fx-sc__result--mount" />
+        <div className="fx-sc__land">{dust('fx-sc__dust--land')}</div>
+        {!show.isShortMount && <span className="fx-sc__skip-hint">แตะเพื่อข้าม ⏭</span>}
       </>
     )
   } else if (show.kind === 'dismount') {

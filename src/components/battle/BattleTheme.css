@@ -2360,14 +2360,14 @@ button.pile:hover {
 
 .fx-boss--krut-naga .fx-boss__veil {
   background:
-    radial-gradient(circle at 28% 38%, rgba(255, 92, 42, 0.26) 0%, transparent 48%),
-    radial-gradient(circle at 72% 48%, rgba(36, 184, 255, 0.26) 0%, transparent 48%),
-    radial-gradient(circle at 50% 44%, rgba(28, 12, 38, 0.84) 0%, rgba(4, 3, 10, 0.95) 85%);
+    radial-gradient(ellipse at 50% 20%, rgba(255, 120, 71, 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 80%, rgba(14, 116, 144, 0.35) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(10, 14, 28, 0.9) 0%, rgba(2, 4, 12, 0.98) 90%);
 }
 
 .fx-boss--naga .fx-boss__veil {
   background:
-    radial-gradient(circle at 50% 42%, rgba(40, 215, 210, 0.24) 0%, rgba(255, 65, 130, 0.14) 34%, rgba(3, 20, 32, 0.92) 72%, rgba(2, 10, 18, 0.96) 100%);
+    radial-gradient(circle at 50% 40%, rgba(56, 232, 223, 0.22) 0%, rgba(14, 116, 144, 0.3) 30%, rgba(2, 24, 38, 0.94) 68%, rgba(1, 8, 14, 0.98) 100%);
 }
 
 @keyframes fx-boss-veil {
@@ -2784,9 +2784,9 @@ button.pile:hover {
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(255, 245, 250, 0.85) 0%,
-    rgba(255, 77, 141, 0.52) 26%,
-    rgba(56, 232, 223, 0.28) 54%,
+    rgba(224, 254, 255, 0.88) 0%,
+    rgba(45, 212, 191, 0.42) 28%,
+    rgba(10, 76, 106, 0.28) 56%,
     transparent 74%
   );
   opacity: 0;
@@ -2794,12 +2794,12 @@ button.pile:hover {
 }
 
 @keyframes fx-boss-mani-pulse {
-  0%, 12% { opacity: 0; transform: scale(0.3); }
-  26%     { opacity: 0.92; transform: scale(1.06); }
-  52%     { opacity: 0.75; transform: scale(0.94); }
-  74%     { opacity: 0.95; transform: scale(1.12); }
-  92%, 100% { opacity: 0; transform: scale(0.4); }
+  0%, 14% { opacity: 0; transform: scale(0.65); filter: blur(4px); }
+  42%     { opacity: 0.85; transform: scale(1.0); filter: blur(0px); }
+  70%     { opacity: 0.92; transform: scale(1.04); filter: blur(0px); }
+  92%, 100% { opacity: 0; transform: scale(0.9); filter: blur(2px); }
 }
+
 
 /* ---------- 12.6 Canvas อนุภาคธาตุ ---------- */
 .fx-boss__canvas {
@@ -3092,29 +3092,7 @@ button.pile:hover {
 }
 
 /* แสงมณีบาดาล (ทับทิมแดง-ทอง) และวงน้ำวนด้านหน้าพญานาคราช */
-.fx-boss__mani-gems {
-  position: absolute;
-  inset: 0;
-}
 
-.fx-boss__mani-flare {
-  position: absolute;
-  width: calc(var(--card-w) * 0.28);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(circle, #ffffff 0%, #ff4d8d 35%, rgba(255, 77, 141, 0) 70%);
-  clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
-}
-
-.fx-boss__mani-flare--crown {
-  left: 55%;
-  top: 30%;
-}
-
-.fx-boss__mani-flare--heart {
-  left: 50%;
-  top: 58%;
-}
 
 .fx-boss__whirlpool-ring {
   position: absolute;
@@ -3290,7 +3268,7 @@ button.pile:hover {
 }
 
 /* ---------- 12.10 โหมดลดการเคลื่อนไหว (prefers-reduced-motion) ---------- */
-.fx-boss--reduced .fx-boss__Anchor {
+.fx-boss--reduced .fx-boss__anchor {
   position: absolute;
   left: var(--boss-x);
   top: var(--boss-y);
@@ -3488,4 +3466,881 @@ button.pile:hover {
   .pile--extra .pile__label {
     display: none !important;
   }
+}
+
+/* ---------- พญานาคราช: กล้องโผล่อย่างหนักแน่น + สั่นเบา ๆ ---------- */
+.fx-boss--naga .fx-boss__camera {
+  animation: fx-boss-camera-naga var(--dur) cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes fx-boss-camera-naga {
+  0%   { transform: translateY(48px) scale(0.68); opacity: 0; }
+  22%  { transform: translateY(20px) scale(0.86); opacity: 0.95; }
+  45%  { transform: translateY(0) scale(1.02); opacity: 1; }
+  /* จอสั่นเบา ๆ เมื่อนาคโผล่เต็มตัว */
+  47%  { transform: translate(2px, -2px) scale(1.02); }
+  49%  { transform: translate(-2px, 1.5px) scale(1.02); }
+  51%  { transform: translate(1.5px, 2px) scale(1.02); }
+  53%  { transform: translate(-1.5px, -1.5px) scale(1.02); }
+  55%  { transform: translate(0, 0) scale(1.02); }
+  78%  { transform: translate(0, 0) scale(1); opacity: 1; }
+  94%  { transform: translate(var(--ex), var(--ey)) scale(var(--s1)); opacity: 1; }
+  100% { transform: translate(var(--ex), var(--ey)) scale(var(--s1)); opacity: 0; }
+}
+
+/* ---------- บรรยากาศนาคราช: ความมืดบาดาล + ระลอกน้ำ + ฟองอากาศ ---------- */
+.fx-boss__abyss-depth {
+  position: absolute;
+  inset: -15%;
+  background: radial-gradient(circle, transparent 40%, rgba(2, 14, 24, 0.75) 85%);
+  pointer-events: none;
+}
+
+.fx-boss__water-current {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 60%, rgba(56, 232, 223, 0.16) 0%, transparent 65%);
+  opacity: 0;
+  animation: fx-boss-water-current var(--dur) ease-in-out forwards;
+}
+
+@keyframes fx-boss-water-current {
+  0%, 15% { opacity: 0; transform: scale(0.7); }
+  50%     { opacity: 0.9; transform: scale(1.05); }
+  85%     { opacity: 0.8; transform: scale(1.0); }
+  100%    { opacity: 0; transform: scale(0.8); }
+}
+
+.fx-boss__naga-fx {
+  position: absolute;
+  inset: 0;
+}
+
+.fx-boss__naga-bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.9) 0%, rgba(56, 232, 223, 0.45) 45%, rgba(14, 116, 144, 0.2) 75%, transparent 100%);
+  border: 1px solid rgba(165, 243, 252, 0.6);
+  box-shadow: 0 0 10px rgba(56, 232, 223, 0.5), inset 0 0 6px rgba(255, 255, 255, 0.5);
+  animation: fx-boss-bubble-rise var(--dur) ease-in-out forwards;
+}
+
+.fx-boss__naga-bubble--1 {
+  width: calc(var(--card-w) * 0.22);
+  aspect-ratio: 1;
+  left: 32%;
+  top: 55%;
+  animation-delay: 200ms;
+}
+
+.fx-boss__naga-bubble--2 {
+  width: calc(var(--card-w) * 0.16);
+  aspect-ratio: 1;
+  left: 68%;
+  top: 42%;
+  animation-delay: 450ms;
+}
+
+.fx-boss__naga-bubble--3 {
+  width: calc(var(--card-w) * 0.28);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 25%;
+  animation-delay: 700ms;
+}
+
+@keyframes fx-boss-bubble-rise {
+  0%   { opacity: 0; transform: translate(-50%, 15px) scale(0.6); }
+  25%  { opacity: 0.85; transform: translate(calc(-50% + 4px), -10px) scale(0.9); }
+  60%  { opacity: 0.95; transform: translate(calc(-50% - 6px), -45px) scale(1.05); }
+  85%  { opacity: 0.7; transform: translate(calc(-50% + 2px), -75px) scale(1.15); }
+  98%, 100% { opacity: 0; transform: translate(-50%, -95px) scale(1.25); }
+}
+
+.fx-boss__caustics {
+  position: absolute;
+  inset: -10%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(56, 232, 223, 0.18) 0%, rgba(14, 116, 144, 0.12) 45%, transparent 70%);
+  filter: blur(8px);
+  opacity: 0;
+  animation: fx-boss-caustics var(--dur) ease-in-out forwards;
+}
+
+@keyframes fx-boss-caustics {
+  0%, 20% { opacity: 0; transform: scale(0.9); }
+  50%     { opacity: 0.85; transform: scale(1.05); }
+  80%     { opacity: 0.8; transform: scale(1); }
+  95%, 100% { opacity: 0; transform: scale(0.95); }
+}
+
+/* ---------- ครุฑนาคา: ฟ้าแยกบาดาล + เกลียวคู่ + วงแหวนทอง-น้ำเงิน ---------- */
+.fx-boss__split-sky {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  top: -25%;
+  height: 60%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 120, 71, 0.32) 0%, rgba(255, 170, 50, 0.15) 45%, transparent 80%);
+  pointer-events: none;
+}
+
+.fx-boss__split-abyss {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: -25%;
+  height: 60%;
+  background: radial-gradient(ellipse at 50% 100%, rgba(14, 116, 144, 0.35) 0%, rgba(2, 24, 38, 0.2) 50%, transparent 80%);
+  pointer-events: none;
+}
+
+.fx-boss__fire-feather {
+  position: absolute;
+  width: calc(var(--card-w) * 0.18);
+  height: calc(var(--card-w) * 0.35);
+  background: linear-gradient(135deg, rgba(255, 230, 128, 0.9) 0%, rgba(255, 100, 51, 0.75) 60%, transparent 100%);
+  clip-path: polygon(50% 0%, 100% 40%, 75% 100%, 25% 100%, 0% 40%);
+  opacity: 0;
+  animation: fx-boss-feather-glide var(--dur) ease-in-out forwards;
+}
+
+.fx-boss__fire-feather--1 { left: 25%; top: 10%; animation-delay: 200ms; }
+.fx-boss__fire-feather--2 { left: 70%; top: 15%; animation-delay: 450ms; }
+.fx-boss__fire-feather--3 { left: 45%; top: 5%; animation-delay: 650ms; }
+
+@keyframes fx-boss-feather-glide {
+  0%   { opacity: 0; transform: translate(-30px, -40px) rotate(-25deg) scale(0.6); }
+  25%  { opacity: 0.9; transform: translate(0, 0) rotate(-10deg) scale(1); }
+  65%  { opacity: 0.85; transform: translate(40px, 60px) rotate(15deg) scale(0.95); }
+  90%, 100% { opacity: 0; transform: translate(60px, 90px) rotate(30deg) scale(0.7); }
+}
+
+.fx-boss__dual-spiral {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--card-w) * 1.8);
+  height: calc(var(--card-w) * 1.8);
+  margin-left: calc(var(--card-w) * -0.9);
+  margin-top: calc(var(--card-w) * -0.9);
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 120, 71, 0.5) 0deg,
+    transparent 90deg,
+    rgba(56, 189, 248, 0.5) 180deg,
+    transparent 270deg,
+    rgba(255, 120, 71, 0.5) 360deg
+  );
+  filter: blur(4px);
+  opacity: 0;
+  animation: fx-boss-dual-spin var(--dur) linear forwards;
+}
+
+@keyframes fx-boss-dual-spin {
+  0%   { opacity: 0; transform: rotate(0deg) scale(0.4); }
+  25%  { opacity: 0.85; transform: rotate(180deg) scale(1.05); }
+  65%  { opacity: 0.9; transform: rotate(540deg) scale(1); }
+  88%, 100% { opacity: 0; transform: rotate(720deg) scale(0.5); }
+}
+
+.fx-boss__fusion-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  animation: fx-boss-fusion-ring var(--dur) ease-out forwards;
+}
+
+.fx-boss__fusion-ring--gold {
+  width: calc(var(--card-w) * 1.4);
+  height: calc(var(--card-w) * 1.4);
+  border: 2px solid rgba(255, 230, 128, 0.85);
+  box-shadow: 0 0 20px rgba(255, 120, 71, 0.7);
+  animation-delay: 500ms;
+}
+
+.fx-boss__fusion-ring--blue {
+  width: calc(var(--card-w) * 1.6);
+  height: calc(var(--card-w) * 1.6);
+  border: 2px solid rgba(56, 189, 248, 0.85);
+  box-shadow: 0 0 24px rgba(14, 116, 144, 0.7);
+  animation-delay: 750ms;
+}
+
+@keyframes fx-boss-fusion-ring {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  30%  { opacity: 0.95; transform: translate(-50%, -50%) scale(1.05); }
+  70%  { opacity: 0.8; transform: translate(-50%, -50%) scale(1.25); }
+  95%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.45); }
+}
+
+.fx-boss__dual-spiral-ring {
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 200, 100, 0.6);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
+  animation: fx-boss-spin-ring var(--dur) linear forwards;
+}
+
+@keyframes fx-boss-spin-ring {
+  0%   { opacity: 0; transform: rotate(0deg) scale(0.6); }
+  25%  { opacity: 0.9; transform: rotate(180deg) scale(1); }
+  75%  { opacity: 0.9; transform: rotate(540deg) scale(1); }
+  100% { opacity: 0; transform: rotate(720deg) scale(0.8); }
+}
+
+/* ==============================================================
+ * 12.8 ผลกระทบของบอสลงกระดานจริงตอนจบฉาก (Boss Board Impact)
+ * ============================================================== */
+.fx-boss-impact {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+  overflow: hidden;
+}
+
+.fx-boss-impact__ground {
+  position: absolute;
+  left: var(--slot-x);
+  top: var(--slot-y);
+  width: 0;
+  height: 0;
+}
+
+/* ---------- Indra: ฟ้าแลบ + สายฟ้าฟาดลงช่อง + ประกายไฟแตก + รอยไหม้ ---------- */
+.fx-boss-impact--indra .fx-boss-impact__flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.92);
+  opacity: 0;
+  animation: fx-impact-indra-flash var(--dur) ease-out forwards;
+}
+
+@keyframes fx-impact-indra-flash {
+  0%, 71% { opacity: 0; }
+  72%     { opacity: 0.88; }
+  73.5%   { opacity: 0.15; }
+  75%     { opacity: 0.92; }
+  77%     { opacity: 0.35; }
+  81%     { opacity: 0; }
+  100%    { opacity: 0; }
+}
+
+.fx-boss-impact--indra.fx-boss-impact--short .fx-boss-impact__flash {
+  animation-name: fx-impact-indra-flash-short;
+}
+
+@keyframes fx-impact-indra-flash-short {
+  0%, 46% { opacity: 0; }
+  48%     { opacity: 0.88; }
+  51%     { opacity: 0.2; }
+  54%     { opacity: 0.85; }
+  60%     { opacity: 0; }
+  100%    { opacity: 0; }
+}
+
+.fx-boss-impact--indra .fx-boss-impact__bolt-svg {
+  position: absolute;
+  left: -80px;
+  bottom: 0;
+  width: 160px;
+  height: 360px;
+  overflow: visible;
+  filter: drop-shadow(0 0 16px #7ee8fa) drop-shadow(0 0 32px #ffe680);
+}
+
+.fx-boss-impact__bolt-main {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: fx-impact-bolt-strike var(--dur) ease-out forwards;
+}
+
+.fx-boss-impact__bolt-fork {
+  fill: none;
+  stroke: #7ee8fa;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+  animation: fx-impact-bolt-strike var(--dur) ease-out forwards;
+}
+
+@keyframes fx-impact-bolt-strike {
+  0%, 71% { stroke-dashoffset: 600; opacity: 0; }
+  72%     { stroke-dashoffset: 0; opacity: 1; }
+  85%     { opacity: 1; }
+  92%     { opacity: 0.3; }
+  98%, 100% { opacity: 0; }
+}
+
+.fx-boss-impact--indra.fx-boss-impact--short .fx-boss-impact__bolt-main,
+.fx-boss-impact--indra.fx-boss-impact--short .fx-boss-impact__bolt-fork {
+  animation-name: fx-impact-bolt-strike-short;
+}
+
+@keyframes fx-impact-bolt-strike-short {
+  0%, 47% { stroke-dashoffset: 600; opacity: 0; }
+  49%     { stroke-dashoffset: 0; opacity: 1; }
+  75%     { opacity: 0.8; }
+  92%, 100% { opacity: 0; }
+}
+
+.fx-boss-impact--indra .fx-boss-impact__scorch {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--card-w) * 1.3);
+  aspect-ratio: 1;
+  margin-left: calc(var(--card-w) * -0.65);
+  margin-top: calc(var(--card-w) * -0.65);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 230, 128, 0.45) 0%,
+    rgba(126, 232, 250, 0.3) 35%,
+    rgba(20, 30, 60, 0.5) 60%,
+    transparent 78%
+  );
+  box-shadow: 0 0 24px rgba(126, 232, 250, 0.6);
+  opacity: 0;
+  animation: fx-impact-scorch var(--dur) ease-out forwards;
+}
+
+@keyframes fx-impact-scorch {
+  0%, 72% { opacity: 0; transform: scale(0.4); }
+  74%     { opacity: 0.95; transform: scale(1.1); }
+  80%     { opacity: 0.85; transform: scale(1); }
+  98%, 100% { opacity: 0; transform: scale(0.92); }
+}
+
+.fx-boss-impact--indra.fx-boss-impact--short .fx-boss-impact__scorch {
+  animation-name: fx-impact-scorch-short;
+}
+
+@keyframes fx-impact-scorch-short {
+  0%, 48% { opacity: 0; transform: scale(0.4); }
+  52%     { opacity: 0.9; transform: scale(1); }
+  95%, 100% { opacity: 0; transform: scale(0.9); }
+}
+
+.fx-boss-impact__spark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: calc(var(--card-w) * 0.45);
+  background: linear-gradient(to top, #ffffff, #ffe680, transparent);
+  border-radius: 2px;
+  transform-origin: 50% 100%;
+  transform: rotate(var(--ang));
+  opacity: 0;
+  animation: fx-impact-spark var(--dur) ease-out forwards;
+}
+
+@keyframes fx-impact-spark {
+  0%, 72% { opacity: 0; height: 4px; }
+  74%     { opacity: 1; height: calc(var(--card-w) * 0.55); }
+  85%     { opacity: 0.6; height: calc(var(--card-w) * 0.7); }
+  96%, 100% { opacity: 0; height: calc(var(--card-w) * 0.8); }
+}
+
+/* ---------- Naga: น้ำน้ำเงินเข้มซัดท่วมกระดาน + แสงระลอกน้ำ + น้ำไหลกลับเข้าช่อง ---------- */
+.fx-boss-impact--naga .fx-boss-impact__flood-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--slot-x) var(--slot-y), rgba(14, 116, 144, 0.42) 0%, rgba(2, 24, 38, 0.65) 60%, rgba(1, 10, 18, 0.82) 100%);
+  opacity: 0;
+  animation: fx-impact-naga-flood var(--dur) ease-in-out forwards;
+}
+
+@keyframes fx-impact-naga-flood {
+  0%, 71% { opacity: 0; }
+  75%     { opacity: 0.95; }
+  86%     { opacity: 0.9; }
+  98%, 100% { opacity: 0; }
+}
+
+.fx-boss-impact--naga.fx-boss-impact--short .fx-boss-impact__flood-overlay {
+  animation-name: fx-impact-naga-flood-short;
+}
+
+@keyframes fx-impact-naga-flood-short {
+  0%, 46% { opacity: 0; }
+  52%     { opacity: 0.9; }
+  85%     { opacity: 0.75; }
+  100%    { opacity: 0; }
+}
+
+.fx-boss-impact--naga .fx-boss-impact__wave {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  border: 3px solid rgba(56, 232, 223, 0.8);
+  box-shadow: 0 0 28px rgba(14, 116, 144, 0.8), inset 0 0 18px rgba(56, 232, 223, 0.4);
+  opacity: 0;
+  animation: fx-impact-naga-wave var(--dur) ease-out forwards;
+}
+
+.fx-boss-impact--naga .fx-boss-impact__wave--outer {
+  width: calc(var(--card-w) * 2.8);
+  height: calc(var(--card-w) * 2.8);
+  margin-left: calc(var(--card-w) * -1.4);
+  margin-top: calc(var(--card-w) * -1.4);
+  animation-delay: 80ms;
+}
+
+.fx-boss-impact--naga .fx-boss-impact__wave--inner {
+  width: calc(var(--card-w) * 1.8);
+  height: calc(var(--card-w) * 1.8);
+  margin-left: calc(var(--card-w) * -0.9);
+  margin-top: calc(var(--card-w) * -0.9);
+}
+
+@keyframes fx-impact-naga-wave {
+  0%, 72% { opacity: 0; transform: scale(0.2); }
+  76%     { opacity: 0.95; transform: scale(0.85); }
+  88%     { opacity: 0.8; transform: scale(1.4); }
+  98%, 100% { opacity: 0; transform: scale(1.8); }
+}
+
+.fx-boss-impact--naga .fx-boss-impact__water-drain {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--card-w) * 1.1);
+  aspect-ratio: 1;
+  margin-left: calc(var(--card-w) * -0.55);
+  margin-top: calc(var(--card-w) * -0.55);
+  border-radius: 50%;
+  border: 2px dashed rgba(56, 232, 223, 0.65);
+  box-shadow: inset 0 0 20px rgba(10, 76, 106, 0.9);
+  opacity: 0;
+  animation: fx-impact-naga-drain var(--dur) ease-in forwards;
+}
+
+@keyframes fx-impact-naga-drain {
+  0%, 82% { opacity: 0; transform: scale(1.6) rotate(0deg); }
+  89%     { opacity: 0.9; transform: scale(1.1) rotate(180deg); }
+  98%, 100% { opacity: 0; transform: scale(0.2) rotate(360deg); }
+}
+
+/* ---------- Krut-Naga: ลมกรรโชกไฟฝั่งศัตรู + น้ำวนฝั่งเรา + เกลียวเส้นบางหมุนวนที่ช่อง ---------- */
+.fx-boss-impact--krut-naga .fx-boss-impact__enemy-storm {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 48%;
+  background: linear-gradient(to bottom, rgba(255, 120, 71, 0.22) 0%, transparent 100%);
+  opacity: 0;
+  animation: fx-impact-krut-storm var(--dur) ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes fx-impact-krut-storm {
+  0%, 71% { opacity: 0; transform: translateX(-15px); }
+  75%     { opacity: 0.95; transform: translateX(0); }
+  90%     { opacity: 0.75; }
+  100%    { opacity: 0; }
+}
+
+/* ขนนกไฟปลิวชัดเจนขึ้น ขนาดใหญ่ขึ้น พร้อมเรืองแสงเปล่งประกาย */
+.fx-boss-impact__storm-feather {
+  position: absolute;
+  width: 22px;
+  height: 40px;
+  background: linear-gradient(135deg, #fff2a8 0%, #ff8a3d 50%, #dc2626 100%);
+  clip-path: polygon(50% 0%, 95% 35%, 78% 85%, 50% 100%, 22% 85%, 5% 35%);
+  filter: drop-shadow(0 0 8px rgba(255, 120, 50, 0.95)) drop-shadow(0 0 16px rgba(255, 230, 100, 0.85));
+  opacity: 0;
+  animation: fx-impact-feather-fly var(--dur) ease-out forwards;
+}
+
+.fx-boss-impact__storm-feather--0 { left: 10%; top: 16%; animation-delay: 30ms; transform: scale(1.1); }
+.fx-boss-impact__storm-feather--1 { left: 26%; top: 6%; animation-delay: 90ms; transform: scale(0.9); }
+.fx-boss-impact__storm-feather--2 { left: 44%; top: 20%; animation-delay: 150ms; transform: scale(1.2); }
+.fx-boss-impact__storm-feather--3 { left: 62%; top: 10%; animation-delay: 210ms; transform: scale(1.0); }
+.fx-boss-impact__storm-feather--4 { left: 78%; top: 24%; animation-delay: 270ms; transform: scale(1.15); }
+.fx-boss-impact__storm-feather--5 { left: 88%; top: 8%; animation-delay: 330ms; transform: scale(0.85); }
+
+@keyframes fx-impact-feather-fly {
+  0%, 72% { opacity: 0; transform: translate(-35px, -25px) rotate(-35deg); }
+  76%     { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  92%     { opacity: 0.85; transform: translate(55px, 35px) rotate(50deg); }
+  100%    { opacity: 0; transform: translate(90px, 60px) rotate(80deg); }
+}
+
+/* คลื่นน้ำวนฝั่งเรา: โทนบางใส ไม่บังการ์ดและป้ายชื่อ */
+.fx-boss-impact--krut-naga .fx-boss-impact__player-surge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42%;
+  background: radial-gradient(ellipse at 50% 100%, rgba(14, 116, 144, 0.22) 0%, rgba(2, 24, 38, 0.12) 50%, transparent 75%);
+  opacity: 0;
+  animation: fx-impact-naga-surge var(--dur) ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes fx-impact-naga-surge {
+  0%, 71% { opacity: 0; transform: scaleY(0.7); }
+  75%     { opacity: 0.85; transform: scaleY(1); }
+  90%     { opacity: 0.65; }
+  100%    { opacity: 0; }
+}
+
+/* เกลียวสองสี (ไฟวน + น้ำวน) เป็นเส้นบางโปร่งใส ไม่ใช่พื้นทึบ และขนาดไม่เกิน 1.35 เท่าของการ์ด */
+.fx-boss-impact--krut-naga .fx-boss-impact__converge-dual {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--card-w) * 1.35);
+  height: calc(var(--card-w) * 1.35);
+  margin-left: calc(var(--card-w) * -0.675);
+  margin-top: calc(var(--card-w) * -0.675);
+  border-radius: 50%;
+  background: none;
+  opacity: 0;
+  animation: fx-impact-converge-spin var(--dur) linear forwards;
+  pointer-events: none;
+}
+
+.fx-boss-impact__converge-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 6px rgba(255, 120, 71, 0.7)) drop-shadow(0 0 6px rgba(56, 189, 248, 0.7));
+}
+
+.fx-boss-impact__converge-line {
+  fill: none;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-dasharray: 260;
+  stroke-dashoffset: 0;
+}
+
+.fx-boss-impact__converge-line--fire {
+  stroke: #ff7847;
+  filter: drop-shadow(0 0 4px #ffe680);
+}
+
+.fx-boss-impact__converge-line--water {
+  stroke: #38bdf8;
+  filter: drop-shadow(0 0 4px #a5f3fc);
+}
+
+.fx-boss-impact__converge-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, rgba(255, 230, 128, 0.9) 50%, transparent 100%);
+  box-shadow: 0 0 12px #ffe680;
+}
+
+@keyframes fx-impact-converge-spin {
+  0%, 72% { opacity: 0; transform: rotate(0deg) scale(0.4); }
+  76%     { opacity: 0.95; transform: rotate(180deg) scale(1.05); }
+  90%     { opacity: 0.85; transform: rotate(540deg) scale(0.9); }
+  100%    { opacity: 0; transform: rotate(720deg) scale(0.2); }
+}
+
+/* Reduced motion */
+.fx-boss-impact--reduced .fx-boss-impact__soft-pulse {
+  position: absolute;
+  left: var(--slot-x);
+  top: var(--slot-y);
+  width: calc(var(--card-w) * 1.2);
+  aspect-ratio: 1;
+  margin-left: calc(var(--card-w) * -0.6);
+  margin-top: calc(var(--card-w) * -0.6);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 230, 128, 0.45) 0%, transparent 70%);
+  animation: fx-impact-soft 800ms ease-out forwards;
+}
+
+@keyframes fx-impact-soft {
+  0%   { opacity: 0; transform: scale(0.5); }
+  40%  { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+
+/* ==============================================================
+ * 12.9 ฉากขึ้นขี่ "คู่หูในตำนาน" (Mount Showcase)
+ * ============================================================== */
+.fx-sc--mount {
+  --sc-c: #ffd27d;
+  --sc-glow: rgba(255, 196, 90, 0.65);
+}
+
+.fx-sc__title--mount {
+  min-width: 240px;
+  max-width: 90vw;
+  animation-name: fx-sc-mount-title !important;
+}
+
+.fx-sc__stat-upgrade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 4px 12px;
+  background: rgba(15, 12, 6, 0.88);
+  border: 1px solid rgba(255, 210, 125, 0.7);
+  border-radius: 999px;
+  box-shadow: 0 0 14px rgba(255, 196, 90, 0.35);
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+}
+
+.fx-sc__stat-prev {
+  color: #b5a48a;
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.fx-sc__stat-arrow {
+  color: #ffe680;
+  font-size: 0.82rem;
+}
+
+.fx-sc__stat-new {
+  color: #fff9d2;
+  font-weight: 800;
+  text-shadow: 0 0 8px rgba(255, 210, 125, 0.75);
+}
+
+.fx-sc__stat-diff {
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 0.84rem;
+}
+
+.fx-sc__mount-aura {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--card-w) * 2.2);
+  aspect-ratio: 1;
+  margin-left: calc(var(--card-w) * -1.1);
+  margin-top: calc(var(--card-w) * -1.1);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 210, 125, 0.35) 0%, rgba(255, 180, 50, 0.15) 45%, transparent 72%);
+  opacity: 0;
+  animation: fx-sc-mount-aura var(--dur) ease-in-out forwards;
+}
+
+@keyframes fx-sc-mount-aura {
+  0%, 15% { opacity: 0; transform: scale(0.4); }
+  45%     { opacity: 0.95; transform: scale(1.05); }
+  75%     { opacity: 0.9; transform: scale(1); }
+  95%, 100% { opacity: 0; transform: scale(0.6); }
+}
+
+.fx-sc__flash--mount {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--card-w) * 3);
+  aspect-ratio: 1;
+  margin-left: calc(var(--card-w) * -1.5);
+  margin-top: calc(var(--card-w) * -1.5);
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, rgba(255, 240, 180, 0.85) 25%, transparent 68%);
+  opacity: 0;
+  animation: fx-sc-mount-flash var(--dur) ease-out forwards;
+}
+
+@keyframes fx-sc-mount-flash {
+  0%, 42% { opacity: 0; transform: scale(0.3); }
+  45%     { opacity: 1; transform: scale(1); }
+  52%     { opacity: 0.8; transform: scale(1.15); }
+  60%     { opacity: 0; transform: scale(1.3); }
+  100%    { opacity: 0; }
+}
+
+/* การเคลื่อนที่ของคนและสัตว์ */
+.fx-sc__mount-duo {
+  position: absolute;
+  inset: 0;
+}
+
+.fx-sc__mat--rider {
+  border-color: #ffd27d;
+  animation: fx-sc-mat-rider var(--dur) cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes fx-sc-mat-rider {
+  0%   { opacity: 0; transform: translate(var(--rx), var(--ry)) scale(0.7); }
+  12%  { opacity: 1; transform: translate(var(--rx), var(--ry)) scale(0.85); }
+  32%  { opacity: 1; transform: translate(calc(var(--rx) * 0.4), calc(var(--ry) * -0.6)) scale(0.92) rotate(-8deg); }
+  44%  { opacity: 1; transform: translate(0, calc(var(--card-w) * -0.15)) scale(0.9) rotate(4deg); }
+  /* hit-stop pause */
+  45%, 49% { opacity: 1; transform: translate(0, calc(var(--card-w) * -0.15)) scale(0.9) rotate(4deg); }
+  52%  { opacity: 0; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; }
+}
+
+.fx-sc__mat--animal {
+  border-color: #ffd27d;
+  animation: fx-sc-mat-animal var(--dur) cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes fx-sc-mat-animal {
+  0%   { opacity: 0; transform: translate(var(--rx), var(--ry)) scale(0.7); }
+  12%  { opacity: 1; transform: translate(var(--rx), var(--ry)) scale(0.85); }
+  32%  { opacity: 1; transform: translate(calc(var(--rx) * 0.4), calc(var(--ry) * 0.2)) scale(0.92); }
+  44%  { opacity: 1; transform: translate(0, calc(var(--card-w) * 0.08)) scale(0.95); }
+  /* hit-stop pause */
+  45%, 49% { opacity: 1; transform: translate(0, calc(var(--card-w) * 0.08)) scale(0.95); }
+  52%  { opacity: 0; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; }
+}
+
+/* สำหรับร่างรวมร่าง (th03-017 ต้นไทร และ th03-019 ราชินีต่อ): หมุนเกลียวรวมร่างเข้าหากัน */
+.fx-sc__mount-duo--merge .fx-sc__mat--rider {
+  animation-name: fx-sc-mat-merge-a;
+}
+
+.fx-sc__mount-duo--merge .fx-sc__mat--animal {
+  animation-name: fx-sc-mat-merge-b;
+}
+
+@keyframes fx-sc-mat-merge-a {
+  0%   { opacity: 0; transform: translate(var(--rx), var(--ry)) scale(0.7); }
+  12%  { opacity: 1; transform: translate(var(--rx), var(--ry)) scale(0.85); }
+  32%  { opacity: 1; transform: translate(calc(var(--rx) * 0.5), calc(var(--ry) * 0.5)) rotate(45deg) scale(0.9); }
+  44%, 49% { opacity: 1; transform: translate(0, 0) rotate(180deg) scale(0.95); }
+  52%  { opacity: 0; transform: translate(0, 0) scale(1.1); }
+  100% { opacity: 0; }
+}
+
+@keyframes fx-sc-mat-merge-b {
+  0%   { opacity: 0; transform: translate(var(--rx), var(--ry)) scale(0.7); }
+  12%  { opacity: 1; transform: translate(var(--rx), var(--ry)) scale(0.85); }
+  32%  { opacity: 1; transform: translate(calc(var(--rx) * 0.5), calc(var(--ry) * 0.5)) rotate(-45deg) scale(0.9); }
+  44%, 49% { opacity: 1; transform: translate(0, 0) rotate(-180deg) scale(0.95); }
+  52%  { opacity: 0; transform: translate(0, 0) scale(1.1); }
+  100% { opacity: 0; }
+}
+
+/* ร่างผลลัพธ์ตัวใหญ่ */
+.fx-sc__result--mount {
+  animation: fx-sc-mount-result var(--dur) cubic-bezier(0.25, 0.85, 0.3, 1) forwards !important;
+}
+
+@keyframes fx-sc-mount-result {
+  0%, 46% { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  51%     { opacity: 1; transform: translate(0, 0) scale(1.18); box-shadow: 0 0 35px rgba(255, 210, 125, 0.85); }
+  58%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  78%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  94%     { opacity: 1; transform: translate(var(--ex), var(--ey)) scale(var(--s1)); }
+  100%    { opacity: 0; transform: translate(var(--ex), var(--ey)) scale(var(--s1)); }
+}
+
+@keyframes fx-sc-mount-title {
+  0%, 46% { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.8); }
+  53%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.06); }
+  60%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  85%     { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  96%, 100% { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(0.95); }
+}
+
+/* Mount short timing (ซ้ำ / ฝั่ง AI) */
+.fx-sc--mount-short .fx-sc__mount-aura {
+  animation-duration: var(--dur);
+}
+.fx-sc--mount-short .fx-sc__title--mount {
+  animation-name: fx-sc-mount-title-short !important;
+}
+
+@keyframes fx-sc-mount-title-short {
+  0%, 35% { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  45%     { opacity: 1; transform: translateX(-50%) translateY(0); }
+  85%     { opacity: 1; }
+  100%    { opacity: 0; }
+}
+
+.fx-sc--mount-short .fx-sc__result--mount {
+  animation-name: fx-sc-mount-result-short !important;
+}
+
+@keyframes fx-sc-mount-result-short {
+  0%, 30% { opacity: 0; transform: translate(0, 0) scale(0.5); }
+  45%     { opacity: 1; transform: translate(0, 0) scale(1.08); }
+  55%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  78%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  94%     { opacity: 1; transform: translate(var(--ex), var(--ey)) scale(var(--s1)); }
+  100%    { opacity: 0; transform: translate(var(--ex), var(--ey)) scale(var(--s1)); }
+}
+
+/* ลายคลื่นน้ำพญานาคราช */
+.fx-boss-impact__caustics-wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at var(--slot-x) var(--slot-y), transparent 30%, rgba(56, 232, 223, 0.12) 55%, transparent 75%),
+    repeating-radial-gradient(circle at var(--slot-x) var(--slot-y), transparent 0, transparent 18px, rgba(56, 232, 223, 0.14) 22px, transparent 26px);
+  opacity: 0;
+  animation: fx-impact-caustics-wash var(--dur) ease-out forwards;
+}
+
+@keyframes fx-impact-caustics-wash {
+  0%, 72% { opacity: 0; transform: scale(0.6); }
+  78%     { opacity: 0.85; transform: scale(1.05); }
+  90%     { opacity: 0.7; transform: scale(1.15); }
+  100%    { opacity: 0; transform: scale(1.25); }
+}
+
+.fx-boss-impact__wave-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--card-w) * 2.2);
+  height: calc(var(--card-w) * 2.2);
+  margin-left: calc(var(--card-w) * -1.1);
+  margin-top: calc(var(--card-w) * -1.1);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.fx-boss-impact__crest {
+  fill: none;
+  stroke: rgba(56, 232, 223, 0.75);
+  stroke-width: 2.2;
+  stroke-dasharray: 12 8;
+  filter: drop-shadow(0 0 8px rgba(14, 116, 144, 0.9));
+  animation: fx-impact-crest var(--dur) ease-out forwards;
+}
+
+.fx-boss-impact__crest--2 {
+  stroke: rgba(126, 232, 250, 0.6);
+  stroke-width: 1.8;
+  stroke-dasharray: 18 10;
+  animation-delay: 80ms;
+}
+
+@keyframes fx-impact-crest {
+  0%, 72% { opacity: 0; transform: scale(0.3) rotate(0deg); transform-origin: 120px 120px; }
+  78%     { opacity: 0.95; transform: scale(1.05) rotate(20deg); transform-origin: 120px 120px; }
+  92%     { opacity: 0.75; transform: scale(1.35) rotate(45deg); transform-origin: 120px 120px; }
+  100%    { opacity: 0; transform: scale(1.6) rotate(60deg); transform-origin: 120px 120px; }
 }
